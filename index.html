@@ -10,7 +10,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
-  <!-- AUTH / LOGIN CONTAINER -->
+  <!-- AUTH CONTAINER -->
   <div id="auth-container" class="max-w-md mx-auto mt-16 p-6 bg-white rounded-xl shadow-md border border-slate-200">
     <div class="text-center mb-6">
       <h1 class="text-2xl font-bold text-indigo-600">IEP Tracker Login</h1>
@@ -19,7 +19,7 @@
     <form id="login-form" class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-        <input type="email" id="login-email" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="teacher@school.org" />
+        <input type="email" id="login-email" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="teacher@ahschools.us" />
       </div>
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
@@ -30,139 +30,349 @@
     </form>
   </div>
 
-  <!-- MAIN DASHBOARD (HIDDEN UNTIL LOGIN) -->
-  <div id="dashboard-container" class="hidden max-w-5xl mx-auto p-4 space-y-6">
-    <!-- Header -->
-    <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-4">
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-container" class="hidden max-w-5xl mx-auto p-4 space-y-6">
+    <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex justify-between items-center">
       <div class="flex items-center gap-3">
         <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600">
           <i class="fa-solid fa-clipboard-check text-xl"></i>
         </div>
         <div>
-          <h1 class="text-xl font-bold text-slate-800">IEP Daily Goal Tracker</h1>
-          <p id="user-display" class="text-xs text-slate-500">Logged in as staff</p>
+          <h1 class="text-xl font-bold text-slate-800">IEP Goal Tracker</h1>
+          <p id="user-display" class="text-xs text-slate-500">Logged in</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <select id="period-select" class="bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-4 py-2 rounded-lg outline-none">
-          <option value="1">1st Hour</option>
-          <option value="2">2nd Hour</option>
-          <option value="3">3rd Hour</option>
-          <option value="4">4th Hour</option>
-          <option value="5">5th Hour</option>
-          <option value="6">6th Hour</option>
-          <option value="7">7th Hour</option>
-        </select>
-        <button id="logout-btn" class="text-slate-400 hover:text-slate-600 p-2 text-sm" title="Log Out"><i class="fa-solid fa-right-from-bracket"></i></button>
+      <div class="flex items-center gap-2">
+        <button id="nav-roster-btn" onclick="showRosterManager()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border"><i class="fa-solid fa-users-gear mr-1"></i> Manage Roster</button>
+        <button id="logout-btn" class="text-slate-400 hover:text-slate-600 p-2 text-sm"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
     </header>
 
-    <!-- Student Cards Container -->
-    <main id="student-list" class="space-y-4">
-      <!-- Dynamic Student Cards Render Here -->
-    </main>
+    <!-- LANDING PAGE GRID -->
+    <div id="view-landing" class="space-y-4">
+      <h2 class="text-sm font-bold uppercase text-slate-400 tracking-wider">Select Class Period or View</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <button onclick="selectPeriod(1)" class="p-6 bg-white border hover:border-indigo-500 rounded-xl shadow-sm text-center font-bold text-slate-700 hover:text-indigo-600 text-lg transition">1st Hour</button>
+        <button onclick="selectPeriod(2)" class="p-6 bg-white border hover:border-indigo-500 rounded-xl shadow-sm text-center font-bold text-slate-700 hover:text-indigo-600 text-lg transition">2nd Hour</button>
+        <button onclick="selectPeriod(3)" class="p-6 bg-white border hover:border-indigo-500 rounded-xl shadow-sm text-center font-bold text-slate-700 hover:text-indigo-600 text-lg transition">3rd Hour</button>
+        <button onclick="selectPeriod(4)" class="p-6 bg-white border hover:border-indigo-500 rounded-xl shadow-sm text-center font-bold text-slate-700 hover:text-indigo-600 text-lg transition">4th Hour</button>
+        <button onclick="selectPeriod(5)" class="p-6 bg-white border hover:border-indigo-500 rounded-xl shadow-sm text-center font-bold text-slate-700 hover:text-indigo-600 text-lg transition">5th Hour</button>
+        <button onclick="selectCaseload()" class="p-6 bg-indigo-600 hover:bg-indigo-700 text-white border rounded-xl shadow-sm text-center font-bold text-lg transition"><i class="fa-solid fa-folder-user mr-1"></i> My Caseload</button>
+      </div>
+    </div>
+
+    <!-- TRACKING VIEW -->
+    <div id="view-tracking" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <button onclick="showLanding()" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
+        <h2 id="current-view-label" class="font-bold text-slate-700">Class Students</h2>
+      </div>
+      <main id="student-list" class="space-y-6"></main>
+    </div>
+
+    <!-- ROSTER MANAGEMENT -->
+    <div id="view-roster" class="hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <button onclick="showLanding()" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
+        <h2 class="font-bold text-slate-700">Roster Management</h2>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+        <h3 class="font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-user-plus text-indigo-600 mr-1"></i> Add New Student</h3>
+        <form id="add-student-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="text" id="add-fname" placeholder="First Name" required class="p-2 border rounded" />
+          <input type="text" id="add-lname" placeholder="Last Name" required class="p-2 border rounded" />
+          <select id="add-period" required class="p-2 border rounded">
+            <option value="1">1st Hour</option><option value="2">2nd Hour</option><option value="3">3rd Hour</option><option value="4">4th Hour</option><option value="5">5th Hour</option>
+          </select>
+          <input type="email" id="add-cm" placeholder="Case Manager Email" required class="p-2 border rounded" />
+          
+          <div class="md:col-span-2 border-t pt-2 mt-2"><p class="font-semibold text-xs text-indigo-600">Independent Living</p></div>
+          <input type="text" id="add-ind-goal" placeholder="Overall Goal" class="p-2 border rounded md:col-span-2" />
+          <input type="text" id="add-ind-obj1" placeholder="Objective 1" class="p-2 border rounded" />
+          <input type="text" id="add-ind-obj2" placeholder="Objective 2" class="p-2 border rounded" />
+
+          <div class="md:col-span-2 border-t pt-2 mt-2"><p class="font-semibold text-xs text-indigo-600">Employment</p></div>
+          <input type="text" id="add-emp-goal" placeholder="Overall Goal" class="p-2 border rounded md:col-span-2" />
+          <input type="text" id="add-emp-obj1" placeholder="Objective 1" class="p-2 border rounded" />
+          <input type="text" id="add-emp-obj2" placeholder="Objective 2" class="p-2 border rounded" />
+
+          <div class="md:col-span-2 border-t pt-2 mt-2"><p class="font-semibold text-xs text-indigo-600">Post-Secondary</p></div>
+          <input type="text" id="add-post-goal" placeholder="Overall Goal" class="p-2 border rounded md:col-span-2" />
+          <input type="text" id="add-post-obj1" placeholder="Objective 1" class="p-2 border rounded" />
+          <input type="text" id="add-post-obj2" placeholder="Objective 2" class="p-2 border rounded" />
+
+          <button type="submit" class="md:col-span-2 bg-indigo-600 text-white font-bold py-2 rounded hover:bg-indigo-700 transition">Save Student</button>
+        </form>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+        <h3 class="font-bold text-slate-800 border-b pb-2">Active Students Roster</h3>
+        <div id="roster-table-container"></div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Database Configuration
     const SUPABASE_URL = "https://jhrirprisfpksnzvcjls.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-    // DOM Elements
-    const authContainer = document.getElementById('auth-container');
-    const dashboardContainer = document.getElementById('dashboard-container');
-    const loginForm = document.getElementById('login-form');
-    const authError = document.getElementById('auth-error');
-    const userDisplay = document.getElementById('user-display');
-    const studentList = document.getElementById('student-list');
-    const logoutBtn = document.getElementById('logout-btn');
+    let currentUser = null;
+    let todaysLoggedSet = new Set(); // Stores objectives logged today
 
-    // Check Auth Status on Load
     window.addEventListener('DOMContentLoaded', async () => {
       const { data: { session } } = await db.auth.getSession();
-      if (session) showDashboard(session.user);
+      if (session) initApp(session.user);
     });
 
-    // Handle Login
-    loginForm.addEventListener('submit', async (e) => {
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      authError.classList.add('hidden');
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
-
       const { data, error } = await db.auth.signInWithPassword({ email, password });
       if (error) {
-        authError.textContent = error.message;
-        authError.classList.remove('hidden');
+        document.getElementById('auth-error').textContent = error.message;
+        document.getElementById('auth-error').classList.remove('hidden');
       } else {
-        showDashboard(data.user);
+        initApp(data.user);
       }
     });
 
-    // Logout
-    logoutBtn.addEventListener('click', async () => {
+    document.getElementById('logout-btn').addEventListener('click', async () => {
       await db.auth.signOut();
-      dashboardContainer.classList.add('hidden');
-      authContainer.classList.remove('hidden');
+      location.reload();
     });
 
-    function showDashboard(user) {
-      authContainer.classList.add('hidden');
-      dashboardContainer.classList.remove('hidden');
-      userDisplay.textContent = `Logged in: ${user.email}`;
-      loadStudents();
+    function initApp(user) {
+      currentUser = user;
+      document.getElementById('auth-container').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+      document.getElementById('user-display').textContent = `Logged in: ${user.email}`;
+      showLanding();
     }
 
-    // Load Data
-    async function loadStudents() {
-      const { data: students, error } = await db.from('students').select('*');
-      
-      if (error || !students || students.length === 0) {
-        studentList.innerHTML = `
-          <div class="bg-white p-8 text-center rounded-xl border border-slate-200">
-            <i class="fa-solid fa-user-graduate text-4xl text-slate-300 mb-3"></i>
-            <h3 class="text-slate-700 font-bold">No Students Added Yet</h3>
-            <p class="text-slate-400 text-sm mt-1">Add student records in your Supabase 'students' table to begin tracking.</p>
-          </div>`;
+    function showLanding() {
+      document.getElementById('view-landing').classList.remove('hidden');
+      document.getElementById('view-tracking').classList.add('hidden');
+      document.getElementById('view-roster').classList.add('hidden');
+    }
+
+    function selectPeriod(p) {
+      document.getElementById('current-view-label').textContent = `${p}${p === 1 ? 'st' : p === 2 ? 'nd' : p === 3 ? 'rd' : 'th'} Hour Students`;
+      fetchStudents({ period: p });
+    }
+
+    function selectCaseload() {
+      document.getElementById('current-view-label').textContent = `My Assigned Caseload`;
+      fetchStudents({ case_manager_email: currentUser.email });
+    }
+
+    async function fetchStudents(filter) {
+      document.getElementById('view-landing').classList.add('hidden');
+      document.getElementById('view-tracking').classList.remove('hidden');
+      document.getElementById('view-roster').classList.add('hidden');
+
+      // Check what objectives have been logged today
+      const todayISO = new Date().toISOString().split('T')[0];
+      const { data: todayLogs } = await db.from('data_logs')
+        .select('student_id, goal_type, objective_num')
+        .gte('created_at', `${todayISO}T00:00:00.000Z`);
+
+      todaysLoggedSet = new Set(
+        (todayLogs || []).map(l => `${l.student_id}-${l.goal_type}-${l.objective_num}`)
+      );
+
+      // Fetch students
+      let query = db.from('students').select('*');
+      if (filter.period) query = query.eq('period', filter.period);
+      if (filter.case_manager_email) query = query.eq('case_manager_email', filter.case_manager_email);
+
+      const { data: students } = await query;
+      renderStudents(students || []);
+    }
+
+    function renderStudents(students) {
+      const container = document.getElementById('student-list');
+      if (!students.length) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 bg-white rounded-xl border">No students found for this view.</div>`;
         return;
       }
 
-      studentList.innerHTML = students.map(s => renderStudentCard(s)).join('');
+      container.innerHTML = students.map(s => `
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-4">
+          <div class="border-b pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-xl font-bold text-slate-800">${s.first_name} ${s.last_name}</h3>
+              <p class="text-xs text-slate-400">Period ${s.period} | Case Manager: ${s.case_manager_email}</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            ${renderGoalSection(s.id, 'Independent Living', 'ind_living', s.ind_living_goal, s.ind_living_obj1, s.ind_living_obj2)}
+            ${renderGoalSection(s.id, 'Employment', 'employment', s.employment_goal, s.employment_obj1, s.employment_obj2)}
+            ${renderGoalSection(s.id, 'Post-Secondary', 'post_sec', s.post_sec_goal, s.post_sec_obj1, s.post_sec_obj2)}
+          </div>
+        </div>
+      `).join('');
     }
 
-    function renderStudentCard(student) {
+    function renderGoalSection(studentId, label, type, goal, obj1, obj2) {
+      if (!goal && !obj1 && !obj2) return `<div class="p-3 bg-slate-50 rounded border text-slate-400 text-xs">No ${label} goals set.</div>`;
       return `
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col gap-4">
-          <div class="flex justify-between items-center border-b pb-3">
-            <h2 class="text-lg font-bold text-slate-800">${student.first_name} ${student.last_name}</h2>
-            <div class="flex gap-2">
-              <button onclick="logFlag('${student.id}', 'absent')" class="px-3 py-1 text-xs border rounded-lg hover:bg-slate-50 text-slate-600">Absent</button>
-              <button onclick="logFlag('${student.id}', 'no_opportunity')" class="px-3 py-1 text-xs border rounded-lg hover:bg-slate-50 text-slate-600">No Opp</button>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
-              <span class="font-bold text-xs uppercase text-indigo-600 block mb-1">Independent Living</span>
-              <div class="flex items-center justify-between mt-2">
-                <button onclick="logGoal('${student.id}', true)" class="px-3 py-1 bg-green-600 text-white rounded font-bold text-xs hover:bg-green-700">YES</button>
-                <button onclick="logGoal('${student.id}', false)" class="px-3 py-1 bg-red-600 text-white rounded font-bold text-xs hover:bg-red-700">NO</button>
-              </div>
-            </div>
-          </div>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3 text-xs">
+          <span class="font-bold uppercase text-indigo-600 block border-b pb-1">${label}</span>
+          <p class="text-slate-600 italic font-medium">${goal || 'No description'}</p>
+          ${obj1 ? renderObjectiveBlock(studentId, type, 1, obj1) : ''}
+          ${obj2 ? renderObjectiveBlock(studentId, type, 2, obj2) : ''}
         </div>`;
     }
 
-    async function logGoal(studentId, achieved) {
-      const { data: { user } } = await db.auth.getUser();
-      await db.from('data_logs').insert([{ student_id: studentId, recorded_by: user.id, achieved: achieved }]);
-      alert('Data point recorded!');
+    function renderObjectiveBlock(studentId, type, num, text) {
+      const formId = `form-${studentId}-${type}-${num}`;
+      const isLoggedToday = todaysLoggedSet.has(`${studentId}-${type}-${num}`);
+
+      return `
+        <div class="bg-white p-3 rounded border border-slate-200 space-y-2 mt-2 relative">
+          <div class="flex justify-between items-start">
+            <p class="font-semibold text-slate-700">Obj ${num}: ${text}</p>
+            <div id="badge-${formId}" class="${isLoggedToday ? '' : 'hidden'} text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <i class="fa-solid fa-circle-check"></i> Logged Today
+            </div>
+          </div>
+          
+          <!-- Status Selector -->
+          <div class="flex gap-1">
+            <label class="flex-1 text-center py-1 bg-slate-100 hover:bg-green-100 rounded cursor-pointer border text-[10px] font-bold">
+              <input type="radio" name="status-${formId}" value="YES" checked class="hidden" /> YES
+            </label>
+            <label class="flex-1 text-center py-1 bg-slate-100 hover:bg-red-100 rounded cursor-pointer border text-[10px] font-bold">
+              <input type="radio" name="status-${formId}" value="NO" class="hidden" /> NO
+            </label>
+            <label class="flex-1 text-center py-1 bg-slate-100 hover:bg-yellow-100 rounded cursor-pointer border text-[10px] font-bold">
+              <input type="radio" name="status-${formId}" value="absent" class="hidden" /> Absent
+            </label>
+            <label class="flex-1 text-center py-1 bg-slate-100 hover:bg-slate-200 rounded cursor-pointer border text-[10px] font-bold">
+              <input type="radio" name="status-${formId}" value="no_opportunity" class="hidden" /> No Opp
+            </label>
+          </div>
+
+          <!-- Prompts & Notes -->
+          <div class="flex gap-2">
+            <select id="prompts-${formId}" class="p-1 border rounded bg-white text-[11px] w-1/3">
+              <option value="0">0 Prompts</option>
+              <option value="1">1 Prompt</option>
+              <option value="2">2 Prompts</option>
+              <option value="3">3+ Prompts</option>
+            </select>
+            <input type="text" id="notes-${formId}" placeholder="Add note (optional)..." class="p-1 border rounded w-2/3 text-[11px]" />
+          </div>
+
+          <button id="btn-${formId}" onclick="submitLog('${studentId}', '${type}', ${num}, '${formId}')" class="w-full py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold text-[11px] transition">Log Entry</button>
+        </div>`;
     }
 
-    async function logFlag(studentId, flagType) {
-      const { data: { user } } = await db.auth.getUser();
-      await db.from('data_logs').insert([{ student_id: studentId, recorded_by: user.id, flag: flagType }]);
-      alert(`Status recorded: ${flagType}`);
+    async function submitLog(studentId, type, num, formId) {
+      const btn = document.getElementById(`btn-${formId}`);
+      const badge = document.getElementById(`badge-${formId}`);
+      
+      const statusEl = document.querySelector(`input[name="status-${formId}"]:checked`);
+      const status = statusEl ? statusEl.value : 'YES';
+      const prompts = parseInt(document.getElementById(`prompts-${formId}`).value);
+      const notes = document.getElementById(`notes-${formId}`).value;
+
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      const { error } = await db.from('data_logs').insert([{
+        student_id: studentId,
+        recorded_by: currentUser.id,
+        goal_type: type,
+        objective_num: num,
+        status: status,
+        prompts: prompts,
+        notes: notes
+      }]);
+
+      btn.disabled = false;
+      btn.textContent = 'Log Entry';
+
+      if (error) {
+        alert('Error logging data: ' + error.message);
+      } else {
+        // Show permanent green badge for today
+        badge.classList.remove('hidden');
+        todaysLoggedSet.add(`${studentId}-${type}-${num}`);
+        document.getElementById(`notes-${formId}`).value = ''; // clear note box
+      }
+    }
+
+    // ROSTER MANAGER
+    async function showRosterManager() {
+      document.getElementById('view-landing').classList.add('hidden');
+      document.getElementById('view-tracking').classList.add('hidden');
+      document.getElementById('view-roster').classList.remove('hidden');
+
+      const { data: students } = await db.from('students').select('*').order('last_name');
+      const tableContainer = document.getElementById('roster-table-container');
+
+      if (!students || !students.length) {
+        tableContainer.innerHTML = `<p class="text-slate-400 text-sm">No students currently in database.</p>`;
+        return;
+      }
+
+      tableContainer.innerHTML = `
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b bg-slate-50"><th class="p-2">Name</th><th class="p-2">Period</th><th class="p-2">Case Manager</th><th class="p-2 text-right">Action</th></tr>
+          </thead>
+          <tbody>
+            ${students.map(s => `
+              <tr class="border-b hover:bg-slate-50">
+                <td class="p-2 font-bold">${s.first_name} ${s.last_name}</td>
+                <td class="p-2">${s.period}</td>
+                <td class="p-2">${s.case_manager_email}</td>
+                <td class="p-2 text-right">
+                  <button onclick="deleteStudent('${s.id}')" class="text-red-600 hover:text-red-800 font-bold"><i class="fa-solid fa-trash"></i> Delete</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newStudent = {
+        first_name: document.getElementById('add-fname').value,
+        last_name: document.getElementById('add-lname').value,
+        period: parseInt(document.getElementById('add-period').value),
+        case_manager_email: document.getElementById('add-cm').value,
+        ind_living_goal: document.getElementById('add-ind-goal').value,
+        ind_living_obj1: document.getElementById('add-ind-obj1').value,
+        ind_living_obj2: document.getElementById('add-ind-obj2').value,
+        employment_goal: document.getElementById('add-emp-goal').value,
+        employment_obj1: document.getElementById('add-emp-obj1').value,
+        employment_obj2: document.getElementById('add-emp-obj2').value,
+        post_sec_goal: document.getElementById('add-post-goal').value,
+        post_sec_obj1: document.getElementById('add-post-obj1').value,
+        post_sec_obj2: document.getElementById('add-post-obj2').value,
+      };
+
+      const { error } = await db.from('students').insert([newStudent]);
+      if (error) alert('Error adding student: ' + error.message);
+      else {
+        alert('Student added!');
+        e.target.reset();
+        showRosterManager();
+      }
+    });
+
+    async function deleteStudent(id) {
+      if (confirm('Are you sure you want to delete this student?')) {
+        await db.from('students').delete().eq('id', id);
+        showRosterManager();
+      }
     }
   </script>
 </body>
