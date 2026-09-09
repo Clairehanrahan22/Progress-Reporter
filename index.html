@@ -3,39 +3,167 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IEP Goal Tracker</title>
+  <title>IEP Goal Data Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans p-4">
-  <div class="max-w-4xl mx-auto">
-    <header class="bg-white rounded-lg shadow-md p-6 mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-indigo-600">IEP Goal Tracker</h1>
-      <select id="period-select" class="border-2 border-indigo-200 rounded-lg px-3 py-2 bg-indigo-50 font-medium">
-        <option>1st Hour</option>
-        <option>2nd Hour</option>
-        <option>3rd Hour</option>
-        <option>4th Hour</option>
-        <option>5th Hour</option>
-        <option>6th Hour</option>
-        <option>7th Hour</option>
-      </select>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <!-- AUTH / LOGIN CONTAINER -->
+  <div id="auth-container" class="max-w-md mx-auto mt-16 p-6 bg-white rounded-xl shadow-md border border-slate-200">
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-bold text-indigo-600">IEP Tracker Login</h1>
+      <p class="text-slate-500 text-sm mt-1">Sign in with your staff account</p>
+    </div>
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+        <input type="email" id="login-email" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="teacher@school.org" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+        <input type="password" id="login-password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />
+      </div>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition">Sign In</button>
+      <div id="auth-error" class="text-red-500 text-xs text-center hidden"></div>
+    </form>
+  </div>
+
+  <!-- MAIN DASHBOARD (HIDDEN UNTIL LOGIN) -->
+  <div id="dashboard-container" class="hidden max-w-5xl mx-auto p-4 space-y-6">
+    <!-- Header -->
+    <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+          <i class="fa-solid fa-clipboard-check text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">IEP Daily Goal Tracker</h1>
+          <p id="user-display" class="text-xs text-slate-500">Logged in as staff</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <select id="period-select" class="bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold px-4 py-2 rounded-lg outline-none">
+          <option value="1">1st Hour</option>
+          <option value="2">2nd Hour</option>
+          <option value="3">3rd Hour</option>
+          <option value="4">4th Hour</option>
+          <option value="5">5th Hour</option>
+          <option value="6">6th Hour</option>
+          <option value="7">7th Hour</option>
+        </select>
+        <button id="logout-btn" class="text-slate-400 hover:text-slate-600 p-2 text-sm" title="Log Out"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
     </header>
 
-    <main id="app-container" class="space-y-4">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 text-center">
-        <p class="text-slate-500">Loading student cards...</p>
-      </div>
+    <!-- Student Cards Container -->
+    <main id="student-list" class="space-y-4">
+      <!-- Dynamic Student Cards Render Here -->
     </main>
   </div>
 
   <script>
-    // YOUR SUPABASE CREDENTIALS
-    const SUPABASE_URL = "https://jhrirprisfpksnzvcjls.supabase.co"; 
+    // Database Configuration
+    const SUPABASE_URL = "https://jhrirprisfpksnzvcjls.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4";
-
-    // Initialize Supabase Connection
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+    // DOM Elements
+    const authContainer = document.getElementById('auth-container');
+    const dashboardContainer = document.getElementById('dashboard-container');
+    const loginForm = document.getElementById('login-form');
+    const authError = document.getElementById('auth-error');
+    const userDisplay = document.getElementById('user-display');
+    const studentList = document.getElementById('student-list');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Check Auth Status on Load
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) showDashboard(session.user);
+    });
+
+    // Handle Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      authError.classList.add('hidden');
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
+      if (error) {
+        authError.textContent = error.message;
+        authError.classList.remove('hidden');
+      } else {
+        showDashboard(data.user);
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+      await db.auth.signOut();
+      dashboardContainer.classList.add('hidden');
+      authContainer.classList.remove('hidden');
+    });
+
+    function showDashboard(user) {
+      authContainer.classList.add('hidden');
+      dashboardContainer.classList.remove('hidden');
+      userDisplay.textContent = `Logged in: ${user.email}`;
+      loadStudents();
+    }
+
+    // Load Data
+    async function loadStudents() {
+      const { data: students, error } = await db.from('students').select('*');
+      
+      if (error || !students || students.length === 0) {
+        studentList.innerHTML = `
+          <div class="bg-white p-8 text-center rounded-xl border border-slate-200">
+            <i class="fa-solid fa-user-graduate text-4xl text-slate-300 mb-3"></i>
+            <h3 class="text-slate-700 font-bold">No Students Added Yet</h3>
+            <p class="text-slate-400 text-sm mt-1">Add student records in your Supabase 'students' table to begin tracking.</p>
+          </div>`;
+        return;
+      }
+
+      studentList.innerHTML = students.map(s => renderStudentCard(s)).join('');
+    }
+
+    function renderStudentCard(student) {
+      return `
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col gap-4">
+          <div class="flex justify-between items-center border-b pb-3">
+            <h2 class="text-lg font-bold text-slate-800">${student.first_name} ${student.last_name}</h2>
+            <div class="flex gap-2">
+              <button onclick="logFlag('${student.id}', 'absent')" class="px-3 py-1 text-xs border rounded-lg hover:bg-slate-50 text-slate-600">Absent</button>
+              <button onclick="logFlag('${student.id}', 'no_opportunity')" class="px-3 py-1 text-xs border rounded-lg hover:bg-slate-50 text-slate-600">No Opp</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <span class="font-bold text-xs uppercase text-indigo-600 block mb-1">Independent Living</span>
+              <div class="flex items-center justify-between mt-2">
+                <button onclick="logGoal('${student.id}', true)" class="px-3 py-1 bg-green-600 text-white rounded font-bold text-xs hover:bg-green-700">YES</button>
+                <button onclick="logGoal('${student.id}', false)" class="px-3 py-1 bg-red-600 text-white rounded font-bold text-xs hover:bg-red-700">NO</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function logGoal(studentId, achieved) {
+      const { data: { user } } = await db.auth.getUser();
+      await db.from('data_logs').insert([{ student_id: studentId, recorded_by: user.id, achieved: achieved }]);
+      alert('Data point recorded!');
+    }
+
+    async function logFlag(studentId, flagType) {
+      const { data: { user } } = await db.auth.getUser();
+      await db.from('data_logs').insert([{ student_id: studentId, recorded_by: user.id, flag: flagType }]);
+      alert(`Status recorded: ${flagType}`);
+    }
   </script>
 </body>
 </html>
