@@ -398,7 +398,7 @@
             <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: flex-start;">
               <div>
                 <h3 style="margin:0 0 4px 0;">${student.first_name} ${student.last_name}</h3>
-                <small style="color:#64748b;">Case Manager: ${student.case_manager_email}</small>
+                <small style="color:#64748b;">Case Manager: ${student.case_manager_email || 'Not Assigned'}</small>
               </div>
               <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Setup IEP / Teachers</button>
             </div>
@@ -514,7 +514,7 @@
           <div class="flex-between" style="margin-bottom:12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
             <div>
               <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
-              <small style="color:#64748b;">CM: ${student.case_manager_email}</small>
+              <small style="color:#64748b;">CM: ${student.case_manager_email || 'Not Assigned'}</small>
             </div>
             <div>
               <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP Setup / Graphs</button>
@@ -1103,9 +1103,10 @@
       
       let unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
       
+      // Alphabetized by First Name
       unassigned.sort((a, b) => {
-        const nameA = `${a.last_name || ''} ${a.first_name || ''}`.toLowerCase();
-        const nameB = `${b.last_name || ''} ${b.first_name || ''}`.toLowerCase();
+        const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+        const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
         return nameA.localeCompare(nameB);
       });
 
@@ -1140,8 +1141,8 @@
       return studentsList.map(s => `
         <div class="student-search-item">
           <div>
-            <strong>${s.last_name}, ${s.first_name}</strong>
-            <div style="font-size: 11px; color: #64748b;">CM: ${s.case_manager_email}</div>
+            <strong>${s.first_name} ${s.last_name}</strong>
+            <div style="font-size: 11px; color: #64748b;">CM: ${s.case_manager_email || 'Not Assigned'}</div>
           </div>
           <button class="success sm" onclick="addStudentToPeriodDirect('${s.id}', ${periodNum})">+ Add</button>
         </div>
