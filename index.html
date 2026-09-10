@@ -164,7 +164,7 @@
 <script>
   const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let currentUser = null;
   let mySchedule = { p1: '', p2: '', p3: '', p4: '', p5: '' };
@@ -189,7 +189,7 @@
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
     if (error) {
       alert('Sign In Failed: ' + error.message);
     } else {
@@ -209,7 +209,7 @@
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await sbClient.auth.signUp({
       email,
       password,
       options: { data: { full_name: name, role: role } }
@@ -224,7 +224,7 @@
   }
 
   async function initializeApp() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await sbClient.auth.getUser();
     if (user) {
       currentUser = user;
       document.getElementById('login-box').classList.add('hidden');
@@ -282,7 +282,7 @@
       ps_obj2: document.getElementById('ps-obj2').value
     };
 
-    const { error } = await supabase.from('students').insert([studentData]);
+    const { error } = await sbClient.from('students').insert([studentData]);
     if (error) alert('Error saving student: ' + error.message);
     else { alert('Student added successfully!'); toggleRosterView(); }
   }
@@ -291,7 +291,7 @@
     const assignedTeacher = mySchedule['p' + periodNum] || currentUser.email;
     document.getElementById('view-title').innerText = `Period ${periodNum} Roster (${assignedTeacher})`;
     
-    const { data: students, error } = await supabase
+    const { data: students, error } = await sbClient
       .from('students')
       .select('*')
       .eq(`teacher_p${periodNum}`, assignedTeacher);
@@ -302,7 +302,7 @@
 
   async function loadCaseloadView() {
     document.getElementById('view-title').innerText = `My Caseload (${currentUser.email})`;
-    const { data: students, error } = await supabase
+    const { data: students, error } = await sbClient
       .from('students')
       .select('*')
       .eq('case_manager_email', currentUser.email);
@@ -370,12 +370,12 @@
       created_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('logs').insert([logEntry]);
+    const { error } = await sbClient.from('logs').insert([logEntry]);
     if (error) alert('Error logging data: ' + error.message);
     else alert(`Saved: ${status} (${promptCount})`);
   }
 
-  async function handleSignOut() { await supabase.auth.signOut(); location.reload(); }
+  async function handleSignOut() { await sbClient.auth.signOut(); location.reload(); }
   function toggleRosterView() {
     document.getElementById('roster-view').classList.toggle('hidden');
     document.getElementById('tracking-view').classList.toggle('hidden');
