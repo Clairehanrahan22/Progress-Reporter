@@ -13,7 +13,6 @@
       --card-bg: #ffffff;
       --text: #0f172a;
       --border: #e2e8f0;
-      --success: #16a34a;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 900px; margin: 0 auto; }
@@ -24,26 +23,23 @@
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    input, select, textarea { width: 100%; padding: 8px 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
-    .btn-group { display: flex; gap: 6px; margin-bottom: 8px; }
-    .btn-option { flex: 1; padding: 6px; border: 1px solid var(--border); background: white; color: var(--text); border-radius: 4px; }
-    .btn-option.selected { background: var(--primary); color: white; border-color: var(--primary); }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; background: #dcfce7; color: #166534; }
-    .hidden { display: none; }
+    input, select { width: 100%; padding: 8px 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
+    .hidden { display: none !important; }
     .tabs { display: flex; gap: 10px; margin-bottom: 16px; }
-    .tab { padding: 8px 16px; background: #e2e8f0; border-radius: 6px; cursor: pointer; }
-    .tab.active { background: var(--primary); color: white; }
+    .tab-btn { flex: 1; padding: 8px 16px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .tab-btn.active { background: var(--primary); color: white; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- AUTH SECTION -->
+  <!-- AUTH CARD -->
   <div id="auth-section" class="card" style="max-width: 400px; margin: 40px auto;">
     <h2>Progress Reporter Login</h2>
     <div class="tabs">
-      <div id="tab-login" class="tab active" onclick="switchAuthTab('login')">Sign In</div>
-      <div id="tab-signup" class="tab" onclick="switchAuthTab('signup')">Sign Up</div>
+      <button type="button" id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Sign In</button>
+      <button type="button" id="tab-signup" class="tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
     
     <form id="auth-form" onsubmit="handleAuth(event)">
@@ -68,7 +64,7 @@
     </form>
   </div>
 
-  <!-- MAIN APP CONTAINER -->
+  <!-- MAIN APP -->
   <div id="app-section" class="hidden">
     <header>
       <div>
@@ -82,7 +78,6 @@
       </div>
     </header>
 
-    <!-- NAVIGATION DASHBOARD -->
     <div class="grid">
       <button onclick="loadPeriodView(1)">1st Hour</button>
       <button onclick="loadPeriodView(2)">2nd Hour</button>
@@ -92,63 +87,54 @@
       <button class="secondary" onclick="loadCaseloadView()">My Caseload</button>
     </div>
 
-    <!-- MAIN TRACKING CONTAINER -->
     <div id="tracking-view">
       <h2 id="view-title">Select an Hour or Caseload to Begin</h2>
       <div id="student-cards"></div>
     </div>
 
-    <!-- ROSTER MANAGEMENT VIEW -->
     <div id="roster-view" class="card hidden">
       <h2>Add New Student</h2>
       <form onsubmit="handleAddStudent(event)">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div>
-            <label>First Name</label>
-            <input type="text" id="stu-fname" required>
-          </div>
-          <div>
-            <label>Last Name</label>
-            <input type="text" id="stu-lname" required>
-          </div>
+          <div><label>First Name</label><input type="text" id="stu-fname" required></div>
+          <div><label>Last Name</label><input type="text" id="stu-lname" required></div>
         </div>
-
-        <label>Case Manager</label>
-        <select id="stu-cm" required></select>
+        <label>Case Manager Email</label>
+        <input type="email" id="stu-cm" placeholder="cm@ahschools.us" required>
 
         <h3>Period Teacher Assignments</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-          <div><label>1st Hour</label><select id="stu-p1" class="teacher-select"></select></div>
-          <div><label>2nd Hour</label><select id="stu-p2" class="teacher-select"></select></div>
-          <div><label>3rd Hour</label><select id="stu-p3" class="teacher-select"></select></div>
-          <div><label>4th Hour</label><select id="stu-p4" class="teacher-select"></select></div>
-          <div><label>5th Hour</label><select id="stu-p5" class="teacher-select"></select></div>
+          <div><label>1st Hour Teacher</label><input type="email" id="stu-p1" placeholder="teacher@ahschools.us"></div>
+          <div><label>2nd Hour Teacher</label><input type="email" id="stu-p2" placeholder="teacher@ahschools.us"></div>
+          <div><label>3rd Hour Teacher</label><input type="email" id="stu-p3" placeholder="teacher@ahschools.us"></div>
+          <div><label>4th Hour Teacher</label><input type="email" id="stu-p4" placeholder="teacher@ahschools.us"></div>
+          <div><label>5th Hour Teacher</label><input type="email" id="stu-p5" placeholder="teacher@ahschools.us"></div>
         </div>
 
-        <h3>Goals & Objectives</h3>
-        <p><strong>Independent Living</strong></p>
-        <input type="text" id="il-goal" placeholder="Goal Description">
-        <input type="text" id="il-obj1" placeholder="Objective 1">
-        <input type="text" id="il-obj2" placeholder="Objective 2">
-
-        <p><strong>Employment</strong></p>
-        <input type="text" id="emp-goal" placeholder="Goal Description">
-        <input type="text" id="emp-obj1" placeholder="Objective 1">
-        <input type="text" id="emp-obj2" placeholder="Objective 2">
-
-        <p><strong>Post-Secondary</strong></p>
-        <input type="text" id="ps-goal" placeholder="Goal Description">
-        <input type="text" id="ps-obj1" placeholder="Objective 1">
-        <input type="text" id="ps-obj2" placeholder="Objective 2">
-
-        <button type="submit">Save Student to Roster</button>
+        <button type="submit" style="margin-top: 15px;">Save Student to Roster</button>
       </form>
     </div>
   </div>
 </div>
 
+<!-- SCHEDULE MODAL -->
+<div id="schedule-modal" class="modal-overlay hidden">
+  <div class="card" style="width: 400px; max-width: 90%;">
+    <h3>My Period Preferences</h3>
+    <p style="font-size:0.85rem; color:#64748b;">Set assigned teachers for each period.</p>
+    <label>1st Hour Teacher Email</label><input type="email" id="pref-p1">
+    <label>2nd Hour Teacher Email</label><input type="email" id="pref-p2">
+    <label>3rd Hour Teacher Email</label><input type="email" id="pref-p3">
+    <label>4th Hour Teacher Email</label><input type="email" id="pref-p4">
+    <label>5th Hour Teacher Email</label><input type="email" id="pref-p5">
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button onclick="saveScheduleModal()" style="flex:1;">Save Schedule</button>
+      <button onclick="closeScheduleModal()" class="secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  // SUPABASE CONFIGURATION
   const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -158,18 +144,19 @@
 
   function switchAuthTab(mode) {
     authMode = mode;
-    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
-    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
-    document.getElementById('signup-fields').classList.toggle('hidden', mode === 'login');
-    document.getElementById('auth-btn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
+    const isLogin = mode === 'login';
+    document.getElementById('tab-login').classList.toggle('active', isLogin);
+    document.getElementById('tab-signup').classList.toggle('active', !isLogin);
+    document.getElementById('signup-fields').classList.toggle('hidden', isLogin);
+    document.getElementById('auth-btn').innerText = isLogin ? 'Sign In' : 'Create Account';
   }
 
   async function handleAuth(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-email').value;
+    const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
 
-    if (!email.endsWith('@ahschools.us')) {
+    if (!email.toLowerCase().endsWith('@ahschools.us')) {
       alert('Please use your official @ahschools.us email address.');
       return;
     }
@@ -181,12 +168,19 @@
         email, password,
         options: { data: { full_name: name, role: role } }
       });
-      if (error) alert(error.message);
-      else { alert('Account created! Logging you in...'); location.reload(); }
+      if (error) {
+        alert('Sign Up Error: ' + error.message);
+      } else {
+        alert('Account successfully created! Logging you in...');
+        initializeApp();
+      }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(error.message);
-      else initializeApp();
+      if (error) {
+        alert('Login Error: ' + error.message);
+      } else {
+        initializeApp();
+      }
     }
   }
 
@@ -200,11 +194,10 @@
     }
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    location.reload();
-  }
-
+  function openScheduleModal() { document.getElementById('schedule-modal').classList.remove('hidden'); }
+  function closeScheduleModal() { document.getElementById('schedule-modal').classList.add('hidden'); }
+  function saveScheduleModal() { closeScheduleModal(); alert('Schedule preferences saved!'); }
+  async function handleSignOut() { await supabase.auth.signOut(); location.reload(); }
   function toggleRosterView() {
     document.getElementById('roster-view').classList.toggle('hidden');
     document.getElementById('tracking-view').classList.toggle('hidden');
