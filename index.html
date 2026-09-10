@@ -178,7 +178,6 @@
             <small>${currentUserEmail} (Staff)</small>
           </div>
           <div>
-            <button class="outline" onclick="loadCaseload()">My Caseload</button>
             <button class="danger" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
           </div>
         </header>
@@ -587,7 +586,7 @@
               <button onclick="saveTeachers('${student.id}')">Save Teacher Assignments</button>
             </div>
 
-            <!-- TAB 4: HISTORY LOG (NEW TAB) -->
+            <!-- TAB 4: HISTORY LOG -->
             <div id="history-tab" class="tab-content">
               <h3>Archived IEP History & Records</h3>
               <div id="history-select-container">Loading past records...</div>
