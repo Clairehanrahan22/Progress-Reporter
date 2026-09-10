@@ -94,6 +94,45 @@
       padding: 3px 8px;
       border-radius: 12px;
     }
+
+    .email-input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .email-input-wrapper input {
+      border: none !important;
+      margin: 0 !important;
+      outline: none;
+    }
+    .email-domain-tag {
+      background: #f1f5f9;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+      border-left: 1px solid var(--border);
+    }
+
+    .para-chip {
+      display: inline-flex;
+      align-items: center;
+      background: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      margin: 4px 4px 4px 0;
+    }
+    .para-chip span {
+      margin-left: 8px;
+      color: var(--danger);
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -122,6 +161,14 @@
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    }
+
+    function formatUserEmailInput(inputVal) {
+      let cleaned = inputVal.trim().toLowerCase();
+      if (cleaned.endsWith('@ahschools.us')) {
+        return cleaned;
+      }
+      return `${cleaned}@ahschools.us`;
     }
 
     async function initApp() {
@@ -258,13 +305,23 @@
       activePeriod = periodNum;
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
       
-      const periodRoster = allStudents.filter(s => s[colName] === currentUserEmail);
+      // Included if logged-in user is either lead teacher OR listed in paras array
+      const periodRoster = allStudents.filter(s => {
+        const isTeacher = s[colName] === currentUserEmail;
+        const parasArr = s[paraColName] || [];
+        const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
+        return isTeacher || isPara;
+      });
 
       let html = `
         <div class="flex-between" style="margin-bottom: 16px;">
           <h2>${periodNum}th Hour Class Dashboard</h2>
-          <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodNum}th Hour</button>
+          <div>
+            <button class="outline" style="margin-right:8px;" onclick="openManageParasModal(${periodNum})">👥 Manage Paraprofessionals</button>
+            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodNum}th Hour</button>
+          </div>
         </div>
       `;
 
@@ -284,7 +341,7 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      // Check saved indicators strictly for current teacher for TODAY
+      // Check saved indicators for current logged in user for TODAY
       periodRoster.forEach(student => restoreTeacherSavedState(student.id));
     }
 
@@ -300,7 +357,6 @@
         { key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 }
       ];
 
-      // Hide empty objective cards
       const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
 
       let tilesHTML = '';
@@ -361,6 +417,106 @@
           </div>
         </div>
       `;
+    }
+
+    /* PARAPROFESSIONAL MANAGEMENT MODAL */
+    async function openManageParasModal(periodNum) {
+      await fetchAllStudents();
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      // Get current period roster
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      // Collect all current unique paras for this period across this teacher's roster
+      let currentParasSet = new Set();
+      periodStudents.forEach(s => {
+        const arr = s[paraColName];
+        if (Array.isArray(arr)) {
+          arr.forEach(p => currentParasSet.add(p));
+        }
+      });
+
+      const currentParas = Array.from(currentParasSet);
+
+      let chipsHTML = currentParas.map(pEmail => `
+        <div class="para-chip">
+          ${pEmail}
+          <span onclick="removeParaFromPeriod('${pEmail}', ${periodNum})">✕</span>
+        </div>
+      `).join('');
+
+      if (chipsHTML === '') {
+        chipsHTML = '<p style="color:#64748b; font-size:13px;">No paraprofessionals currently assigned to your ' + periodNum + 'th hour.</p>';
+      }
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Manage Paraprofessionals - ${periodNum}th Hour</h3>
+            <p style="font-size:13px; color:#475569;">Assigned paraprofessionals will get full access to view and log data for all students in your ${periodNum}th hour class.</p>
+            
+            <div style="margin-bottom: 16px;">
+              <label>Assigned Paras:</label>
+              <div style="margin-top:6px;">${chipsHTML}</div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;">
+
+            <label>Add Paraprofessional Username:</label>
+            <div class="email-input-wrapper">
+              <input type="text" id="para-username-input" placeholder="e.g. john.doe" style="flex:1;">
+              <div class="email-domain-tag">@ahschools.us</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+              <button class="secondary" onclick="closeModal()">Done</button>
+              <button onclick="addParaToPeriod(${periodNum})">+ Grant Access</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function addParaToPeriod(periodNum) {
+      const inputEl = document.getElementById('para-username-input');
+      if (!inputEl || !inputEl.value.trim()) return;
+
+      const fullEmail = formatUserEmailInput(inputEl.value);
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      // Update all students in this teacher's period roster
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      for (const student of periodStudents) {
+        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
+        if (!existingParas.includes(fullEmail)) {
+          existingParas.push(fullEmail);
+          await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+        }
+      }
+
+      // Automatically register email in staff_members if not present
+      await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
+
+      openManageParasModal(periodNum);
+    }
+
+    async function removeParaFromPeriod(paraEmail, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      for (const student of periodStudents) {
+        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
+        existingParas = existingParas.filter(p => p !== paraEmail);
+        await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+      }
+
+      openManageParasModal(periodNum);
     }
 
     async function restoreTeacherSavedState(studentId) {
@@ -463,7 +619,7 @@
               <button class="tab-btn" onclick="switchTab('history-tab', this); loadStudentHistory('${student.id}');">History Log</button>
             </div>
 
-            <!-- TAB 1: GOALS & OBJECTIVES (FIRST TAB) -->
+            <!-- TAB 1: GOALS & OBJECTIVES -->
             <div id="goals-tab" class="tab-content active">
               <h3>Active IEP Goals & Objectives</h3>
               
@@ -643,7 +799,6 @@
       };
 
       if (isAnnualMeeting && student) {
-        // Step 1: Archive current active goals into iep_history
         const periodLabel = `Archived IEP Cycle (${new Date().toLocaleDateString()})`;
         
         const { data: archivedRecord, error: archiveErr } = await supabaseClient
@@ -659,11 +814,10 @@
           }]).select();
 
         if (archiveErr) {
-          alert('Error archiving existing goals. Please ensure the iep_history SQL script was run in Supabase.');
+          alert('Error archiving existing goals.');
           return;
         }
 
-        // Step 2: Associate previous unlinked logs to this archive record
         if (archivedRecord && archivedRecord.length > 0) {
           const archiveId = archivedRecord[0].id;
           await supabaseClient
@@ -674,7 +828,6 @@
         }
       }
 
-      // Step 3: Overwrite active goals in students table
       const { error } = await supabaseClient.from('students').update(newGoalsData).eq('id', studentId);
 
       if (!error) {
@@ -785,7 +938,6 @@
       const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
       const metric = document.getElementById('chart-metric-select')?.value || 'status';
 
-      // Load active unarchived data
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
