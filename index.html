@@ -39,11 +39,16 @@
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     button.danger { background: var(--danger); }
+    button.success { background: var(--success); }
+    button.success:hover { background: #15803d; }
     button.sm { padding: 6px 12px; font-size: 12px; }
     
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-    .login-box { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; border: 1px solid var(--border); }
+    .login-box { max-width: 420px; margin: 60px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .auth-toggle { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+    .auth-toggle button { background: none; color: var(--text); border: none; font-size: 15px; cursor: pointer; padding: 6px 12px; }
+    .auth-toggle button.active { font-weight: bold; border-bottom: 3px solid var(--primary); color: var(--primary); }
 
     .modal-backdrop {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -133,6 +138,27 @@
       font-weight: bold;
       cursor: pointer;
     }
+
+    .student-search-list {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .student-search-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .student-search-item:last-child {
+      border-bottom: none;
+    }
+    .student-search-item:hover {
+      background: #f1f5f9;
+    }
   </style>
 </head>
 <body>
@@ -154,6 +180,7 @@
     let activeNav = 'caseload';
     let activePeriod = null;
     let chartInstance = null;
+    let authMode = 'login'; // 'login' or 'signup'
 
     function getTodayString() {
       const today = new Date();
@@ -161,6 +188,13 @@
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    }
+
+    function getOrdinalSuffix(num) {
+      if (num === 1) return '1st';
+      if (num === 2) return '2nd';
+      if (num === 3) return '3rd';
+      return `${num}th`;
     }
 
     function formatUserEmailInput(inputVal) {
@@ -175,7 +209,7 @@
       const { data: { session } } = await supabaseClient.auth.getSession();
       
       if (!session) {
-        renderLogin();
+        renderAuthScreen();
         return;
       }
       
@@ -190,30 +224,106 @@
       loadCaseload();
     }
 
-    function renderLogin() {
+    function renderAuthScreen() {
       document.getElementById('app-root').innerHTML = `
         <div class="login-box">
-          <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
-          <label>Email Address</label>
-          <input type="email" id="login-email" placeholder="teacher@school.org">
+          <div class="auth-toggle">
+            <button id="toggle-login" class="${authMode === 'login' ? 'active' : ''}" onclick="switchAuthMode('login')">Sign In</button>
+            <button id="toggle-signup" class="${authMode === 'signup' ? 'active' : ''}" onclick="switchAuthMode('signup')">Create Account</button>
+          </div>
+
+          <h3 style="margin:0 0 16px 0;" id="auth-title">${authMode === 'login' ? 'Sign In to IEP Reporter' : 'Create Staff Account'}</h3>
+          
+          <label>District Username / Email Prefix</label>
+          <div class="email-input-wrapper">
+            <input type="text" id="auth-email-prefix" placeholder="e.g. john.doe">
+            <div class="email-domain-tag">@ahschools.us</div>
+          </div>
+
           <label>Password</label>
-          <input type="password" id="login-pass" placeholder="••••••••">
-          <button style="width:100%; margin-top:10px;" onclick="handleLogin()">Sign In</button>
-          <p id="login-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+          <input type="password" id="auth-pass" placeholder="••••••••">
+
+          <button style="width:100%; margin-top:14px;" id="auth-submit-btn" onclick="handleAuthSubmit()">
+            ${authMode === 'login' ? 'Sign In' : 'Create Account'}
+          </button>
+
+          <div style="margin-top:12px; text-align:center;">
+            <a href="#" onclick="handleForgotPassword()" style="font-size:12px; color:#2563eb;">Forgot password?</a>
+          </div>
+
+          <p id="auth-msg" style="font-size:13px; margin-top:12px; text-align:center;"></p>
         </div>
       `;
     }
 
-    async function handleLogin() {
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-pass').value;
-      const errorEl = document.getElementById('login-error');
+    function switchAuthMode(mode) {
+      authMode = mode;
+      renderAuthScreen();
+    }
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) {
-        errorEl.innerText = error.message;
+    async function handleAuthSubmit() {
+      const prefix = document.getElementById('auth-email-prefix').value;
+      const password = document.getElementById('auth-pass').value;
+      const msgEl = document.getElementById('auth-msg');
+
+      if (!prefix || !password) {
+        msgEl.style.color = 'red';
+        msgEl.innerText = 'Please fill out both username and password.';
+        return;
+      }
+
+      const fullEmail = formatUserEmailInput(prefix);
+      msgEl.style.color = '#64748b';
+      msgEl.innerText = 'Processing...';
+
+      if (authMode === 'login') {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: fullEmail,
+          password: password
+        });
+
+        if (error) {
+          msgEl.style.color = 'red';
+          msgEl.innerText = error.message;
+        } else {
+          initApp();
+        }
       } else {
-        initApp();
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: fullEmail,
+          password: password
+        });
+
+        if (error) {
+          msgEl.style.color = 'red';
+          msgEl.innerText = error.message;
+        } else {
+          await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
+          
+          if (data.session) {
+            msgEl.style.color = 'green';
+            msgEl.innerText = 'Account created successfully! Logging you in...';
+            setTimeout(() => initApp(), 1000);
+          } else {
+            msgEl.style.color = 'green';
+            msgEl.innerText = 'Account created! Logging in...';
+            setTimeout(() => initApp(), 1000);
+          }
+        }
+      }
+    }
+
+    async function handleForgotPassword() {
+      const prefix = prompt("Please enter your email prefix (e.g. john.doe) to receive a password reset link:");
+      if (!prefix) return;
+
+      const fullEmail = formatUserEmailInput(prefix);
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(fullEmail);
+
+      if (error) {
+        alert("Error: " + error.message);
+      } else {
+        alert("Password reset email sent to " + fullEmail + "!");
       }
     }
 
@@ -306,8 +416,8 @@
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
+      const periodLabel = getOrdinalSuffix(periodNum);
       
-      // Included if logged-in user is either lead teacher OR listed in paras array
       const periodRoster = allStudents.filter(s => {
         const isTeacher = s[colName] === currentUserEmail;
         const parasArr = s[paraColName] || [];
@@ -317,10 +427,10 @@
 
       let html = `
         <div class="flex-between" style="margin-bottom: 16px;">
-          <h2>${periodNum}th Hour Class Dashboard</h2>
+          <h2>${periodLabel} Hour Class Dashboard</h2>
           <div>
             <button class="outline" style="margin-right:8px;" onclick="openManageParasModal(${periodNum})">👥 Manage Paraprofessionals</button>
-            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodNum}th Hour</button>
+            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodLabel} Hour</button>
           </div>
         </div>
       `;
@@ -328,7 +438,7 @@
       if (periodRoster.length === 0) {
         html += `
           <div class="card" style="text-align:center; padding:32px; color:#64748b;">
-            <p style="margin:0 0 12px 0;">No students assigned to your ${periodNum}th hour yet.</p>
+            <p style="margin:0 0 12px 0;">No students assigned to your ${periodLabel} hour yet.</p>
             <button class="outline" onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student</button>
           </div>
         `;
@@ -341,7 +451,6 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      // Check saved indicators for current logged in user for TODAY
       periodRoster.forEach(student => restoreTeacherSavedState(student.id));
     }
 
@@ -424,11 +533,10 @@
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
+      const periodLabel = getOrdinalSuffix(periodNum);
 
-      // Get current period roster
       const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
 
-      // Collect all current unique paras for this period across this teacher's roster
       let currentParasSet = new Set();
       periodStudents.forEach(s => {
         const arr = s[paraColName];
@@ -447,14 +555,14 @@
       `).join('');
 
       if (chipsHTML === '') {
-        chipsHTML = '<p style="color:#64748b; font-size:13px;">No paraprofessionals currently assigned to your ' + periodNum + 'th hour.</p>';
+        chipsHTML = `<p style="color:#64748b; font-size:13px;">No paraprofessionals currently assigned to your ${periodLabel} hour.</p>`;
       }
 
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
-            <h3>Manage Paraprofessionals - ${periodNum}th Hour</h3>
-            <p style="font-size:13px; color:#475569;">Assigned paraprofessionals will get full access to view and log data for all students in your ${periodNum}th hour class.</p>
+            <h3>Manage Paraprofessionals - ${periodLabel} Hour</h3>
+            <p style="font-size:13px; color:#475569;">Assigned paraprofessionals will get full access to view and log data for all students in your ${periodLabel} hour class.</p>
             
             <div style="margin-bottom: 16px;">
               <label>Assigned Paras:</label>
@@ -487,7 +595,6 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      // Update all students in this teacher's period roster
       const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
 
       for (const student of periodStudents) {
@@ -498,7 +605,6 @@
         }
       }
 
-      // Automatically register email in staff_members if not present
       await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
 
       openManageParasModal(periodNum);
@@ -990,40 +1096,86 @@
       });
     }
 
+    /* SEARCHABLE & ALPHABETIZED ADD TO PERIOD MODAL */
     function openAddToPeriodModal(periodNum) {
       const colName = `teacher_p${periodNum}`;
-      const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
+      const periodLabel = getOrdinalSuffix(periodNum);
       
-      if (unassigned.length === 0) {
-        alert('All available students are already in this class hour!');
-        return;
-      }
+      let unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
+      
+      unassigned.sort((a, b) => {
+        const nameA = `${a.last_name || ''} ${a.first_name || ''}`.toLowerCase();
+        const nameB = `${b.last_name || ''} ${b.first_name || ''}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
 
-      let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
+      window.unassignedStudentsForPeriod = unassigned;
 
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
-            <h3>Add Existing Student to ${periodNum}th Hour</h3>
-            <label>Select Student from System:</label>
-            <select id="select-student-to-add">${options}</select>
-            <button onclick="addStudentToPeriod(${periodNum})">Add to Class</button>
-            <button class="secondary" onclick="closeModal()">Cancel</button>
+            <h3>Add Student to ${periodLabel} Hour</h3>
+            
+            <label>Search Student Name:</label>
+            <input type="text" id="student-search-input" placeholder="Type first or last name..." oninput="filterAddToPeriodList(${periodNum})">
+
+            <div class="student-search-list" id="student-search-list">
+              ${renderStudentSearchItems(unassigned, periodNum)}
+            </div>
+
+            <div style="margin-top: 16px; text-align: right;">
+              <button class="secondary" onclick="closeModal()">Done</button>
+            </div>
           </div>
         </div>
       `;
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    async function addStudentToPeriod(periodNum) {
-      const studentId = document.getElementById('select-student-to-add').value;
+    function renderStudentSearchItems(studentsList, periodNum) {
+      if (!studentsList || studentsList.length === 0) {
+        return `<div style="padding: 16px; text-align: center; color: #64748b; font-size: 13px;">No matching students available.</div>`;
+      }
+
+      return studentsList.map(s => `
+        <div class="student-search-item">
+          <div>
+            <strong>${s.last_name}, ${s.first_name}</strong>
+            <div style="font-size: 11px; color: #64748b;">CM: ${s.case_manager_email}</div>
+          </div>
+          <button class="success sm" onclick="addStudentToPeriodDirect('${s.id}', ${periodNum})">+ Add</button>
+        </div>
+      `).join('');
+    }
+
+    function filterAddToPeriodList(periodNum) {
+      const searchVal = document.getElementById('student-search-input')?.value.toLowerCase() || '';
+      const unassigned = window.unassignedStudentsForPeriod || [];
+
+      const filtered = unassigned.filter(s => {
+        const fullName = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase();
+        return fullName.includes(searchVal);
+      });
+
+      const listEl = document.getElementById('student-search-list');
+      if (listEl) {
+        listEl.innerHTML = renderStudentSearchItems(filtered, periodNum);
+      }
+    }
+
+    async function addStudentToPeriodDirect(studentId, periodNum) {
       const updateData = {};
       updateData[`teacher_p${periodNum}`] = currentUserEmail;
 
       const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
       if (!error) {
-        closeModal();
+        window.unassignedStudentsForPeriod = window.unassignedStudentsForPeriod.filter(s => s.id !== studentId);
+        filterAddToPeriodList(periodNum);
+        
+        await fetchAllStudents();
         switchView(periodNum);
+      } else {
+        alert("Error adding student to class period.");
       }
     }
 
