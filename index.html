@@ -16,20 +16,32 @@
       --border: #cbd5e1;
       --danger: #dc2626;
       --active-btn: #0f172a;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-    .container { max-width: 960px; margin: 0 auto; }
+    .container { max-width: 1280px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    
+    /* 3-COLUMN DASHBOARD CARD GRID */
+    .student-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     
     button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     button.danger { background: var(--danger); }
+    button.sm { padding: 6px 12px; font-size: 12px; }
     
-    /* NAV BUTTON ACTIVE HIGHLIGHT STATE */
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
     .login-box { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; border: 1px solid var(--border); }
@@ -48,10 +60,41 @@
     .tab-content.active { display: block; }
     
     .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
-    label { font-weight: 600; font-size: 13px; display: block; margin-top: 8px; color: #334155; }
-    input, textarea, select { width: 100%; padding: 8px; margin: 4px 0 12px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
-    textarea { min-height: 55px; }
+    
+    /* MINI GOAL CARD INSIDE STUDENT DASHBOARD */
+    .obj-tile {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .obj-tile.saved-success {
+      background: var(--success-bg);
+      border-color: #86efac;
+    }
+
+    .obj-tile-header { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .obj-text { font-size: 12px; color: #475569; margin-bottom: 10px; line-height: 1.35; }
+
+    .entry-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px; }
+    
+    label { font-weight: 600; font-size: 12px; display: block; margin-top: 4px; color: #334155; }
+    input, textarea, select { width: 100%; padding: 6px 8px; margin: 2px 0 6px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 13px; }
+    textarea { min-height: 45px; }
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+    .saved-badge {
+      display: none;
+      background: var(--success);
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
   </style>
 </head>
 <body>
@@ -85,7 +128,6 @@
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
 
-      // Auto-register logged in email to staff registry
       await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
 
       renderDashboard();
@@ -185,52 +227,160 @@
       `;
 
       if (myCaseload.length === 0) {
-        html += '<p>No students assigned to your caseload.</p>';
+        html += '<p style="color:#64748b;">No students on your caseload.</p>';
       } else {
+        html += `<div class="student-grid">`;
         myCaseload.forEach(student => {
           html += `
-            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
+            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: flex-start;">
               <div>
                 <h3 style="margin:0 0 4px 0;">${student.first_name} ${student.last_name}</h3>
                 <small style="color:#64748b;">Case Manager: ${student.case_manager_email}</small>
               </div>
-              <button class="outline" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Open Profile & IEP</button>
+              <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Setup IEP / Teachers</button>
             </div>
           `;
         });
+        html += `</div>`;
       }
       document.getElementById('main-view').innerHTML = html;
     }
 
+    /* CLASS PERIOD DASHBOARD VIEW (CARDS DASHBOARD) */
     async function switchView(periodNum) {
       updateNavHighlights(periodNum);
       activePeriod = periodNum;
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
+      
       const periodRoster = allStudents.filter(s => s[colName] === currentUserEmail);
 
       let html = `
         <div class="flex-between" style="margin-bottom: 16px;">
-          <h2>${periodNum}th Hour Class Roster</h2>
-          <button onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student to Roster</button>
+          <h2>${periodNum}th Hour Class Dashboard</h2>
+          <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodNum}th Hour</button>
         </div>
       `;
 
       if (periodRoster.length === 0) {
-        html += '<p>No students assigned to your roster for this hour.</p>';
+        html += `
+          <div class="card" style="text-align:center; padding:32px; color:#64748b;">
+            <p style="margin:0 0 12px 0;">No students assigned to your ${periodNum}th hour yet.</p>
+            <button class="outline" onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student</button>
+          </div>
+        `;
       } else {
+        html += `<div class="student-grid">`;
         periodRoster.forEach(student => {
-          html += `
-            <div class="card flex-between">
-              <div onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
-                <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
-              </div>
-              <button class="danger" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">Remove from Hour</button>
-            </div>
-          `;
+          html += renderStudentDashboardCard(student, periodNum);
         });
+        html += `</div>`;
       }
       document.getElementById('main-view').innerHTML = html;
+    }
+
+    function renderStudentDashboardCard(student, periodNum) {
+      const objectives = [
+        { key: 'obj_1_1', label: 'Ind. Living 1.1', text: student.obj_1_1 },
+        { key: 'obj_1_2', label: 'Ind. Living 1.2', text: student.obj_1_2 },
+        { key: 'obj_2_1', label: 'Post-Sec 2.1', text: student.obj_2_1 },
+        { key: 'obj_2_2', label: 'Post-Sec 2.2', text: student.obj_2_2 },
+        { key: 'obj_3_1', label: 'Employment 3.1', text: student.obj_3_1 },
+        { key: 'obj_3_2', label: 'Employment 3.2', text: student.obj_3_2 },
+      ];
+
+      if (student.goal_4 || student.obj_4_1 || student.obj_4_2) {
+        objectives.push({ key: 'obj_4_1', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.1`, text: student.obj_4_1 });
+        objectives.push({ key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 });
+      }
+
+      let tilesHTML = '';
+      objectives.forEach(o => {
+        if (o.text && o.text.trim() !== '') {
+          tilesHTML += `
+            <div class="obj-tile" id="tile_${student.id}_${o.key}">
+              <div class="obj-tile-header">
+                <span>${o.label}</span>
+                <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Saved</span>
+              </div>
+              <div class="obj-text">${o.text}</div>
+              
+              <div class="entry-row">
+                <div>
+                  <label style="margin-top:0;">Status</label>
+                  <select id="status_${student.id}_${o.key}" style="margin:0;">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Absent">Absent</option>
+                    <option value="No Opportunity">No Opportunity</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="margin-top:0;">Prompts</label>
+                  <input type="number" id="prompts_${student.id}_${o.key}" placeholder="0" style="margin:0;" min="0">
+                </div>
+              </div>
+
+              <input type="text" id="notes_${student.id}_${o.key}" placeholder="Anecdotal notes..." style="margin-bottom:8px;">
+
+              <div style="text-align:right;">
+                <button class="sm" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}')">Log Entry</button>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      if (tilesHTML === '') {
+        tilesHTML = `<p style="color:#94a3b8; font-size:12px;">No objectives configured for this student.</p>`;
+      }
+
+      return `
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+            <div>
+              <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
+              <small style="color:#64748b;">CM: ${student.case_manager_email}</small>
+            </div>
+            <div>
+              <button class="outline sm" onclick="openStudentModal('${student.id}')">Graphs</button>
+              <button class="danger sm" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">X</button>
+            </div>
+          </div>
+          <div>
+            ${tilesHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    async function quickSaveData(studentId, objKey) {
+      const statusVal = document.getElementById(`status_${studentId}_${objKey}`)?.value || 'Yes';
+      const promptsVal = parseInt(document.getElementById(`prompts_${studentId}_${objKey}`)?.value) || 0;
+      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+      
+      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+      const tile = document.getElementById(`tile_${studentId}_${objKey}`);
+      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+
+      const { error } = await supabaseClient.from('progress_data').insert([{
+        student_id: studentId,
+        objective_key: objKey,
+        status: statusVal,
+        prompts: promptsVal,
+        notes: notesVal
+      }]);
+
+      if (!error) {
+        if (tile) tile.classList.add('saved-success');
+        if (badge) badge.style.display = 'inline-block';
+        if (btn) {
+          btn.innerText = '✓ Saved';
+          btn.style.backgroundColor = 'var(--success)';
+        }
+      } else {
+        alert('Error saving data entry.');
+      }
     }
 
     function buildTeacherDropdownOptions(currentAssignedEmail) {
@@ -260,9 +410,9 @@
 
             <!-- TAB 1: DATA & GRAPHS -->
             <div id="data-tab" class="tab-content active">
-              <h3>Progress Tracker</h3>
+              <h3>Progress Tracker Graph</h3>
               <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px;">
-                <label>Select Objective to Track/View:</label>
+                <label>Select Objective to Inspect Chart:</label>
                 <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
                   <option value="obj_1_1">Independent Living - Objective 1.1</option>
                   <option value="obj_1_2">Independent Living - Objective 1.2</option>
@@ -272,14 +422,6 @@
                   <option value="obj_3_2">Employment - Objective 3.2</option>
                   ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
                 </select>
-                
-                <div style="display:flex; gap:8px; align-items:flex-end;">
-                  <div style="flex:1;">
-                    <label>Log Score / Percentage (%):</label>
-                    <input type="number" id="data-score-input" placeholder="e.g. 85">
-                  </div>
-                  <button onclick="logProgressData('${student.id}')">Log Data Point</button>
-                </div>
               </div>
               <canvas id="progressChart" style="max-height: 260px;"></canvas>
             </div>
@@ -318,7 +460,6 @@
                 <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
               </div>
 
-              <!-- OPTIONAL GOAL 4 CONTAINER -->
               <div id="goal4-container" style="display: ${hasGoal4 ? 'block' : 'none'};">
                 <div class="goal-box" style="border-left-color: #059669;">
                   <h4 style="margin:0 0 8px 0; color:#065f46;">Goal Area 4 (Additional Goal)</h4>
@@ -415,6 +556,7 @@
       if (!error) {
         alert('Goals & Objectives saved successfully!');
         closeModal();
+        if (activePeriod) switchView(activePeriod);
       } else {
         alert('Error saving goals.');
       }
@@ -434,28 +576,9 @@
         alert('Teacher assignments updated!');
         closeModal();
         if (activePeriod) switchView(activePeriod);
+        else loadCaseload();
       } else {
         alert('Error saving teacher assignments.');
-      }
-    }
-
-    async function logProgressData(studentId) {
-      const objKey = document.getElementById('data-obj-select').value;
-      const scoreVal = parseFloat(document.getElementById('data-score-input').value);
-
-      if (isNaN(scoreVal)) return alert('Please enter a valid number.');
-
-      const { error } = await supabaseClient.from('progress_data').insert([{
-        student_id: studentId,
-        objective_key: objKey,
-        score: scoreVal
-      }]);
-
-      if (!error) {
-        document.getElementById('data-score-input').value = '';
-        loadProgressChart(studentId);
-      } else {
-        alert('Error logging data point.');
       }
     }
 
@@ -471,7 +594,7 @@
       if (error || !data) return;
 
       const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const scores = data.map(d => d.score);
+      const scores = data.map(d => d.status === 'Yes' ? 100 : 0);
 
       const ctx = document.getElementById('progressChart')?.getContext('2d');
       if (!ctx) return;
@@ -483,7 +606,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: `Progress Score (%)`,
+            label: `Yes / Mastered Trend`,
             data: scores,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
@@ -501,13 +624,19 @@
     function openAddToPeriodModal(periodNum) {
       const colName = `teacher_p${periodNum}`;
       const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
+      
+      if (unassigned.length === 0) {
+        alert('All available students are already in this class hour!');
+        return;
+      }
+
       let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
 
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
             <h3>Add Existing Student to ${periodNum}th Hour</h3>
-            <label>Select Student from Existing Caseloads:</label>
+            <label>Select Student from System:</label>
             <select id="select-student-to-add">${options}</select>
             <button onclick="addStudentToPeriod(${periodNum})">Add to Class</button>
             <button class="secondary" onclick="closeModal()">Cancel</button>
