@@ -15,18 +15,23 @@
       --text: #0f172a;
       --border: #cbd5e1;
       --danger: #dc2626;
+      --active-btn: #0f172a;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 960px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
-    button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    
+    button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     button.danger { background: var(--danger); }
     
+    /* NAV BUTTON ACTIVE HIGHLIGHT STATE */
+    .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
     .login-box { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; border: 1px solid var(--border); }
 
     .modal-backdrop {
@@ -42,10 +47,10 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 12px; margin-bottom: 16px; border-radius: 4px; }
+    .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
     label { font-weight: 600; font-size: 13px; display: block; margin-top: 8px; color: #334155; }
     input, textarea, select { width: 100%; padding: 8px; margin: 4px 0 12px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
-    textarea { min-height: 60px; }
+    textarea { min-height: 55px; }
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
@@ -64,6 +69,8 @@
     let currentUserEmail = '';
     let currentUserId = '';
     let allStudents = [];
+    let allStaffEmails = [];
+    let activeNav = 'caseload';
     let activePeriod = null;
     let chartInstance = null;
 
@@ -77,7 +84,12 @@
       
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
+
+      // Auto-register logged in email to staff registry
+      await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
+
       renderDashboard();
+      await fetchStaffMembers();
       await fetchAllStudents();
       loadCaseload();
     }
@@ -123,16 +135,35 @@
         </header>
 
         <div class="grid">
-          <button class="nav-btn" onclick="switchView(1)">1st Hour</button>
-          <button class="nav-btn" onclick="switchView(2)">2nd Hour</button>
-          <button class="nav-btn" onclick="switchView(3)">3rd Hour</button>
-          <button class="nav-btn" onclick="switchView(4)">4th Hour</button>
-          <button class="nav-btn" onclick="switchView(5)">5th Hour</button>
-          <button class="nav-btn secondary" onclick="loadCaseload()">My Caseload</button>
+          <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
+          <button id="nav-p2" class="nav-btn outline" onclick="switchView(2)">2nd Hour</button>
+          <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
+          <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
+          <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
+          <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
         </div>
 
         <div id="main-view"></div>
       `;
+    }
+
+    function updateNavHighlights(selectedNav) {
+      activeNav = selectedNav;
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
+      if (selectedNav === 'caseload') {
+        document.getElementById('nav-caseload')?.classList.add('active-nav');
+      } else {
+        document.getElementById(`nav-p${selectedNav}`)?.classList.add('active-nav');
+      }
+    }
+
+    async function fetchStaffMembers() {
+      const { data } = await supabaseClient.from('staff_members').select('email');
+      if (data && data.length > 0) {
+        allStaffEmails = data.map(s => s.email);
+      } else {
+        allStaffEmails = [currentUserEmail];
+      }
     }
 
     async function fetchAllStudents() {
@@ -141,6 +172,7 @@
     }
 
     async function loadCaseload() {
+      updateNavHighlights('caseload');
       activePeriod = null;
       await fetchAllStudents();
       const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
@@ -171,6 +203,7 @@
     }
 
     async function switchView(periodNum) {
+      updateNavHighlights(periodNum);
       activePeriod = periodNum;
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
@@ -184,7 +217,7 @@
       `;
 
       if (periodRoster.length === 0) {
-        html += '<p>No students rostered in this class period.</p>';
+        html += '<p>No students assigned to your roster for this hour.</p>';
       } else {
         periodRoster.forEach(student => {
           html += `
@@ -200,9 +233,20 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
+    function buildTeacherDropdownOptions(currentAssignedEmail) {
+      let options = `<option value="">-- Unassigned --</option>`;
+      allStaffEmails.forEach(email => {
+        const selected = (email === currentAssignedEmail) ? 'selected' : '';
+        options += `<option value="${email}" ${selected}>${email}</option>`;
+      });
+      return options;
+    }
+
     function openStudentModal(studentId) {
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
+
+      const hasGoal4 = student.goal_4 || student.obj_4_1 || student.obj_4_2 || student.goal_4_domain;
 
       const modalHTML = `
         <div class="modal-backdrop">
@@ -210,27 +254,29 @@
             <h2>${student.first_name} ${student.last_name}</h2>
             <div class="tab-buttons">
               <button class="tab-btn active" onclick="switchTab('data-tab', this); loadProgressChart('${student.id}');">Data & Graphs</button>
-              <button class="tab-btn" onclick="switchTab('goals-tab', this)">3 Goals & Objectives</button>
+              <button class="tab-btn" onclick="switchTab('goals-tab', this)">Goals & Objectives</button>
               <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
             </div>
 
+            <!-- TAB 1: DATA & GRAPHS -->
             <div id="data-tab" class="tab-content active">
               <h3>Progress Tracker</h3>
               <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px;">
                 <label>Select Objective to Track/View:</label>
                 <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
-                  <option value="obj_1_1">Goal 1 - Objective 1</option>
-                  <option value="obj_1_2">Goal 1 - Objective 2</option>
-                  <option value="obj_2_1">Goal 2 - Objective 1</option>
-                  <option value="obj_2_2">Goal 2 - Objective 2</option>
-                  <option value="obj_3_1">Goal 3 - Objective 1</option>
-                  <option value="obj_3_2">Goal 3 - Objective 2</option>
+                  <option value="obj_1_1">Independent Living - Objective 1.1</option>
+                  <option value="obj_1_2">Independent Living - Objective 1.2</option>
+                  <option value="obj_2_1">Post-Secondary - Objective 2.1</option>
+                  <option value="obj_2_2">Post-Secondary - Objective 2.2</option>
+                  <option value="obj_3_1">Employment - Objective 3.1</option>
+                  <option value="obj_3_2">Employment - Objective 3.2</option>
+                  ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
                 </select>
                 
                 <div style="display:flex; gap:8px; align-items:flex-end;">
                   <div style="flex:1;">
                     <label>Log Score / Percentage (%):</label>
-                    <input type="number" id="data-score-input" placeholder="e.g. 80">
+                    <input type="number" id="data-score-input" placeholder="e.g. 85">
                   </div>
                   <button onclick="logProgressData('${student.id}')">Log Data Point</button>
                 </div>
@@ -238,11 +284,12 @@
               <canvas id="progressChart" style="max-height: 260px;"></canvas>
             </div>
 
+            <!-- TAB 2: STANDARDIZED GOALS & OBJECTIVES -->
             <div id="goals-tab" class="tab-content">
               <h3>IEP Goals & Objectives</h3>
               
               <div class="goal-box">
-                <h4>Goal Area 1</h4>
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 1: Independent Living</h4>
                 <label>Goal Description:</label>
                 <textarea id="g1">${student.goal_1 || ''}</textarea>
                 <label>Objective 1.1:</label>
@@ -252,7 +299,7 @@
               </div>
 
               <div class="goal-box">
-                <h4>Goal Area 2</h4>
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 2: Post-Secondary Education / Training</h4>
                 <label>Goal Description:</label>
                 <textarea id="g2">${student.goal_2 || ''}</textarea>
                 <label>Objective 2.1:</label>
@@ -262,7 +309,7 @@
               </div>
 
               <div class="goal-box">
-                <h4>Goal Area 3</h4>
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 3: Employment</h4>
                 <label>Goal Description:</label>
                 <textarea id="g3">${student.goal_3 || ''}</textarea>
                 <label>Objective 3.1:</label>
@@ -271,21 +318,49 @@
                 <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
               </div>
 
-              <button onclick="saveAllGoals('${student.id}')">Save All 3 Goals & Objectives</button>
+              <!-- OPTIONAL GOAL 4 CONTAINER -->
+              <div id="goal4-container" style="display: ${hasGoal4 ? 'block' : 'none'};">
+                <div class="goal-box" style="border-left-color: #059669;">
+                  <h4 style="margin:0 0 8px 0; color:#065f46;">Goal Area 4 (Additional Goal)</h4>
+                  <label>Select Target Goal Area:</label>
+                  <select id="g4_domain">
+                    <option value="Independent Living" ${student.goal_4_domain === 'Independent Living' ? 'selected' : ''}>Independent Living</option>
+                    <option value="Post-Secondary Education/Training" ${student.goal_4_domain === 'Post-Secondary Education/Training' ? 'selected' : ''}>Post-Secondary Education / Training</option>
+                    <option value="Employment" ${student.goal_4_domain === 'Employment' ? 'selected' : ''}>Employment</option>
+                  </select>
+                  <label>Goal Description:</label>
+                  <textarea id="g4">${student.goal_4 || ''}</textarea>
+                  <label>Objective 4.1:</label>
+                  <input type="text" id="g4_o1" value="${student.obj_4_1 || ''}">
+                  <label>Objective 4.2:</label>
+                  <input type="text" id="g4_o2" value="${student.obj_4_2 || ''}">
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                <button type="button" class="outline" id="add-g4-btn" style="display:${hasGoal4 ? 'none' : 'block'};" onclick="enableGoal4()">+ Add 4th Goal</button>
+                <button onclick="saveAllGoals('${student.id}')">Save Goals & Objectives</button>
+              </div>
             </div>
 
+            <!-- TAB 3: DROPDOWN TEACHER ASSIGNMENTS -->
             <div id="teachers-tab" class="tab-content">
               <h3>Class Period Teacher Assignments</h3>
-              <label>1st Hour Teacher Email:</label>
-              <input type="email" id="tp1" value="${student.teacher_p1 || ''}">
-              <label>2nd Hour Teacher Email:</label>
-              <input type="email" id="tp2" value="${student.teacher_p2 || ''}">
-              <label>3rd Hour Teacher Email:</label>
-              <input type="email" id="tp3" value="${student.teacher_p3 || ''}">
-              <label>4th Hour Teacher Email:</label>
-              <input type="email" id="tp4" value="${student.teacher_p4 || ''}">
-              <label>5th Hour Teacher Email:</label>
-              <input type="email" id="tp5" value="${student.teacher_p5 || ''}">
+              <label>1st Hour Teacher:</label>
+              <select id="tp1">${buildTeacherDropdownOptions(student.teacher_p1)}</select>
+              
+              <label>2nd Hour Teacher:</label>
+              <select id="tp2">${buildTeacherDropdownOptions(student.teacher_p2)}</select>
+              
+              <label>3rd Hour Teacher:</label>
+              <select id="tp3">${buildTeacherDropdownOptions(student.teacher_p3)}</select>
+              
+              <label>4th Hour Teacher:</label>
+              <select id="tp4">${buildTeacherDropdownOptions(student.teacher_p4)}</select>
+              
+              <label>5th Hour Teacher:</label>
+              <select id="tp5">${buildTeacherDropdownOptions(student.teacher_p5)}</select>
+              
               <button onclick="saveTeachers('${student.id}')">Save Teacher Assignments</button>
             </div>
 
@@ -297,6 +372,11 @@
       `;
       document.getElementById('modal-root').innerHTML = modalHTML;
       setTimeout(() => loadProgressChart(studentId), 100);
+    }
+
+    function enableGoal4() {
+      document.getElementById('goal4-container').style.display = 'block';
+      document.getElementById('add-g4-btn').style.display = 'none';
     }
 
     function switchTab(tabId, btn) {
@@ -312,6 +392,9 @@
     }
 
     async function saveAllGoals(studentId) {
+      const g4Container = document.getElementById('goal4-container');
+      const isG4Visible = g4Container && g4Container.style.display !== 'none';
+
       const updates = {
         goal_1: document.getElementById('g1').value,
         obj_1_1: document.getElementById('g1_o1').value,
@@ -322,11 +405,15 @@
         goal_3: document.getElementById('g3').value,
         obj_3_1: document.getElementById('g3_o1').value,
         obj_3_2: document.getElementById('g3_o2').value,
+        goal_4: isG4Visible ? document.getElementById('g4').value : '',
+        obj_4_1: isG4Visible ? document.getElementById('g4_o1').value : '',
+        obj_4_2: isG4Visible ? document.getElementById('g4_o2').value : '',
+        goal_4_domain: isG4Visible ? document.getElementById('g4_domain').value : ''
       };
 
       const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
-        alert('All 3 Goals & Objectives saved successfully!');
+        alert('Goals & Objectives saved successfully!');
         closeModal();
       } else {
         alert('Error saving goals.');
@@ -335,18 +422,20 @@
 
     async function saveTeachers(studentId) {
       const updates = {
-        teacher_p1: document.getElementById('tp1').value,
-        teacher_p2: document.getElementById('tp2').value,
-        teacher_p3: document.getElementById('tp3').value,
-        teacher_p4: document.getElementById('tp4').value,
-        teacher_p5: document.getElementById('tp5').value,
+        teacher_p1: document.getElementById('tp1').value || null,
+        teacher_p2: document.getElementById('tp2').value || null,
+        teacher_p3: document.getElementById('tp3').value || null,
+        teacher_p4: document.getElementById('tp4').value || null,
+        teacher_p5: document.getElementById('tp5').value || null,
       };
 
       const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
-        alert('Teachers assigned successfully!');
+        alert('Teacher assignments updated!');
         closeModal();
         if (activePeriod) switchView(activePeriod);
+      } else {
+        alert('Error saving teacher assignments.');
       }
     }
 
@@ -473,7 +562,12 @@
         first_name: fn,
         last_name: ln,
         case_manager_email: currentUserEmail,
-        case_manager_id: currentUserId
+        case_manager_id: currentUserId,
+        teacher_p1: null,
+        teacher_p2: null,
+        teacher_p3: null,
+        teacher_p4: null,
+        teacher_p5: null
       }]);
 
       if (!error) {
