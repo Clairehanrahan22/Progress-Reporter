@@ -17,371 +17,331 @@
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 900px; margin: 0 auto; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
     button { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    input, select, textarea { width: 100%; padding: 8px 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
-    .hidden { display: none !important; }
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-    .obj-card { background: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
-    .opt-btn { background: #ffffff; color: #334155; border: 1px solid var(--border); padding: 6px 12px; margin-right: 4px; border-radius: 4px; }
-    .opt-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-    .auth-toggle { text-align: center; margin-top: 15px; color: var(--primary); cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
+    button.danger { background: #dc2626; }
+    .nav-btn.active { background: #1e40af; font-weight: bold; }
+    
+    /* MODAL STYLES */
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .modal-content {
+      background: #fff; padding: 24px; border-radius: 12px; max-width: 650px; width: 90%; max-height: 85vh; overflow-y: auto;
+    }
+    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; padding-bottom: 8px; }
+    .tab-btn { background: transparent; color: var(--text); border: none; padding: 8px 12px; }
+    .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    input, textarea, select { width: 100%; padding: 8px; margin: 6px 0 16px 0; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    textarea { min-height: 80px; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
-
-<div class="container">
-  <!-- SIGN IN FORM -->
-  <div id="login-box" class="card" style="max-width: 400px; margin: 40px auto;">
-    <h2 style="margin-top:0;">Progress Reporter - Sign In</h2>
-    <form onsubmit="handleSignIn(event)">
-      <label>School Email (@ahschools.us)</label>
-      <input type="email" id="login-email" required placeholder="teacher@ahschools.us">
-      
-      <label>Password</label>
-      <input type="password" id="login-password" required minlength="6">
-      
-      <button type="submit" style="width: 100%;">Sign In</button>
-    </form>
-    <div class="auth-toggle" onclick="showForm('signup')">Need an account? Sign Up</div>
-  </div>
-
-  <!-- SIGN UP FORM -->
-  <div id="signup-box" class="card hidden" style="max-width: 400px; margin: 40px auto;">
-    <h2 style="margin-top:0;">Progress Reporter - Sign Up</h2>
-    <form onsubmit="handleSignUp(event)">
-      <label>Full Name</label>
-      <input type="text" id="signup-name" required placeholder="First & Last Name">
-
-      <label>School Email (@ahschools.us)</label>
-      <input type="email" id="signup-email" required placeholder="teacher@ahschools.us">
-      
-      <label>Password (6+ characters)</label>
-      <input type="password" id="signup-password" required minlength="6">
-      
-      <label>Role</label>
-      <select id="signup-role">
-        <option value="Teacher">Teacher / Case Manager</option>
-        <option value="Paraprofessional">Paraprofessional</option>
-      </select>
-      
-      <button type="submit" style="width: 100%;">Create Account</button>
-    </form>
-    <div class="auth-toggle" onclick="showForm('login')">Already have an account? Sign In</div>
-  </div>
-
-  <!-- MAIN APP CONTAINER -->
-  <div id="app-section" class="hidden">
+  <div class="container">
     <header>
       <div>
-        <h1 style="margin: 0; font-size: 1.5rem;">IEP Progress Reporter</h1>
-        <span id="user-display" style="font-size: 0.85rem; color: #64748b;"></span>
+        <h1 style="margin:0;">IEP Progress Reporter</h1>
+        <small id="user-display">Loading session...</small>
       </div>
       <div>
-        <button class="outline" onclick="openScheduleModal()">My Schedule</button>
-        <button class="outline" id="manage-roster-btn" onclick="toggleRosterView()">Manage Roster</button>
-        <button class="secondary" onclick="handleSignOut()">Sign Out</button>
+        <button class="outline" onclick="loadCaseload(currentUserEmail)">My Caseload</button>
+        <button class="danger" onclick="supabase.auth.signOut().then(() => location.reload())">Sign Out</button>
       </div>
     </header>
 
+    <!-- PERIOD NAVIGATION -->
     <div class="grid">
-      <button onclick="loadPeriodView(1)">1st Hour</button>
-      <button onclick="loadPeriodView(2)">2nd Hour</button>
-      <button onclick="loadPeriodView(3)">3rd Hour</button>
-      <button onclick="loadPeriodView(4)">4th Hour</button>
-      <button onclick="loadPeriodView(5)">5th Hour</button>
-      <button class="secondary" onclick="loadCaseloadView()">My Caseload</button>
+      <button class="nav-btn" onclick="switchView('p1', 1)">1st Hour</button>
+      <button class="nav-btn" onclick="switchView('p2', 2)">2nd Hour</button>
+      <button class="nav-btn" onclick="switchView('p3', 3)">3rd Hour</button>
+      <button class="nav-btn" onclick="switchView('p4', 4)">4th Hour</button>
+      <button class="nav-btn" onclick="switchView('p5', 5)">5th Hour</button>
+      <button class="nav-btn secondary" onclick="loadCaseload(currentUserEmail)">My Caseload</button>
     </div>
 
-    <div id="tracking-view">
-      <h2 id="view-title">Select an Hour or Caseload to Begin</h2>
-      <div id="student-cards"></div>
-    </div>
-
-    <div id="roster-view" class="card hidden">
-      <h2>Add New Student</h2>
-      <form onsubmit="handleAddStudent(event)">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div><label>First Name</label><input type="text" id="stu-fname" required></div>
-          <div><label>Last Name</label><input type="text" id="stu-lname" required></div>
-        </div>
-        <label>Case Manager Email</label>
-        <input type="email" id="stu-cm" placeholder="cm@ahschools.us" required>
-
-        <h3>Period Teacher Assignments</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-          <div><label>1st Hour Teacher</label><input type="email" id="stu-p1" placeholder="teacher@ahschools.us"></div>
-          <div><label>2nd Hour Teacher</label><input type="email" id="stu-p2" placeholder="teacher@ahschools.us"></div>
-          <div><label>3rd Hour Teacher</label><input type="email" id="stu-p3" placeholder="teacher@ahschools.us"></div>
-          <div><label>4th Hour Teacher</label><input type="email" id="stu-p4" placeholder="teacher@ahschools.us"></div>
-          <div><label>5th Hour Teacher</label><input type="email" id="stu-p5" placeholder="teacher@ahschools.us"></div>
-        </div>
-
-        <h3>Goals & Objectives</h3>
-        <p><strong>Independent Living</strong></p>
-        <input type="text" id="il-goal" placeholder="Goal Description">
-        <input type="text" id="il-obj1" placeholder="Objective 1">
-        <input type="text" id="il-obj2" placeholder="Objective 2">
-
-        <p><strong>Employment</strong></p>
-        <input type="text" id="emp-goal" placeholder="Goal Description">
-        <input type="text" id="emp-obj1" placeholder="Objective 1">
-        <input type="text" id="emp-obj2" placeholder="Objective 2">
-
-        <p><strong>Post-Secondary</strong></p>
-        <input type="text" id="ps-goal" placeholder="Goal Description">
-        <input type="text" id="ps-obj1" placeholder="Objective 1">
-        <input type="text" id="ps-obj2" placeholder="Objective 2">
-
-        <button type="submit" style="margin-top: 15px;">Save Student to Roster</button>
-      </form>
-    </div>
+    <!-- MAIN VIEW CONTAINER -->
+    <div id="main-view"></div>
   </div>
-</div>
 
-<!-- SCHEDULE MODAL -->
-<div id="schedule-modal" class="modal-overlay hidden">
-  <div class="card" style="width: 400px; max-width: 90%;">
-    <h3>My Period Preferences</h3>
-    <p style="font-size:0.85rem; color:#64748b;">Set assigned teachers for each period.</p>
-    <label>1st Hour Teacher Email</label><input type="email" id="pref-p1">
-    <label>2nd Hour Teacher Email</label><input type="email" id="pref-p2">
-    <label>3rd Hour Teacher Email</label><input type="email" id="pref-p3">
-    <label>4th Hour Teacher Email</label><input type="email" id="pref-p4">
-    <label>5th Hour Teacher Email</label><input type="email" id="pref-p5">
-    <div style="display:flex; gap:10px; margin-top:10px;">
-      <button onclick="saveScheduleModal()" style="flex:1;">Save Schedule</button>
-      <button onclick="closeScheduleModal()" class="secondary">Cancel</button>
-    </div>
-  </div>
-</div>
+  <!-- MODAL CONTAINER -->
+  <div id="modal-root"></div>
 
-<script>
-  const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
-  const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <script>
+    // INITIALIZE SUPABASE
+    const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL.supabase.co'; // Preserved from project config
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentUser = null;
-  let mySchedule = { p1: '', p2: '', p3: '', p4: '', p5: '' };
+    let currentUserEmail = '';
+    let currentUserId = '';
+    let allStudents = [];
+    let currentPeriod = null;
 
-  function showForm(formType) {
-    if (formType === 'signup') {
-      document.getElementById('login-box').classList.add('hidden');
-      document.getElementById('signup-box').classList.remove('hidden');
-    } else {
-      document.getElementById('signup-box').classList.add('hidden');
-      document.getElementById('login-box').classList.remove('hidden');
-    }
-  }
-
-  async function handleSignIn(e) {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-
-    if (!email.toLowerCase().endsWith('@ahschools.us')) {
-      alert('Please use your official @ahschools.us email address.');
-      return;
-    }
-
-    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert('Sign In Failed: ' + error.message);
-    } else {
-      initializeApp();
-    }
-  }
-
-  async function handleSignUp(e) {
-    e.preventDefault();
-    const name = document.getElementById('signup-name').value.trim();
-    const email = document.getElementById('signup-email').value.trim();
-    const password = document.getElementById('signup-password').value;
-    const role = document.getElementById('signup-role').value;
-
-    if (!email.toLowerCase().endsWith('@ahschools.us')) {
-      alert('Please use your official @ahschools.us email address.');
-      return;
-    }
-
-    const { data, error } = await sbClient.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name, role: role } }
-    });
-
-    if (error) {
-      alert('Sign Up Failed: ' + error.message);
-    } else {
-      alert('Account created successfully!');
-      initializeApp();
-    }
-  }
-
-  async function initializeApp() {
-    const { data: { user } } = await sbClient.auth.getUser();
-    if (user) {
-      currentUser = user;
-      document.getElementById('login-box').classList.add('hidden');
-      document.getElementById('signup-box').classList.add('hidden');
-      document.getElementById('app-section').classList.remove('hidden');
-      document.getElementById('user-display').innerText = `${user.user_metadata.full_name || user.email} (${user.user_metadata.role || 'Staff'})`;
+    async function initApp() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        document.getElementById('main-view').innerHTML = '<p>Please log in to access the reporter.</p>';
+        return;
+      }
+      currentUserEmail = session.user.email;
+      currentUserId = session.user.id;
+      document.getElementById('user-display').innerText = `${currentUserEmail} (Staff)`;
       
-      const savedPref = localStorage.getItem('my_schedule_' + user.id);
-      if (savedPref) {
-        mySchedule = JSON.parse(savedPref);
-        document.getElementById('pref-p1').value = mySchedule.p1 || '';
-        document.getElementById('pref-p2').value = mySchedule.p2 || '';
-        document.getElementById('pref-p3').value = mySchedule.p3 || '';
-        document.getElementById('pref-p4').value = mySchedule.p4 || '';
-        document.getElementById('pref-p5').value = mySchedule.p5 || '';
+      fetchAllStudents();
+      loadCaseload(currentUserEmail);
+    }
+
+    async function fetchAllStudents() {
+      const { data, error } = await supabase.from('students').select('*');
+      if (!error && data) {
+        allStudents = data;
       }
     }
-  }
 
-  function openScheduleModal() { document.getElementById('schedule-modal').classList.remove('hidden'); }
-  function closeScheduleModal() { document.getElementById('schedule-modal').classList.add('hidden'); }
-  
-  function saveScheduleModal() {
-    mySchedule = {
-      p1: document.getElementById('pref-p1').value.trim(),
-      p2: document.getElementById('pref-p2').value.trim(),
-      p3: document.getElementById('pref-p3').value.trim(),
-      p4: document.getElementById('pref-p4').value.trim(),
-      p5: document.getElementById('pref-p5').value.trim()
-    };
-    if (currentUser) localStorage.setItem('my_schedule_' + currentUser.id, JSON.stringify(mySchedule));
-    closeScheduleModal();
-    alert('Schedule saved successfully!');
-  }
+    // --- CASELOAD VIEW & NEW STUDENT CREATION ---
+    async function loadCaseload(email) {
+      currentPeriod = null;
+      await fetchAllStudents();
+      const myCaseload = allStudents.filter(s => s.case_manager_email === email);
+      
+      let html = `
+        <div class="flex-between" style="margin-bottom: 16px;">
+          <h2>My Caseload (${email})</h2>
+          <button onclick="openCreateStudentModal()">+ Add New Student to System</button>
+        </div>
+      `;
 
-  async function handleAddStudent(e) {
-    e.preventDefault();
-    const studentData = {
-      first_name: document.getElementById('stu-fname').value,
-      last_name: document.getElementById('stu-lname').value,
-      case_manager_email: document.getElementById('stu-cm').value,
-      teacher_p1: document.getElementById('stu-p1').value,
-      teacher_p2: document.getElementById('stu-p2').value,
-      teacher_p3: document.getElementById('stu-p3').value,
-      teacher_p4: document.getElementById('stu-p4').value,
-      teacher_p5: document.getElementById('stu-p5').value,
-      il_goal: document.getElementById('il-goal').value,
-      il_obj1: document.getElementById('il-obj1').value,
-      il_obj2: document.getElementById('il-obj2').value,
-      emp_goal: document.getElementById('emp-goal').value,
-      emp_obj1: document.getElementById('emp-obj1').value,
-      emp_obj2: document.getElementById('emp-obj2').value,
-      ps_goal: document.getElementById('ps-goal').value,
-      ps_obj1: document.getElementById('ps-obj1').value,
-      ps_obj2: document.getElementById('ps-obj2').value
-    };
-
-    const { error } = await sbClient.from('students').insert([studentData]);
-    if (error) alert('Error saving student: ' + error.message);
-    else { alert('Student added successfully!'); toggleRosterView(); }
-  }
-
-  async function loadPeriodView(periodNum) {
-    const assignedTeacher = mySchedule['p' + periodNum] || currentUser.email;
-    document.getElementById('view-title').innerText = `Period ${periodNum} Roster (${assignedTeacher})`;
-    
-    const { data: students, error } = await sbClient
-      .from('students')
-      .select('*')
-      .eq(`teacher_p${periodNum}`, assignedTeacher);
-
-    if (error) alert('Error loading roster: ' + error.message);
-    else renderStudentCards(students || []);
-  }
-
-  async function loadCaseloadView() {
-    document.getElementById('view-title').innerText = `My Caseload (${currentUser.email})`;
-    const { data: students, error } = await sbClient
-      .from('students')
-      .select('*')
-      .eq('case_manager_email', currentUser.email);
-
-    if (error) alert('Error loading caseload: ' + error.message);
-    else renderStudentCards(students || []);
-  }
-
-  function renderStudentCards(students) {
-    const container = document.getElementById('student-cards');
-    if (students.length === 0) {
-      container.innerHTML = '<p style="color:#64748b;">No students found for this view.</p>';
-      return;
+      if (myCaseload.length === 0) {
+        html += '<p>No students found for this view.</p>';
+      } else {
+        myCaseload.forEach(student => {
+          html += `
+            <div class="card flex-between" style="cursor:pointer;" onclick="openStudentModal('${student.id}')">
+              <h3>${student.first_name} ${student.last_name}</h3>
+              <button class="outline" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Manage IEP / Schedule</button>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('main-view').innerHTML = html;
     }
 
-    container.innerHTML = students.map(s => `
-      <div class="card">
-        <h3>${s.first_name} ${s.last_name}</h3>
-        ${renderObjectiveSection(s.id, 'Independent Living', s.il_goal, s.il_obj1, s.il_obj2)}
-        ${renderObjectiveSection(s.id, 'Employment', s.emp_goal, s.emp_obj1, s.emp_obj2)}
-        ${renderObjectiveSection(s.id, 'Post-Secondary', s.ps_goal, s.ps_obj1, s.ps_obj2)}
-      </div>
-    `).join('');
-  }
+    // --- PERIOD ROSTER VIEWS ---
+    async function switchView(periodKey, periodNum) {
+      currentPeriod = periodNum;
+      await fetchAllStudents();
+      const colName = `teacher_p${periodNum}`;
+      const periodRoster = allStudents.filter(s => s[colName] === currentUserEmail);
 
-  function renderObjectiveSection(studentId, title, goal, obj1, obj2) {
-    if (!goal) return '';
-    return `
-      <div style="margin-top:10px;">
-        <strong>${title}:</strong> ${goal}
-        ${obj1 ? renderObjectiveCard(studentId, title + ' Obj 1', obj1) : ''}
-        ${obj2 ? renderObjectiveCard(studentId, title + ' Obj 2', obj2) : ''}
-      </div>
-    `;
-  }
-
-  function renderObjectiveCard(studentId, objTitle, objText) {
-    return `
-      <div class="obj-card">
-        <div><strong>${objTitle}:</strong> ${objText}</div>
-        <div style="margin-top:8px;">
-          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'YES')">YES</button>
-          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'NO')">NO</button>
-          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'Absent')">Absent</button>
-          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'No Opp')">No Opp</button>
-          <select style="width:auto; display:inline-block; margin:0 4px;" id="prompts-${studentId}-${objTitle}">
-            <option value="0 Prompts">0 Prompts</option>
-            <option value="1 Prompt">1 Prompt</option>
-            <option value="2 Prompts">2 Prompts</option>
-            <option value="3+ Prompts">3+ Prompts</option>
-          </select>
+      let html = `
+        <div class="flex-between" style="margin-bottom: 16px;">
+          <h2>${periodNum}th Hour Roster</h2>
+          <button onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student to Roster</button>
         </div>
-      </div>
-    `;
-  }
+      `;
 
-  async function logData(studentId, objective, status) {
-    const promptCount = document.getElementById(`prompts-${studentId}-${objective}`).value;
-    const logEntry = {
-      student_id: studentId,
-      objective_name: objective,
-      status: status,
-      prompts: promptCount,
-      logged_by: currentUser.email,
-      created_at: new Date().toISOString()
-    };
+      if (periodRoster.length === 0) {
+        html += '<p>No students in this class period roster.</p>';
+      } else {
+        periodRoster.forEach(student => {
+          html += `
+            <div class="card flex-between">
+              <div onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
+                <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
+              </div>
+              <button class="danger" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">Remove from Class</button>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('main-view').innerHTML = html;
+    }
 
-    const { error } = await sbClient.from('logs').insert([logEntry]);
-    if (error) alert('Error logging data: ' + error.message);
-    else alert(`Saved: ${status} (${promptCount})`);
-  }
+    // --- STUDENT PROFILE MODAL WITH TABS ---
+    function openStudentModal(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
 
-  async function handleSignOut() { await sbClient.auth.signOut(); location.reload(); }
-  function toggleRosterView() {
-    document.getElementById('roster-view').classList.toggle('hidden');
-    document.getElementById('tracking-view').classList.toggle('hidden');
-  }
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h2>${student.first_name} ${student.last_name}</h2>
+            <div class="tab-buttons">
+              <button class="tab-btn active" onclick="switchTab('data-tab', this)">Data & Graphs</button>
+              <button class="tab-btn" onclick="switchTab('goals-tab', this)">Goals & Objectives</button>
+              <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
+            </div>
 
-  window.onload = initializeApp;
-</script>
+            <!-- TAB 1: DATA & GRAPHS -->
+            <div id="data-tab" class="tab-content active">
+              <h3>Progress Tracker & Visuals</h3>
+              <p>Graphs and entry logs for IEP objective tracking.</p>
+            </div>
+
+            <!-- TAB 2: GOALS & OBJECTIVES -->
+            <div id="goals-tab" class="tab-content">
+              <h3>Goals & Objectives</h3>
+              <label>Goals Description:</label>
+              <textarea id="modal-goals">${student.goals || ''}</textarea>
+              <label>Objectives:</label>
+              <textarea id="modal-objectives">${student.objectives || ''}</textarea>
+              <button onclick="saveGoals('${student.id}')">Save IEP Data</button>
+            </div>
+
+            <!-- TAB 3: ASSIGN TEACHERS -->
+            <div id="teachers-tab" class="tab-content">
+              <h3>Class Period Teacher Assignments</h3>
+              <label>1st Hour Teacher Email:</label>
+              <input type="email" id="tp1" value="${student.teacher_p1 || ''}">
+              <label>2nd Hour Teacher Email:</label>
+              <input type="email" id="tp2" value="${student.teacher_p2 || ''}">
+              <label>3rd Hour Teacher Email:</label>
+              <input type="email" id="tp3" value="${student.teacher_p3 || ''}">
+              <label>4th Hour Teacher Email:</label>
+              <input type="email" id="tp4" value="${student.teacher_p4 || ''}">
+              <label>5th Hour Teacher Email:</label>
+              <input type="email" id="tp5" value="${student.teacher_p5 || ''}">
+              <button onclick="saveTeachers('${student.id}')">Save Period Assignments</button>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right;">
+              <button class="secondary" onclick="closeModal()">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-root').innerHTML = '';
+    }
+
+    // --- DATA SAVE HANDLERS ---
+    async function saveGoals(studentId) {
+      const goals = document.getElementById('modal-goals').value;
+      const objectives = document.getElementById('modal-objectives').value;
+
+      const { error } = await supabase
+        .from('students')
+        .update({ goals, objectives })
+        .eq('id', studentId);
+
+      if (!error) {
+        alert('Goals updated successfully!');
+        closeModal();
+      }
+    }
+
+    async function saveTeachers(studentId) {
+      const updates = {
+        teacher_p1: document.getElementById('tp1').value,
+        teacher_p2: document.getElementById('tp2').value,
+        teacher_p3: document.getElementById('tp3').value,
+        teacher_p4: document.getElementById('tp4').value,
+        teacher_p5: document.getElementById('tp5').value,
+      };
+
+      const { error } = await supabase.from('students').update(updates).eq('id', studentId);
+      if (!error) {
+        alert('Teachers assigned successfully!');
+        closeModal();
+        if (currentPeriod) switchView(`p${currentPeriod}`, currentPeriod);
+      }
+    }
+
+    // --- ROSTER MANAGEMENT MODALS ---
+    function openAddToPeriodModal(periodNum) {
+      const unassigned = allStudents.filter(s => s[`teacher_p${periodNum}`] !== currentUserEmail);
+      let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add Existing Student to ${periodNum}th Hour</h3>
+            <select id="select-student-to-add">${options}</select>
+            <button onclick="addStudentToPeriod('${periodNum}')">Add to Class</button>
+            <button class="secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function addStudentToPeriod(periodNum) {
+      const studentId = document.getElementById('select-student-to-add').value;
+      const updateData = {};
+      updateData[`teacher_p${periodNum}`] = currentUserEmail;
+
+      const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
+      if (!error) {
+        closeModal();
+        switchView(`p${periodNum}`, periodNum);
+      }
+    }
+
+    async function removeStudentFromPeriod(studentId, periodNum) {
+      const updateData = {};
+      updateData[`teacher_p${periodNum}`] = null;
+
+      const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
+      if (!error) {
+        switchView(`p${periodNum}`, periodNum);
+      }
+    }
+
+    function openCreateStudentModal() {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add New Student to System</h3>
+            <label>First Name:</label>
+            <input type="text" id="new-fn">
+            <label>Last Name:</label>
+            <input type="text" id="new-ln">
+            <button onclick="createStudent()">Create Student</button>
+            <button class="secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function createStudent() {
+      const fn = document.getElementById('new-fn').value;
+      const ln = document.getElementById('new-ln').value;
+
+      const { error } = await supabase.from('students').insert([{
+        first_name: fn,
+        last_name: ln,
+        case_manager_email: currentUserEmail,
+        case_manager_id: currentUserId
+      }]);
+
+      if (!error) {
+        closeModal();
+        loadCaseload(currentUserEmail);
+      }
+    }
+
+    initApp();
+  </script>
 </body>
 </html>
