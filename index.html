@@ -1,161 +1,1080 @@
-/* CONFIGURATION & MASTER DATA */
-const MASTER_ROSTER = [
-  { fn: 'Samantha', ln: 'B.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Mia', ln: 'B.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Dominic', ln: 'G.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Mikayla', ln: 'S.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Jeremiah', ln: 'T.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Milo', ln: 'K.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'William', ln: 'S.', cm: 'claire.hanrahan@ahschools.us' },
-  { fn: 'Kyle', ln: 'B.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Sarah', ln: 'K.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Jack', ln: 'P.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Hannah', ln: 'B.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Demetrius', ln: 'C.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Ethan', ln: 'W.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Neveah', ln: 'M-T.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Josh', ln: 'M.', cm: 'emily.catterton@ahschools.us' },
-  { fn: 'Adrian', ln: 'N.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Chance', ln: 'S.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Mohamed', ln: 'W.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Dominic', ln: 'P.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Kanhchana', ln: 'I.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Johnny', ln: 'X.', cm: 'trent.hanson@ahschools.us' },
-  { fn: 'Carter', ln: 'R.', cm: 'ryan.roth@ahschools.us' },
-  { fn: 'Naomi', ln: 'B.', cm: 'ryan.roth@ahschools.us' },
-  { fn: 'Ashton', ln: 'B.', cm: 'ryan.roth@ahschools.us' },
-  { fn: 'Sophie', ln: 'T.', cm: 'ryan.roth@ahschools.us' },
-  { fn: 'Alvin', ln: 'Z.', cm: 'ryan.roth@ahschools.us' },
-  { fn: 'Tony', ln: 'R-A.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Steven', ln: 'G.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Alex', ln: 'C.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Alondra', ln: 'O.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Devon', ln: 'J.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Latrell', ln: 'J.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Elise', ln: 'K.', cm: 'tamara.onnen@ahschools.us' },
-  { fn: 'Brennen', ln: 'J.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Hailey', ln: 'B.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Lima', ln: 'P.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Johnathon', ln: 'X.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Terrica', ln: 'T.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Jalon', ln: 'C.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Michael', ln: 'G.', cm: 'karlyn.pranke@ahschools.us' },
-  { fn: 'Bilaal', ln: 'A.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Zahur', ln: 'A.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Gavin', ln: 'C.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Windy', ln: 'L.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Ariella', ln: 'S.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Bella', ln: 'K.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Chloe', ln: 'B.', cm: 'nicole.ruid@ahschools.us' },
-  { fn: 'Samuel', ln: 'B.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Ariyanna', ln: 'R.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Kaitlyn', ln: 'H.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Gabriel', ln: 'M.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Masha', ln: 'G.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'James', ln: 'K.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Nasar', ln: 'M.', cm: 'kelley.stowell@ahschools.us' },
-  { fn: 'Chance', ln: 'K.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Angel', ln: 'L.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Davian', ln: 'N.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Madison', ln: 'R.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Ismeal', ln: 'S.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Max', ln: 'S.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Owen', ln: 'P.', cm: 'ryan.erlandson@ahschools.us' },
-  { fn: 'Jack', ln: 'N.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Myles', ln: 'G.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Lucas', ln: 'P.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Ebin', ln: 'M.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Emma', ln: 'G.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Jonah', ln: 'W.', cm: 'carol.lewis@ahschools.us' },
-  { fn: 'Abdullahi', ln: 'O.', cm: 'carol.lewis@ahschools.us' }
-];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress Reporter - IEP Management</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --border: #cbd5e1;
+      --danger: #dc2626;
+      --active-btn: #0f172a;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { max-width: 1280px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    
+    .student-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
 
-const ADMIN_FALLBACK_EMAIL = 'admin@ahschools.us';
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    
+    button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #64748b; }
+    button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    button.danger { background: var(--danger); }
+    button.sm { padding: 6px 12px; font-size: 12px; }
+    
+    .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-/* TRIGGER & SETUP */
-function createFormSubmitTrigger() {
-  const form = FormApp.getActiveForm();
-  const triggers = ScriptApp.getUserTriggers(form);
-  triggers.forEach(trigger => ScriptApp.deleteTrigger(trigger));
+    .login-box { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; border: 1px solid var(--border); }
 
-  ScriptApp.newTrigger('onFormSubmit')
-    .forForm(form)
-    .onFormSubmit()
-    .create();
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .modal-content {
+      background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto;
+    }
+    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; padding-bottom: 8px; }
+    .tab-btn { background: transparent; color: var(--text); border: none; padding: 8px 12px; font-size: 15px; }
+    .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
+    
+    .obj-tile {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
 
-  Logger.log('Successfully created form submission trigger.');
-}
+    .obj-tile.saved-success {
+      background: var(--success-bg);
+      border-color: #86efac;
+    }
 
-/* EVENT HANDLER */
-function onFormSubmit(e) {
-  try {
-    const itemResponses = e.response.getItemResponses();
-    let studentFirstName = '';
-    let studentLastName = '';
-    let incidentDetails = [];
+    .obj-tile-header { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .obj-text { font-size: 12px; color: #475569; margin-bottom: 10px; line-height: 1.35; }
 
-    for (let i = 0; i < itemResponses.length; i++) {
-      const response = itemResponses[i];
-      const title = response.getItem().getTitle().toLowerCase().trim();
-      const value = response.getResponse();
+    .entry-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px; }
+    
+    label { font-weight: 600; font-size: 12px; display: block; margin-top: 4px; color: #334155; }
+    .help-note { font-size: 11px; color: #64748b; margin-bottom: 6px; font-style: italic; }
+    input, textarea, select { width: 100%; padding: 6px 8px; margin: 2px 0 6px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 13px; }
+    textarea { min-height: 45px; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
-      if (title.includes('first name') || title.includes('student first')) {
-        studentFirstName = value.toString().trim();
-      } else if (title.includes('last name') || title.includes('student last')) {
-        studentLastName = value.toString().trim();
+    .saved-badge {
+      display: none;
+      background: var(--success);
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+
+    .email-input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .email-input-wrapper input {
+      border: none !important;
+      margin: 0 !important;
+      outline: none;
+    }
+    .email-domain-tag {
+      background: #f1f5f9;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+      border-left: 1px solid var(--border);
+    }
+
+    .para-chip {
+      display: inline-flex;
+      align-items: center;
+      background: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      margin: 4px 4px 4px 0;
+    }
+    .para-chip span {
+      margin-left: 8px;
+      color: var(--danger);
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app-root">
+    <div style="text-align:center; margin-top:50px;">Loading application...</div>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let currentUserEmail = '';
+    let currentUserId = '';
+    let allStudents = [];
+    let allStaffEmails = [];
+    let activeNav = 'caseload';
+    let activePeriod = null;
+    let chartInstance = null;
+
+    function getTodayString() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatUserEmailInput(inputVal) {
+      let cleaned = inputVal.trim().toLowerCase();
+      if (cleaned.endsWith('@ahschools.us')) {
+        return cleaned;
+      }
+      return `${cleaned}@ahschools.us`;
+    }
+
+    async function initApp() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session) {
+        renderLogin();
+        return;
+      }
+      
+      currentUserEmail = session.user.email;
+      currentUserId = session.user.id;
+
+      await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
+
+      renderDashboard();
+      await fetchStaffMembers();
+      await fetchAllStudents();
+      loadCaseload();
+    }
+
+    function renderLogin() {
+      document.getElementById('app-root').innerHTML = `
+        <div class="login-box">
+          <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="teacher@school.org">
+          <label>Password</label>
+          <input type="password" id="login-pass" placeholder="••••••••">
+          <button style="width:100%; margin-top:10px;" onclick="handleLogin()">Sign In</button>
+          <p id="login-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+        </div>
+      `;
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-pass').value;
+      const errorEl = document.getElementById('login-error');
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.innerText = error.message;
       } else {
-        const formattedVal = Array.isArray(value) ? value.join(', ') : value;
-        incidentDetails.push('<strong>' + response.getItem().getTitle() + ':</strong> ' + formattedVal);
+        initApp();
       }
     }
 
-    const matchedStudent = findStudent(studentFirstName, studentLastName);
+    function renderDashboard() {
+      document.getElementById('app-root').innerHTML = `
+        <header>
+          <div>
+            <h1 style="margin:0;">IEP Progress Reporter</h1>
+            <small>${currentUserEmail} (Staff)</small>
+          </div>
+          <div>
+            <button class="danger" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
+          </div>
+        </header>
 
-    if (matchedStudent) {
-      sendEmailNotification(matchedStudent.cm, matchedStudent.fn + ' ' + matchedStudent.ln, incidentDetails);
-    } else {
-      Logger.log('No matching Case Manager found for: ' + studentFirstName + ' ' + studentLastName);
-      sendEmailNotification(
-        ADMIN_FALLBACK_EMAIL,
-        studentFirstName + ' ' + studentLastName + ' (Unmatched)',
-        incidentDetails
-      );
+        <div class="grid">
+          <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
+          <button id="nav-p2" class="nav-btn outline" onclick="switchView(2)">2nd Hour</button>
+          <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
+          <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
+          <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
+          <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
+        </div>
+
+        <div id="main-view"></div>
+      `;
     }
-  } catch (err) {
-    Logger.log('Error processing form submission: ' + err.message);
-  }
-}
 
-/* HELPER FUNCTIONS */
-function findStudent(firstName, lastName) {
-  if (!firstName || !lastName) return null;
+    function updateNavHighlights(selectedNav) {
+      activeNav = selectedNav;
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
+      if (selectedNav === 'caseload') {
+        document.getElementById('nav-caseload')?.classList.add('active-nav');
+      } else {
+        document.getElementById(`nav-p${selectedNav}`)?.classList.add('active-nav');
+      }
+    }
 
-  const cleanFN = firstName.toLowerCase().trim();
-  const cleanLN = lastName.toLowerCase().trim().replace('.', '');
+    async function fetchStaffMembers() {
+      const { data } = await supabaseClient.from('staff_members').select('email');
+      if (data && data.length > 0) {
+        allStaffEmails = data.map(s => s.email);
+      } else {
+        allStaffEmails = [currentUserEmail];
+      }
+    }
 
-  return MASTER_ROSTER.find(student => {
-    const rosterFN = student.fn.toLowerCase().trim();
-    const rosterLN = student.ln.toLowerCase().trim().replace('.', '');
-    
-    return rosterFN === cleanFN && rosterLN.startsWith(cleanLN.charAt(0));
-  });
-}
+    async function fetchAllStudents() {
+      const { data, error } = await supabaseClient.from('students').select('*');
+      if (!error && data) allStudents = data;
+    }
 
-function sendEmailNotification(recipientEmail, studentName, incidentDetails) {
-  const subject = 'Behavior Incident Report: ' + studentName;
-  
-  const htmlBody = '<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">' +
-    '<h2 style="color: #2c3e50;">Behavior Incident Notification</h2>' +
-    '<p>A new incident report has been submitted for a student on your caseload.</p>' +
-    '<p><strong>Student:</strong> ' + studentName + '</p>' +
-    '<hr style="border: 0; border-top: 1px solid #ccc;">' +
-    '<h3>Report Details:</h3>' +
-    '<p>' + incidentDetails.join('<br><br>') + '</p>' +
-    '<hr style="border: 0; border-top: 1px solid #ccc;">' +
-    '<p style="font-size: 0.85em; color: #777;"><em>This is an automated notification from the Behavior Reporting System.</em></p>' +
-    '</div>';
+    async function loadCaseload() {
+      updateNavHighlights('caseload');
+      activePeriod = null;
+      await fetchAllStudents();
+      const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
+      
+      let html = `
+        <div class="flex-between" style="margin-bottom: 16px;">
+          <h2>My Caseload (${currentUserEmail})</h2>
+          <button onclick="openCreateStudentModal()">+ Add New Student to System</button>
+        </div>
+      `;
 
-  GmailApp.sendEmail(recipientEmail, subject, '', {
-    htmlBody: htmlBody
-  });
-}
+      if (myCaseload.length === 0) {
+        html += '<p style="color:#64748b;">No students on your caseload.</p>';
+      } else {
+        html += `<div class="student-grid">`;
+        myCaseload.forEach(student => {
+          html += `
+            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: flex-start;">
+              <div>
+                <h3 style="margin:0 0 4px 0;">${student.first_name} ${student.last_name}</h3>
+                <small style="color:#64748b;">Case Manager: ${student.case_manager_email}</small>
+              </div>
+              <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Setup IEP / Teachers</button>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      document.getElementById('main-view').innerHTML = html;
+    }
+
+    /* CLASS PERIOD DASHBOARD VIEW */
+    async function switchView(periodNum) {
+      updateNavHighlights(periodNum);
+      activePeriod = periodNum;
+      await fetchAllStudents();
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+      
+      // Included if logged-in user is either lead teacher OR listed in paras array
+      const periodRoster = allStudents.filter(s => {
+        const isTeacher = s[colName] === currentUserEmail;
+        const parasArr = s[paraColName] || [];
+        const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
+        return isTeacher || isPara;
+      });
+
+      let html = `
+        <div class="flex-between" style="margin-bottom: 16px;">
+          <h2>${periodNum}th Hour Class Dashboard</h2>
+          <div>
+            <button class="outline" style="margin-right:8px;" onclick="openManageParasModal(${periodNum})">👥 Manage Paraprofessionals</button>
+            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student to ${periodNum}th Hour</button>
+          </div>
+        </div>
+      `;
+
+      if (periodRoster.length === 0) {
+        html += `
+          <div class="card" style="text-align:center; padding:32px; color:#64748b;">
+            <p style="margin:0 0 12px 0;">No students assigned to your ${periodNum}th hour yet.</p>
+            <button class="outline" onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student</button>
+          </div>
+        `;
+      } else {
+        html += `<div class="student-grid">`;
+        periodRoster.forEach(student => {
+          html += renderStudentDashboardCard(student, periodNum);
+        });
+        html += `</div>`;
+      }
+      document.getElementById('main-view').innerHTML = html;
+
+      // Check saved indicators for current logged in user for TODAY
+      periodRoster.forEach(student => restoreTeacherSavedState(student.id));
+    }
+
+    function renderStudentDashboardCard(student, periodNum) {
+      const rawObjectives = [
+        { key: 'obj_1_1', label: 'Ind. Living 1.1', text: student.obj_1_1 },
+        { key: 'obj_1_2', label: 'Ind. Living 1.2', text: student.obj_1_2 },
+        { key: 'obj_2_1', label: 'Post-Sec 2.1', text: student.obj_2_1 },
+        { key: 'obj_2_2', label: 'Post-Sec 2.2', text: student.obj_2_2 },
+        { key: 'obj_3_1', label: 'Employment 3.1', text: student.obj_3_1 },
+        { key: 'obj_3_2', label: 'Employment 3.2', text: student.obj_3_2 },
+        { key: 'obj_4_1', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.1`, text: student.obj_4_1 },
+        { key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 }
+      ];
+
+      const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
+
+      let tilesHTML = '';
+      activeObjectives.forEach((o, index) => {
+        const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
+        tilesHTML += `
+          <div class="obj-tile" id="tile_${student.id}_${o.key}">
+            <div class="obj-tile-header">
+              <span>${o.label}</span>
+              <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Saved</span>
+            </div>
+            <div class="obj-text">${o.text}</div>
+            
+            <div class="entry-row">
+              <div>
+                <label style="margin-top:0;">Status</label>
+                <select id="status_${student.id}_${o.key}" style="margin:0;">
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Absent">Absent</option>
+                  <option value="No Opportunity">No Opportunity</option>
+                </select>
+              </div>
+              <div>
+                <label style="margin-top:0;">Prompts</label>
+                <input type="number" id="prompts_${student.id}_${o.key}" placeholder="0" style="margin:0;" min="0">
+              </div>
+            </div>
+
+            <input type="text" id="notes_${student.id}_${o.key}" placeholder="Anecdotal notes... (Press Enter to Log)" style="margin-bottom:8px;"
+              onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
+
+            <div style="text-align:right;">
+              <button class="sm" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log Entry</button>
+            </div>
+          </div>
+        `;
+      });
+
+      if (tilesHTML === '') {
+        tilesHTML = `<p style="color:#94a3b8; font-size:12px;">No active objectives set for this student.</p>`;
+      }
+
+      return `
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+            <div>
+              <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
+              <small style="color:#64748b;">CM: ${student.case_manager_email}</small>
+            </div>
+            <div>
+              <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP Setup / Graphs</button>
+              <button class="danger sm" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">X</button>
+            </div>
+          </div>
+          <div>
+            ${tilesHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    /* PARAPROFESSIONAL MANAGEMENT MODAL */
+    async function openManageParasModal(periodNum) {
+      await fetchAllStudents();
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      // Get current period roster
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      // Collect all current unique paras for this period across this teacher's roster
+      let currentParasSet = new Set();
+      periodStudents.forEach(s => {
+        const arr = s[paraColName];
+        if (Array.isArray(arr)) {
+          arr.forEach(p => currentParasSet.add(p));
+        }
+      });
+
+      const currentParas = Array.from(currentParasSet);
+
+      let chipsHTML = currentParas.map(pEmail => `
+        <div class="para-chip">
+          ${pEmail}
+          <span onclick="removeParaFromPeriod('${pEmail}', ${periodNum})">✕</span>
+        </div>
+      `).join('');
+
+      if (chipsHTML === '') {
+        chipsHTML = '<p style="color:#64748b; font-size:13px;">No paraprofessionals currently assigned to your ' + periodNum + 'th hour.</p>';
+      }
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Manage Paraprofessionals - ${periodNum}th Hour</h3>
+            <p style="font-size:13px; color:#475569;">Assigned paraprofessionals will get full access to view and log data for all students in your ${periodNum}th hour class.</p>
+            
+            <div style="margin-bottom: 16px;">
+              <label>Assigned Paras:</label>
+              <div style="margin-top:6px;">${chipsHTML}</div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;">
+
+            <label>Add Paraprofessional Username:</label>
+            <div class="email-input-wrapper">
+              <input type="text" id="para-username-input" placeholder="e.g. john.doe" style="flex:1;">
+              <div class="email-domain-tag">@ahschools.us</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+              <button class="secondary" onclick="closeModal()">Done</button>
+              <button onclick="addParaToPeriod(${periodNum})">+ Grant Access</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function addParaToPeriod(periodNum) {
+      const inputEl = document.getElementById('para-username-input');
+      if (!inputEl || !inputEl.value.trim()) return;
+
+      const fullEmail = formatUserEmailInput(inputEl.value);
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      // Update all students in this teacher's period roster
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      for (const student of periodStudents) {
+        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
+        if (!existingParas.includes(fullEmail)) {
+          existingParas.push(fullEmail);
+          await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+        }
+      }
+
+      // Automatically register email in staff_members if not present
+      await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
+
+      openManageParasModal(periodNum);
+    }
+
+    async function removeParaFromPeriod(paraEmail, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      for (const student of periodStudents) {
+        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
+        existingParas = existingParas.filter(p => p !== paraEmail);
+        await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+      }
+
+      openManageParasModal(periodNum);
+    }
+
+    async function restoreTeacherSavedState(studentId) {
+      const todayStr = getTodayString();
+      const startDate = `${todayStr}T00:00:00.000Z`;
+      const endDate = `${todayStr}T23:59:59.999Z`;
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('objective_key')
+        .eq('student_id', studentId)
+        .eq('logged_by', currentUserEmail)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error || !data) return;
+
+      const savedObjKeys = data.map(d => d.objective_key);
+
+      document.querySelectorAll(`[id^="tile_${studentId}_"]`).forEach(tile => {
+        const objKey = tile.id.replace(`tile_${studentId}_`, '');
+        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+        const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+
+        if (savedObjKeys.includes(objKey)) {
+          tile.classList.add('saved-success');
+          if (badge) badge.style.display = 'inline-block';
+          if (btn) {
+            btn.innerText = '✓ Saved';
+            btn.style.backgroundColor = 'var(--success)';
+          }
+        } else {
+          tile.classList.remove('saved-success');
+          if (badge) badge.style.display = 'none';
+          if (btn) {
+            btn.innerText = 'Log Entry';
+            btn.style.backgroundColor = 'var(--primary)';
+          }
+        }
+      });
+    }
+
+    async function quickSaveData(studentId, objKey, nextObjKey = null) {
+      const statusVal = document.getElementById(`status_${studentId}_${objKey}`)?.value || 'Yes';
+      const promptsVal = parseInt(document.getElementById(`prompts_${studentId}_${objKey}`)?.value) || 0;
+      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+
+      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+      const tile = document.getElementById(`tile_${studentId}_${objKey}`);
+      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+
+      const { error } = await supabaseClient.from('progress_data').insert([{
+        student_id: studentId,
+        objective_key: objKey,
+        status: statusVal,
+        prompts: promptsVal,
+        notes: notesVal,
+        logged_by: currentUserEmail
+      }]);
+
+      if (!error) {
+        if (tile) tile.classList.add('saved-success');
+        if (badge) badge.style.display = 'inline-block';
+        if (btn) {
+          btn.innerText = '✓ Saved';
+          btn.style.backgroundColor = 'var(--success)';
+        }
+
+        if (nextObjKey) {
+          document.getElementById(`status_${studentId}_${nextObjKey}`)?.focus();
+        }
+      } else {
+        alert('Error saving data entry.');
+      }
+    }
+
+    function buildTeacherDropdownOptions(currentAssignedEmail) {
+      let options = `<option value="">-- Unassigned --</option>`;
+      allStaffEmails.forEach(email => {
+        const selected = (email === currentAssignedEmail) ? 'selected' : '';
+        options += `<option value="${email}" ${selected}>${email}</option>`;
+      });
+      return options;
+    }
+
+    async function openStudentModal(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      const hasGoal4 = student.goal_4 || student.obj_4_1 || student.obj_4_2 || student.goal_4_domain;
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h2>${student.first_name} ${student.last_name}</h2>
+            <div class="tab-buttons">
+              <button class="tab-btn active" onclick="switchTab('goals-tab', this)">Goals & Objectives</button>
+              <button class="tab-btn" onclick="switchTab('data-tab', this); loadProgressChart('${student.id}');">Data & Graphs</button>
+              <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
+              <button class="tab-btn" onclick="switchTab('history-tab', this); loadStudentHistory('${student.id}');">History Log</button>
+            </div>
+
+            <!-- TAB 1: GOALS & OBJECTIVES -->
+            <div id="goals-tab" class="tab-content active">
+              <h3>Active IEP Goals & Objectives</h3>
+              
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 1: Independent Living</h4>
+                <label>Goal Description:</label>
+                <textarea id="g1">${student.goal_1 || ''}</textarea>
+                
+                <label>Objective 1.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g1_o1" value="${student.obj_1_1 || ''}">
+                
+                <label>Objective 1.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g1_o2" value="${student.obj_1_2 || ''}">
+              </div>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 2: Post-Secondary Education / Training</h4>
+                <label>Goal Description:</label>
+                <textarea id="g2">${student.goal_2 || ''}</textarea>
+                
+                <label>Objective 2.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g2_o1" value="${student.obj_2_1 || ''}">
+                
+                <label>Objective 2.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g2_o2" value="${student.obj_2_2 || ''}">
+              </div>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 3: Employment</h4>
+                <label>Goal Description:</label>
+                <textarea id="g3">${student.goal_3 || ''}</textarea>
+                
+                <label>Objective 3.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g3_o1" value="${student.obj_3_1 || ''}">
+                
+                <label>Objective 3.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
+              </div>
+
+              <div id="goal4-container" style="display: ${hasGoal4 ? 'block' : 'none'};">
+                <div class="goal-box" style="border-left-color: #059669;">
+                  <h4 style="margin:0 0 8px 0; color:#065f46;">Goal Area 4 (Additional Goal)</h4>
+                  <label>Select Target Goal Area:</label>
+                  <select id="g4_domain">
+                    <option value="Independent Living" ${student.goal_4_domain === 'Independent Living' ? 'selected' : ''}>Independent Living</option>
+                    <option value="Post-Secondary Education/Training" ${student.goal_4_domain === 'Post-Secondary Education/Training' ? 'selected' : ''}>Post-Secondary Education / Training</option>
+                    <option value="Employment" ${student.goal_4_domain === 'Employment' ? 'selected' : ''}>Employment</option>
+                  </select>
+                  <label>Goal Description:</label>
+                  <textarea id="g4">${student.goal_4 || ''}</textarea>
+                  
+                  <label>Objective 4.1:</label>
+                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                  <input type="text" id="g4_o1" value="${student.obj_4_1 || ''}">
+                  
+                  <label>Objective 4.2:</label>
+                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
+                  <input type="text" id="g4_o2" value="${student.obj_4_2 || ''}">
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                <button type="button" class="outline" id="add-g4-btn" style="display:${hasGoal4 ? 'none' : 'block'};" onclick="enableGoal4()">+ Add 4th Goal</button>
+                <button onclick="saveAllGoals('${student.id}')">Save Goals & Objectives</button>
+              </div>
+            </div>
+
+            <!-- TAB 2: DATA & GRAPHS -->
+            <div id="data-tab" class="tab-content">
+              <h3>Active IEP Progress Graph</h3>
+              <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px; display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label>Select Active Objective:</label>
+                  <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
+                    <option value="obj_1_1">Independent Living - Objective 1.1</option>
+                    <option value="obj_1_2">Independent Living - Objective 1.2</option>
+                    <option value="obj_2_1">Post-Secondary - Objective 2.1</option>
+                    <option value="obj_2_2">Post-Secondary - Objective 2.2</option>
+                    <option value="obj_3_1">Employment - Objective 3.1</option>
+                    <option value="obj_3_2">Employment - Objective 3.2</option>
+                    ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
+                  </select>
+                </div>
+
+                <div>
+                  <label>Metric Displayed:</label>
+                  <select id="chart-metric-select" onchange="loadProgressChart('${student.id}')">
+                    <option value="status">Status Trend (% Yes)</option>
+                    <option value="prompts">Prompt Count Trend</option>
+                  </select>
+                </div>
+              </div>
+              <canvas id="progressChart" style="max-height: 260px;"></canvas>
+            </div>
+
+            <!-- TAB 3: ASSIGN TEACHERS -->
+            <div id="teachers-tab" class="tab-content">
+              <h3>Class Period Teacher Assignments</h3>
+              <label>1st Hour Teacher:</label>
+              <select id="tp1">${buildTeacherDropdownOptions(student.teacher_p1)}</select>
+              
+              <label>2nd Hour Teacher:</label>
+              <select id="tp2">${buildTeacherDropdownOptions(student.teacher_p2)}</select>
+              
+              <label>3rd Hour Teacher:</label>
+              <select id="tp3">${buildTeacherDropdownOptions(student.teacher_p3)}</select>
+              
+              <label>4th Hour Teacher:</label>
+              <select id="tp4">${buildTeacherDropdownOptions(student.teacher_p4)}</select>
+              
+              <label>5th Hour Teacher:</label>
+              <select id="tp5">${buildTeacherDropdownOptions(student.teacher_p5)}</select>
+              
+              <button onclick="saveTeachers('${student.id}')">Save Teacher Assignments</button>
+            </div>
+
+            <!-- TAB 4: HISTORY LOG -->
+            <div id="history-tab" class="tab-content">
+              <h3>Archived IEP History & Records</h3>
+              <div id="history-select-container">Loading past records...</div>
+              <div id="history-details-container" style="margin-top:16px;"></div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right;">
+              <button class="secondary" onclick="closeModal()">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    function enableGoal4() {
+      document.getElementById('goal4-container').style.display = 'block';
+      document.getElementById('add-g4-btn').style.display = 'none';
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-root').innerHTML = '';
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    }
+
+    async function saveAllGoals(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      const isAnnualMeeting = confirm("Did this student have an IEP meeting resulting in new annual goals?\n\n- Click OK if this is a NEW IEP (Past goals and data will be safely archived to History Log).\n- Click CANCEL if you are just fixing typos in current goals.");
+
+      const g4Container = document.getElementById('goal4-container');
+      const isG4Visible = g4Container && g4Container.style.display !== 'none';
+
+      const newGoalsData = {
+        goal_1: document.getElementById('g1').value,
+        obj_1_1: document.getElementById('g1_o1').value,
+        obj_1_2: document.getElementById('g1_o2').value,
+        goal_2: document.getElementById('g2').value,
+        obj_2_1: document.getElementById('g2_o1').value,
+        obj_2_2: document.getElementById('g2_o2').value,
+        goal_3: document.getElementById('g3').value,
+        obj_3_1: document.getElementById('g3_o1').value,
+        obj_3_2: document.getElementById('g3_o2').value,
+        goal_4: isG4Visible ? document.getElementById('g4').value : '',
+        obj_4_1: isG4Visible ? document.getElementById('g4_o1').value : '',
+        obj_4_2: isG4Visible ? document.getElementById('g4_o2').value : '',
+        goal_4_domain: isG4Visible ? document.getElementById('g4_domain').value : ''
+      };
+
+      if (isAnnualMeeting && student) {
+        const periodLabel = `Archived IEP Cycle (${new Date().toLocaleDateString()})`;
+        
+        const { data: archivedRecord, error: archiveErr } = await supabaseClient
+          .from('iep_history')
+          .insert([{
+            student_id: studentId,
+            period_label: periodLabel,
+            goal_1: student.goal_1, obj_1_1: student.obj_1_1, obj_1_2: student.obj_1_2,
+            goal_2: student.goal_2, obj_2_1: student.obj_2_1, obj_2_2: student.obj_2_2,
+            goal_3: student.goal_3, obj_3_1: student.obj_3_1, obj_3_2: student.obj_3_2,
+            goal_4: student.goal_4, obj_4_1: student.obj_4_1, obj_4_2: student.obj_4_2,
+            goal_4_domain: student.goal_4_domain
+          }]).select();
+
+        if (archiveErr) {
+          alert('Error archiving existing goals.');
+          return;
+        }
+
+        if (archivedRecord && archivedRecord.length > 0) {
+          const archiveId = archivedRecord[0].id;
+          await supabaseClient
+            .from('progress_data')
+            .update({ iep_history_id: archiveId })
+            .eq('student_id', studentId)
+            .is('iep_history_id', null);
+        }
+      }
+
+      const { error } = await supabaseClient.from('students').update(newGoalsData).eq('id', studentId);
+
+      if (!error) {
+        alert(isAnnualMeeting ? 'New IEP goals activated and previous cycle archived to History!' : 'Goals updated!');
+        closeModal();
+        if (activePeriod) switchView(activePeriod);
+        else loadCaseload();
+      } else {
+        alert('Error saving goals.');
+      }
+    }
+
+    async function loadStudentHistory(studentId) {
+      const selectContainer = document.getElementById('history-select-container');
+      const detailsContainer = document.getElementById('history-details-container');
+
+      const { data: historyRecords, error } = await supabaseClient
+        .from('iep_history')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('archived_at', { ascending: false });
+
+      if (error || !historyRecords || historyRecords.length === 0) {
+        selectContainer.innerHTML = '<p style="color:#64748b;">No past IEP goal archives found for this student.</p>';
+        detailsContainer.innerHTML = '';
+        return;
+      }
+
+      let options = historyRecords.map(rec => 
+        `<option value="${rec.id}">${rec.period_label} - Archived ${new Date(rec.archived_at).toLocaleDateString()}</option>`
+      ).join('');
+
+      selectContainer.innerHTML = `
+        <label>Select Past Archived IEP Period:</label>
+        <select id="history-period-select" onchange="renderArchivedHistoryDetails('${studentId}', this.value)">
+          ${options}
+        </select>
+      `;
+
+      window.cachedHistoryRecords = historyRecords;
+      renderArchivedHistoryDetails(studentId, historyRecords[0].id);
+    }
+
+    async function renderArchivedHistoryDetails(studentId, historyId) {
+      const container = document.getElementById('history-details-container');
+      const rec = (window.cachedHistoryRecords || []).find(r => r.id === historyId);
+
+      if (!rec) return;
+
+      const { data: logs } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('iep_history_id', historyId)
+        .order('created_at', { ascending: false });
+
+      const logCount = logs ? logs.length : 0;
+
+      container.innerHTML = `
+        <div class="goal-box">
+          <h4>Archived Goals Text</h4>
+          <p><strong>Goal 1:</strong> ${rec.goal_1 || 'N/A'}</p>
+          <small>Obj 1.1: ${rec.obj_1_1 || 'N/A'} | Obj 1.2: ${rec.obj_1_2 || 'N/A'}</small>
+          
+          <p style="margin-top:10px;"><strong>Goal 2:</strong> ${rec.goal_2 || 'N/A'}</p>
+          <small>Obj 2.1: ${rec.obj_2_1 || 'N/A'} | Obj 2.2: ${rec.obj_2_2 || 'N/A'}</small>
+          
+          <p style="margin-top:10px;"><strong>Goal 3:</strong> ${rec.goal_3 || 'N/A'}</p>
+          <small>Obj 3.1: ${rec.obj_3_1 || 'N/A'} | Obj 3.2: ${rec.obj_3_2 || 'N/A'}</small>
+        </div>
+
+        <div class="card">
+          <h4>Data Entries Collected (${logCount} Total Logs)</h4>
+          <div style="max-height: 180px; overflow-y: auto; font-size:12px;">
+            ${logCount === 0 ? '<p style="color:#64748b;">No logs recorded during this period.</p>' : ''}
+            ${(logs || []).map(l => `
+              <div style="border-bottom:1px solid #e2e8f0; padding:6px 0;">
+                <strong>${new Date(l.created_at).toLocaleDateString()}</strong> [${l.objective_key}] - 
+                Status: <strong>${l.status}</strong> | Prompts: <strong>${l.prompts || 0}</strong> | Notes: ${l.notes || 'None'}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveTeachers(studentId) {
+      const updates = {
+        teacher_p1: document.getElementById('tp1').value || null,
+        teacher_p2: document.getElementById('tp2').value || null,
+        teacher_p3: document.getElementById('tp3').value || null,
+        teacher_p4: document.getElementById('tp4').value || null,
+        teacher_p5: document.getElementById('tp5').value || null,
+      };
+
+      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
+      if (!error) {
+        alert('Teacher assignments updated!');
+        closeModal();
+        if (activePeriod) switchView(activePeriod);
+        else loadCaseload();
+      } else {
+        alert('Error saving teacher assignments.');
+      }
+    }
+
+    async function loadProgressChart(studentId) {
+      const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
+      const metric = document.getElementById('chart-metric-select')?.value || 'status';
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('objective_key', objKey)
+        .is('iep_history_id', null)
+        .order('created_at', { ascending: true });
+
+      if (error || !data) return;
+
+      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+      
+      let scores = [];
+      let labelName = '';
+      let maxY = 100;
+
+      if (metric === 'prompts') {
+        scores = data.map(d => d.prompts || 0);
+        labelName = 'Prompts Required';
+        const maxPromptInSet = Math.max(...scores, 5);
+        maxY = maxPromptInSet + 2;
+      } else {
+        scores = data.map(d => d.status === 'Yes' ? 100 : 0);
+        labelName = 'Success Rate (% Yes)';
+        maxY = 100;
+      }
+
+      const ctx = document.getElementById('progressChart')?.getContext('2d');
+      if (!ctx) return;
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: labelName,
+            data: scores,
+            borderColor: metric === 'prompts' ? '#dc2626' : '#2563eb',
+            backgroundColor: metric === 'prompts' ? 'rgba(220, 38, 38, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { min: 0, max: maxY } }
+        }
+      });
+    }
+
+    function openAddToPeriodModal(periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
+      
+      if (unassigned.length === 0) {
+        alert('All available students are already in this class hour!');
+        return;
+      }
+
+      let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add Existing Student to ${periodNum}th Hour</h3>
+            <label>Select Student from System:</label>
+            <select id="select-student-to-add">${options}</select>
+            <button onclick="addStudentToPeriod(${periodNum})">Add to Class</button>
+            <button class="secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function addStudentToPeriod(periodNum) {
+      const studentId = document.getElementById('select-student-to-add').value;
+      const updateData = {};
+      updateData[`teacher_p${periodNum}`] = currentUserEmail;
+
+      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
+      if (!error) {
+        closeModal();
+        switchView(periodNum);
+      }
+    }
+
+    async function removeStudentFromPeriod(studentId, periodNum) {
+      const updateData = {};
+      updateData[`teacher_p${periodNum}`] = null;
+
+      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
+      if (!error) switchView(periodNum);
+    }
+
+    function openCreateStudentModal() {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add New Student to System</h3>
+            <label>First Name:</label>
+            <input type="text" id="new-fn">
+            <label>Last Name:</label>
+            <input type="text" id="new-ln">
+            <button onclick="createStudent()">Create Student</button>
+            <button class="secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function createStudent() {
+      const fn = document.getElementById('new-fn').value;
+      const ln = document.getElementById('new-ln').value;
+
+      const { error } = await supabaseClient.from('students').insert([{
+        first_name: fn,
+        last_name: ln,
+        case_manager_email: currentUserEmail,
+        case_manager_id: currentUserId,
+        teacher_p1: null,
+        teacher_p2: null,
+        teacher_p3: null,
+        teacher_p4: null,
+        teacher_p5: null
+      }]);
+
+      if (!error) {
+        closeModal();
+        loadCaseload();
+      }
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
