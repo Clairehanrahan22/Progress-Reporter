@@ -55,7 +55,7 @@
       </div>
       <div>
         <button class="outline" onclick="loadCaseload(currentUserEmail)">My Caseload</button>
-        <button class="danger" onclick="supabase.auth.signOut().then(() => location.reload())">Sign Out</button>
+        <button class="danger" onclick="supabaseClient.auth.signOut().then(() => location.reload())">Sign Out</button>
       </div>
     </header>
 
@@ -77,18 +77,17 @@
   <div id="modal-root"></div>
 
   <script>
-    // INITIALIZE SUPABASE
-    const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL.supabase.co'; // Preserved from project config
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+    const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
     let currentUserEmail = '';
     let currentUserId = '';
     let allStudents = [];
     let currentPeriod = null;
 
     async function initApp() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
         document.getElementById('main-view').innerHTML = '<p>Please log in to access the reporter.</p>';
         return;
@@ -102,7 +101,7 @@
     }
 
     async function fetchAllStudents() {
-      const { data, error } = await supabase.from('students').select('*');
+      const { data, error } = await supabaseClient.from('students').select('*');
       if (!error && data) {
         allStudents = data;
       }
@@ -239,7 +238,7 @@
       const goals = document.getElementById('modal-goals').value;
       const objectives = document.getElementById('modal-objectives').value;
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('students')
         .update({ goals, objectives })
         .eq('id', studentId);
@@ -259,7 +258,7 @@
         teacher_p5: document.getElementById('tp5').value,
       };
 
-      const { error } = await supabase.from('students').update(updates).eq('id', studentId);
+      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
         alert('Teachers assigned successfully!');
         closeModal();
@@ -290,7 +289,7 @@
       const updateData = {};
       updateData[`teacher_p${periodNum}`] = currentUserEmail;
 
-      const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
+      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
       if (!error) {
         closeModal();
         switchView(`p${periodNum}`, periodNum);
@@ -301,7 +300,7 @@
       const updateData = {};
       updateData[`teacher_p${periodNum}`] = null;
 
-      const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
+      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
       if (!error) {
         switchView(`p${periodNum}`, periodNum);
       }
@@ -328,7 +327,7 @@
       const fn = document.getElementById('new-fn').value;
       const ln = document.getElementById('new-ln').value;
 
-      const { error } = await supabase.from('students').insert([{
+      const { error } = await supabaseClient.from('students').insert([{
         first_name: fn,
         last_name: ln,
         case_manager_email: currentUserEmail,
