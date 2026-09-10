@@ -39,6 +39,8 @@
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     button.danger { background: var(--danger); }
+    button.success { background: var(--success); }
+    button.success:hover { background: #15803d; }
     button.sm { padding: 6px 12px; font-size: 12px; }
     
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -132,6 +134,27 @@
       color: var(--danger);
       font-weight: bold;
       cursor: pointer;
+    }
+
+    .student-search-list {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    .student-search-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .student-search-item:last-child {
+      border-bottom: none;
+    }
+    .student-search-item:hover {
+      background: #f8fafc;
     }
   </style>
 </head>
@@ -307,7 +330,6 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
       
-      // Included if logged-in user is either lead teacher OR listed in paras array
       const periodRoster = allStudents.filter(s => {
         const isTeacher = s[colName] === currentUserEmail;
         const parasArr = s[paraColName] || [];
@@ -341,7 +363,6 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      // Check saved indicators for current logged in user for TODAY
       periodRoster.forEach(student => restoreTeacherSavedState(student.id));
     }
 
@@ -425,10 +446,8 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      // Get current period roster
       const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
 
-      // Collect all current unique paras for this period across this teacher's roster
       let currentParasSet = new Set();
       periodStudents.forEach(s => {
         const arr = s[paraColName];
@@ -487,7 +506,6 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      // Update all students in this teacher's period roster
       const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
 
       for (const student of periodStudents) {
@@ -498,7 +516,6 @@
         }
       }
 
-      // Automatically register email in staff_members if not present
       await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
 
       openManageParasModal(periodNum);
@@ -729,28 +746,34 @@
               
               <label>2nd Hour Teacher:</label>
               <select id="tp2">${buildTeacherDropdownOptions(student.teacher_p2)}</select>
-              
+
               <label>3rd Hour Teacher:</label>
               <select id="tp3">${buildTeacherDropdownOptions(student.teacher_p3)}</select>
-              
+
               <label>4th Hour Teacher:</label>
               <select id="tp4">${buildTeacherDropdownOptions(student.teacher_p4)}</select>
-              
+
               <label>5th Hour Teacher:</label>
               <select id="tp5">${buildTeacherDropdownOptions(student.teacher_p5)}</select>
-              
-              <button onclick="saveTeachers('${student.id}')">Save Teacher Assignments</button>
+
+              <div style="margin-top:16px; text-align:right;">
+                <button onclick="saveStudentTeachers('${student.id}')">Save Teacher Assignments</button>
+              </div>
             </div>
 
             <!-- TAB 4: HISTORY LOG -->
             <div id="history-tab" class="tab-content">
-              <h3>Archived IEP History & Records</h3>
-              <div id="history-select-container">Loading past records...</div>
-              <div id="history-details-container" style="margin-top:16px;"></div>
+              <h3>Recent Progress Log Entries</h3>
+              <div id="history-log-content" style="max-height: 300px; overflow-y: auto;">
+                <p style="color:#64748b;">Loading entry history...</p>
+              </div>
             </div>
 
-            <div style="margin-top: 20px; text-align: right;">
+            <hr style="border:none; border-top:1px solid var(--border); margin:20px 0 16px 0;">
+            
+            <div style="display:flex; justify-content:space-between;">
               <button class="secondary" onclick="closeModal()">Close</button>
+              <button class="danger sm" onclick="deleteStudent('${student.id}')">Delete Student</button>
             </div>
           </div>
         </div>
@@ -763,211 +786,337 @@
       document.getElementById('add-g4-btn').style.display = 'none';
     }
 
-    function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    function switchTab(tabId, btnEl) {
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
-      btn.classList.add('active');
+      btnEl.classList.add('active');
     }
 
     function closeModal() {
       document.getElementById('modal-root').innerHTML = '';
-      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
     }
 
     async function saveAllGoals(studentId) {
-      const student = allStudents.find(s => s.id === studentId);
-      const isAnnualMeeting = confirm("Did this student have an IEP meeting resulting in new annual goals?\n\n- Click OK if this is a NEW IEP (Past goals and data will be safely archived to History Log).\n- Click CANCEL if you are just fixing typos in current goals.");
+      const g1 = document.getElementById('g1').value;
+      const g1_o1 = document.getElementById('g1_o1').value;
+      const g1_o2 = document.getElementById('g1_o2').value;
 
-      const g4Container = document.getElementById('goal4-container');
-      const isG4Visible = g4Container && g4Container.style.display !== 'none';
+      const g2 = document.getElementById('g2').value;
+      const g2_o1 = document.getElementById('g2_o1').value;
+      const g2_o2 = document.getElementById('g2_o2').value;
 
-      const newGoalsData = {
-        goal_1: document.getElementById('g1').value,
-        obj_1_1: document.getElementById('g1_o1').value,
-        obj_1_2: document.getElementById('g1_o2').value,
-        goal_2: document.getElementById('g2').value,
-        obj_2_1: document.getElementById('g2_o1').value,
-        obj_2_2: document.getElementById('g2_o2').value,
-        goal_3: document.getElementById('g3').value,
-        obj_3_1: document.getElementById('g3_o1').value,
-        obj_3_2: document.getElementById('g3_o2').value,
-        goal_4: isG4Visible ? document.getElementById('g4').value : '',
-        obj_4_1: isG4Visible ? document.getElementById('g4_o1').value : '',
-        obj_4_2: isG4Visible ? document.getElementById('g4_o2').value : '',
-        goal_4_domain: isG4Visible ? document.getElementById('g4_domain').value : ''
-      };
+      const g3 = document.getElementById('g3').value;
+      const g3_o1 = document.getElementById('g3_o1').value;
+      const g3_o2 = document.getElementById('g3_o2').value;
 
-      if (isAnnualMeeting && student) {
-        const periodLabel = `Archived IEP Cycle (${new Date().toLocaleDateString()})`;
-        
-        const { data: archivedRecord, error: archiveErr } = await supabaseClient
-          .from('iep_history')
-          .insert([{
-            student_id: studentId,
-            period_label: periodLabel,
-            goal_1: student.goal_1, obj_1_1: student.obj_1_1, obj_1_2: student.obj_1_2,
-            goal_2: student.goal_2, obj_2_1: student.obj_2_1, obj_2_2: student.obj_2_2,
-            goal_3: student.goal_3, obj_3_1: student.obj_3_1, obj_3_2: student.obj_3_2,
-            goal_4: student.goal_4, obj_4_1: student.obj_4_1, obj_4_2: student.obj_4_2,
-            goal_4_domain: student.goal_4_domain
-          }]).select();
+      const g4 = document.getElementById('g4') ? document.getElementById('g4').value : '';
+      const g4_o1 = document.getElementById('g4_o1') ? document.getElementById('g4_o1').value : '';
+      const g4_o2 = document.getElementById('g4_o2') ? document.getElementById('g4_o2').value : '';
+      const g4_domain = document.getElementById('g4_domain') ? document.getElementById('g4_domain').value : '';
 
-        if (archiveErr) {
-          alert('Error archiving existing goals.');
-          return;
-        }
-
-        if (archivedRecord && archivedRecord.length > 0) {
-          const archiveId = archivedRecord[0].id;
-          await supabaseClient
-            .from('progress_data')
-            .update({ iep_history_id: archiveId })
-            .eq('student_id', studentId)
-            .is('iep_history_id', null);
-        }
-      }
-
-      const { error } = await supabaseClient.from('students').update(newGoalsData).eq('id', studentId);
+      const { error } = await supabaseClient.from('students').update({
+        goal_1: g1, obj_1_1: g1_o1, obj_1_2: g1_o2,
+        goal_2: g2, obj_2_1: g2_o1, obj_2_2: g2_o2,
+        goal_3: g3, obj_3_1: g3_o1, obj_3_2: g3_o2,
+        goal_4: g4, obj_4_1: g4_o1, obj_4_2: g4_o2, goal_4_domain: g4_domain
+      }).eq('id', studentId);
 
       if (!error) {
-        alert(isAnnualMeeting ? 'New IEP goals activated and previous cycle archived to History!' : 'Goals updated!');
+        alert('Goals & Objectives saved successfully!');
         closeModal();
-        if (activePeriod) switchView(activePeriod);
-        else loadCaseload();
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
       } else {
         alert('Error saving goals.');
       }
     }
 
-    async function loadStudentHistory(studentId) {
-      const selectContainer = document.getElementById('history-select-container');
-      const detailsContainer = document.getElementById('history-details-container');
+    async function saveStudentTeachers(studentId) {
+      const tp1 = document.getElementById('tp1').value;
+      const tp2 = document.getElementById('tp2').value;
+      const tp3 = document.getElementById('tp3').value;
+      const tp4 = document.getElementById('tp4').value;
+      const tp5 = document.getElementById('tp5').value;
 
-      const { data: historyRecords, error } = await supabaseClient
-        .from('iep_history')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('archived_at', { ascending: false });
+      const { error } = await supabaseClient.from('students').update({
+        teacher_p1: tp1,
+        teacher_p2: tp2,
+        teacher_p3: tp3,
+        teacher_p4: tp4,
+        teacher_p5: tp5
+      }).eq('id', studentId);
 
-      if (error || !historyRecords || historyRecords.length === 0) {
-        selectContainer.innerHTML = '<p style="color:#64748b;">No past IEP goal archives found for this student.</p>';
-        detailsContainer.innerHTML = '';
-        return;
-      }
-
-      let options = historyRecords.map(rec => 
-        `<option value="${rec.id}">${rec.period_label} - Archived ${new Date(rec.archived_at).toLocaleDateString()}</option>`
-      ).join('');
-
-      selectContainer.innerHTML = `
-        <label>Select Past Archived IEP Period:</label>
-        <select id="history-period-select" onchange="renderArchivedHistoryDetails('${studentId}', this.value)">
-          ${options}
-        </select>
-      `;
-
-      window.cachedHistoryRecords = historyRecords;
-      renderArchivedHistoryDetails(studentId, historyRecords[0].id);
-    }
-
-    async function renderArchivedHistoryDetails(studentId, historyId) {
-      const container = document.getElementById('history-details-container');
-      const rec = (window.cachedHistoryRecords || []).find(r => r.id === historyId);
-
-      if (!rec) return;
-
-      const { data: logs } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('iep_history_id', historyId)
-        .order('created_at', { ascending: false });
-
-      const logCount = logs ? logs.length : 0;
-
-      container.innerHTML = `
-        <div class="goal-box">
-          <h4>Archived Goals Text</h4>
-          <p><strong>Goal 1:</strong> ${rec.goal_1 || 'N/A'}</p>
-          <small>Obj 1.1: ${rec.obj_1_1 || 'N/A'} | Obj 1.2: ${rec.obj_1_2 || 'N/A'}</small>
-          
-          <p style="margin-top:10px;"><strong>Goal 2:</strong> ${rec.goal_2 || 'N/A'}</p>
-          <small>Obj 2.1: ${rec.obj_2_1 || 'N/A'} | Obj 2.2: ${rec.obj_2_2 || 'N/A'}</small>
-          
-          <p style="margin-top:10px;"><strong>Goal 3:</strong> ${rec.goal_3 || 'N/A'}</p>
-          <small>Obj 3.1: ${rec.obj_3_1 || 'N/A'} | Obj 3.2: ${rec.obj_3_2 || 'N/A'}</small>
-        </div>
-
-        <div class="card">
-          <h4>Data Entries Collected (${logCount} Total Logs)</h4>
-          <div style="max-height: 180px; overflow-y: auto; font-size:12px;">
-            ${logCount === 0 ? '<p style="color:#64748b;">No logs recorded during this period.</p>' : ''}
-            ${(logs || []).map(l => `
-              <div style="border-bottom:1px solid #e2e8f0; padding:6px 0;">
-                <strong>${new Date(l.created_at).toLocaleDateString()}</strong> [${l.objective_key}] - 
-                Status: <strong>${l.status}</strong> | Prompts: <strong>${l.prompts || 0}</strong> | Notes: ${l.notes || 'None'}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    async function saveTeachers(studentId) {
-      const updates = {
-        teacher_p1: document.getElementById('tp1').value || null,
-        teacher_p2: document.getElementById('tp2').value || null,
-        teacher_p3: document.getElementById('tp3').value || null,
-        teacher_p4: document.getElementById('tp4').value || null,
-        teacher_p5: document.getElementById('tp5').value || null,
-      };
-
-      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
         alert('Teacher assignments updated!');
         closeModal();
-        if (activePeriod) switchView(activePeriod);
-        else loadCaseload();
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
       } else {
-        alert('Error saving teacher assignments.');
+        alert('Error updating teacher assignments.');
       }
     }
 
-    async function loadProgressChart(studentId) {
-      const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
-      const metric = document.getElementById('chart-metric-select')?.value || 'status';
+    async function openCreateStudentModal() {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add New Student to System</h3>
+            <label>First Name</label>
+            <input type="text" id="new-fn" placeholder="e.g. Jane">
+            
+            <label>Last Name Initial / Name</label>
+            <input type="text" id="new-ln" placeholder="e.g. D.">
+
+            <div style="display:flex; justify-content:space-between; margin-top:16px;">
+              <button class="secondary" onclick="closeModal()">Cancel</button>
+              <button onclick="createNewStudent()">Create Student</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function createNewStudent() {
+      const fn = document.getElementById('new-fn').value.trim();
+      const ln = document.getElementById('new-ln').value.trim();
+
+      if (!fn || !ln) {
+        alert('Please provide both first and last name.');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('students').insert([{
+        first_name: fn,
+        last_name: ln,
+        case_manager_email: currentUserEmail
+      }]);
+
+      if (!error) {
+        closeModal();
+        loadCaseload();
+      } else {
+        alert('Error creating student.');
+      }
+    }
+
+    /* SEARCHABLE & ALPHABETIZED ADD TO PERIOD MODAL */
+    async function openAddToPeriodModal(periodNum) {
+      await fetchAllStudents();
+      
+      const colName = `teacher_p${periodNum}`;
+      
+      // Filter out students already in this period, and sort remaining alphabetically by first name
+      const availableStudents = allStudents
+        .filter(s => s[colName] !== currentUserEmail)
+        .sort((a, b) => a.first_name.localeCompare(b.first_name, undefined, { sensitivity: 'base' }));
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add Student to ${periodNum}th Hour</h3>
+            
+            <label>Search Student:</label>
+            <input type="text" id="student-search-input" placeholder="Type student name..." onkeyup="filterStudentAddList()">
+
+            <div class="student-search-list" id="student-search-list-container">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+              <button class="secondary" onclick="closeModal()">Done</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      
+      // Store available list temporarily on window object for easy filtering
+      window.availableStudentsForPeriod = availableStudents;
+      window.currentPeriodNumModal = periodNum;
+      
+      renderStudentAddList(availableStudents, periodNum);
+    }
+
+    function renderStudentAddList(studentList, periodNum) {
+      const container = document.getElementById('student-search-list-container');
+      if (!container) return;
+
+      if (studentList.length === 0) {
+        container.innerHTML = `<div style="padding:16px; color:#64748b; text-align:center; font-size:13px;">No available students found</div>`;
+        return;
+      }
+
+      let html = '';
+      studentList.forEach(student => {
+        html += `
+          <div class="student-search-item">
+            <div>
+              <strong style="font-size:14px; color:#0f172a;">${student.first_name} ${student.last_name}</strong>
+              <div style="font-size:11px; color:#64748b;">CM: ${student.case_manager_email}</div>
+            </div>
+            <button class="success sm" onclick="assignStudentToPeriodDirect('${student.id}', ${periodNum})">+ Add</button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function filterStudentAddList() {
+      const query = document.getElementById('student-search-input').value.toLowerCase().trim();
+      const allAvailable = window.availableStudentsForPeriod || [];
+      const periodNum = window.currentPeriodNumModal;
+
+      const filtered = allAvailable.filter(s => {
+        const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
+        return fullName.includes(query);
+      });
+
+      renderStudentAddList(filtered, periodNum);
+    }
+
+    async function assignStudentToPeriodDirect(studentId, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+
+      const { error } = await supabaseClient.from('students').update({
+        [colName]: currentUserEmail
+      }).eq('id', studentId);
+
+      if (!error) {
+        // Remove added student from local available list and refresh modal list
+        window.availableStudentsForPeriod = window.availableStudentsForPeriod.filter(s => s.id !== studentId);
+        filterStudentAddList();
+        
+        // Refresh underlying dashboard view in background
+        switchView(periodNum);
+      } else {
+        alert('Error adding student to period.');
+      }
+    }
+
+    async function removeStudentFromPeriod(studentId, periodNum) {
+      if (!confirm(`Are you sure you want to remove this student from your ${periodNum}th hour roster?`)) return;
+
+      const colName = `teacher_p${periodNum}`;
+
+      const { error } = await supabaseClient.from('students').update({
+        [colName]: null
+      }).eq('id', studentId);
+
+      if (!error) {
+        switchView(periodNum);
+      } else {
+        alert('Error removing student from period.');
+      }
+    }
+
+    async function deleteStudent(studentId) {
+      if (!confirm("Are you sure you want to delete this student permanently from the system?")) return;
+
+      const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
+      if (!error) {
+        closeModal();
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
+      } else {
+        alert('Error deleting student.');
+      }
+    }
+
+    async function loadStudentHistory(studentId) {
+      const container = document.getElementById('history-log-content');
+      if (!container) return;
 
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
-        .eq('objective_key', objKey)
-        .is('iep_history_id', null)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      if (error || !data) return;
-
-      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      
-      let scores = [];
-      let labelName = '';
-      let maxY = 100;
-
-      if (metric === 'prompts') {
-        scores = data.map(d => d.prompts || 0);
-        labelName = 'Prompts Required';
-        const maxPromptInSet = Math.max(...scores, 5);
-        maxY = maxPromptInSet + 2;
-      } else {
-        scores = data.map(d => d.status === 'Yes' ? 100 : 0);
-        labelName = 'Success Rate (% Yes)';
-        maxY = 100;
+      if (error || !data || data.length === 0) {
+        container.innerHTML = `<p style="color:#64748b; font-size:13px;">No recorded data entries for this student yet.</p>`;
+        return;
       }
 
-      const ctx = document.getElementById('progressChart')?.getContext('2d');
-      if (!ctx) return;
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border); color:#475569;">
+            <th style="padding:6px;">Date</th>
+            <th style="padding:6px;">Obj</th>
+            <th style="padding:6px;">Status</th>
+            <th style="padding:6px;">Prompts</th>
+            <th style="padding:6px;">Logged By</th>
+            <th style="padding:6px;">Notes</th>
+          </tr>
+        </thead>
+        <tbody>`;
 
+      data.forEach(entry => {
+        const dateStr = new Date(entry.created_at).toLocaleDateString();
+        html += `
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:6px;">${dateStr}</td>
+            <td style="padding:6px;">${entry.objective_key}</td>
+            <td style="padding:6px;"><strong>${entry.status}</strong></td>
+            <td style="padding:6px;">${entry.prompts}</td>
+            <td style="padding:6px;">${entry.logged_by || '-'}</td>
+            <td style="padding:6px;">${entry.notes || '-'}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    async function loadProgressChart(studentId) {
+      const objSelect = document.getElementById('data-obj-select');
+      const metricSelect = document.getElementById('chart-metric-select');
+      if (!objSelect || !metricSelect) return;
+
+      const selectedObj = objSelect.value;
+      const selectedMetric = metricSelect.value;
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('objective_key', selectedObj)
+        .order('created_at', { ascending: true });
+
+      if (error || !data || data.length === 0) {
+        if (chartInstance) chartInstance.destroy();
+        return;
+      }
+
+      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+      let chartData = [];
+      let labelName = '';
+
+      if (selectedMetric === 'status') {
+        labelName = 'Success Rate (% Yes)';
+        chartData = data.map(d => (d.status === 'Yes' ? 100 : 0));
+      } else {
+        labelName = 'Prompts Required';
+        chartData = data.map(d => d.prompts || 0);
+      }
+
+      const ctx = document.getElementById('progressChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
 
       chartInstance = new Chart(ctx, {
@@ -976,104 +1125,24 @@
           labels: labels,
           datasets: [{
             label: labelName,
-            data: scores,
-            borderColor: metric === 'prompts' ? '#dc2626' : '#2563eb',
-            backgroundColor: metric === 'prompts' ? 'rgba(220, 38, 38, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+            data: chartData,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
             fill: true,
-            tension: 0.2
+            tension: 0.3
           }]
         },
         options: {
           responsive: true,
-          scales: { y: { min: 0, max: maxY } }
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true }
+          }
         }
       });
     }
 
-    function openAddToPeriodModal(periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
-      
-      if (unassigned.length === 0) {
-        alert('All available students are already in this class hour!');
-        return;
-      }
-
-      let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3>Add Existing Student to ${periodNum}th Hour</h3>
-            <label>Select Student from System:</label>
-            <select id="select-student-to-add">${options}</select>
-            <button onclick="addStudentToPeriod(${periodNum})">Add to Class</button>
-            <button class="secondary" onclick="closeModal()">Cancel</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function addStudentToPeriod(periodNum) {
-      const studentId = document.getElementById('select-student-to-add').value;
-      const updateData = {};
-      updateData[`teacher_p${periodNum}`] = currentUserEmail;
-
-      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
-      if (!error) {
-        closeModal();
-        switchView(periodNum);
-      }
-    }
-
-    async function removeStudentFromPeriod(studentId, periodNum) {
-      const updateData = {};
-      updateData[`teacher_p${periodNum}`] = null;
-
-      const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
-      if (!error) switchView(periodNum);
-    }
-
-    function openCreateStudentModal() {
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3>Add New Student to System</h3>
-            <label>First Name:</label>
-            <input type="text" id="new-fn">
-            <label>Last Name:</label>
-            <input type="text" id="new-ln">
-            <button onclick="createStudent()">Create Student</button>
-            <button class="secondary" onclick="closeModal()">Cancel</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function createStudent() {
-      const fn = document.getElementById('new-fn').value;
-      const ln = document.getElementById('new-ln').value;
-
-      const { error } = await supabaseClient.from('students').insert([{
-        first_name: fn,
-        last_name: ln,
-        case_manager_email: currentUserEmail,
-        case_manager_id: currentUserId,
-        teacher_p1: null,
-        teacher_p2: null,
-        teacher_p3: null,
-        teacher_p4: null,
-        teacher_p5: null
-      }]);
-
-      if (!error) {
-        closeModal();
-        loadCaseload();
-      }
-    }
-
+    // Initialize application state
     initApp();
   </script>
 </body>
