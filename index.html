@@ -82,6 +82,7 @@
     .entry-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px; }
     
     label { font-weight: 600; font-size: 12px; display: block; margin-top: 4px; color: #334155; }
+    .help-note { font-size: 11px; color: #64748b; margin-bottom: 6px; font-style: italic; }
     input, textarea, select { width: 100%; padding: 6px 8px; margin: 2px 0 6px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 13px; }
     textarea { min-height: 45px; }
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
@@ -434,9 +435,13 @@
                 <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 1: Independent Living</h4>
                 <label>Goal Description:</label>
                 <textarea id="g1">${student.goal_1 || ''}</textarea>
+                
                 <label>Objective 1.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g1_o1" value="${student.obj_1_1 || ''}">
+                
                 <label>Objective 1.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g1_o2" value="${student.obj_1_2 || ''}">
               </div>
 
@@ -444,9 +449,13 @@
                 <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 2: Post-Secondary Education / Training</h4>
                 <label>Goal Description:</label>
                 <textarea id="g2">${student.goal_2 || ''}</textarea>
+                
                 <label>Objective 2.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g2_o1" value="${student.obj_2_1 || ''}">
+                
                 <label>Objective 2.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g2_o2" value="${student.obj_2_2 || ''}">
               </div>
 
@@ -454,9 +463,13 @@
                 <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 3: Employment</h4>
                 <label>Goal Description:</label>
                 <textarea id="g3">${student.goal_3 || ''}</textarea>
+                
                 <label>Objective 3.1:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g3_o1" value="${student.obj_3_1 || ''}">
+                
                 <label>Objective 3.2:</label>
+                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                 <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
               </div>
 
@@ -471,9 +484,13 @@
                   </select>
                   <label>Goal Description:</label>
                   <textarea id="g4">${student.goal_4 || ''}</textarea>
+                  
                   <label>Objective 4.1:</label>
+                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                   <input type="text" id="g4_o1" value="${student.obj_4_1 || ''}">
+                  
                   <label>Objective 4.2:</label>
+                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
                   <input type="text" id="g4_o2" value="${student.obj_4_2 || ''}">
                 </div>
               </div>
