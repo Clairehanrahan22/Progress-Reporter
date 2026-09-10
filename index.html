@@ -15,7 +15,6 @@
       --text: #0f172a;
       --border: #cbd5e1;
       --danger: #dc2626;
-      --success: #16a34a;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 960px; margin: 0 auto; }
@@ -28,7 +27,8 @@
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     button.danger { background: var(--danger); }
     
-    /* MODAL & TABS */
+    .login-box { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; border: 1px solid var(--border); }
+
     .modal-backdrop {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
@@ -50,33 +50,10 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div>
-        <h1 style="margin:0;">IEP Progress Reporter</h1>
-        <small id="user-display">Loading session...</small>
-      </div>
-      <div>
-        <button class="outline" onclick="loadCaseload()">My Caseload</button>
-        <button class="danger" onclick="supabaseClient.auth.signOut().then(() => location.reload())">Sign Out</button>
-      </div>
-    </header>
-
-    <!-- CLASS PERIOD & CASELOAD NAVIGATION -->
-    <div class="grid">
-      <button class="nav-btn" onclick="switchView(1)">1st Hour</button>
-      <button class="nav-btn" onclick="switchView(2)">2nd Hour</button>
-      <button class="nav-btn" onclick="switchView(3)">3rd Hour</button>
-      <button class="nav-btn" onclick="switchView(4)">4th Hour</button>
-      <button class="nav-btn" onclick="switchView(5)">5th Hour</button>
-      <button class="nav-btn secondary" onclick="loadCaseload()">My Caseload</button>
-    </div>
-
-    <!-- MAIN DASHBOARD CONTENT -->
-    <div id="main-view"></div>
+  <div class="container" id="app-root">
+    <div style="text-align:center; margin-top:50px;">Loading application...</div>
   </div>
 
-  <!-- POPUP MODALS -->
   <div id="modal-root"></div>
 
   <script>
@@ -92,16 +69,70 @@
 
     async function initApp() {
       const { data: { session } } = await supabaseClient.auth.getSession();
+      
       if (!session) {
-        document.getElementById('main-view').innerHTML = '<p>Please log in to access your dashboard.</p>';
+        renderLogin();
         return;
       }
+      
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
-      document.getElementById('user-display').innerText = `${currentUserEmail} (Staff)`;
-      
+      renderDashboard();
       await fetchAllStudents();
       loadCaseload();
+    }
+
+    function renderLogin() {
+      document.getElementById('app-root').innerHTML = `
+        <div class="login-box">
+          <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="teacher@school.org">
+          <label>Password</label>
+          <input type="password" id="login-pass" placeholder="••••••••">
+          <button style="width:100%; margin-top:10px;" onclick="handleLogin()">Sign In</button>
+          <p id="login-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+        </div>
+      `;
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-pass').value;
+      const errorEl = document.getElementById('login-error');
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.innerText = error.message;
+      } else {
+        initApp();
+      }
+    }
+
+    function renderDashboard() {
+      document.getElementById('app-root').innerHTML = `
+        <header>
+          <div>
+            <h1 style="margin:0;">IEP Progress Reporter</h1>
+            <small>${currentUserEmail} (Staff)</small>
+          </div>
+          <div>
+            <button class="outline" onclick="loadCaseload()">My Caseload</button>
+            <button class="danger" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
+          </div>
+        </header>
+
+        <div class="grid">
+          <button class="nav-btn" onclick="switchView(1)">1st Hour</button>
+          <button class="nav-btn" onclick="switchView(2)">2nd Hour</button>
+          <button class="nav-btn" onclick="switchView(3)">3rd Hour</button>
+          <button class="nav-btn" onclick="switchView(4)">4th Hour</button>
+          <button class="nav-btn" onclick="switchView(5)">5th Hour</button>
+          <button class="nav-btn secondary" onclick="loadCaseload()">My Caseload</button>
+        </div>
+
+        <div id="main-view"></div>
+      `;
     }
 
     async function fetchAllStudents() {
@@ -109,7 +140,6 @@
       if (!error && data) allStudents = data;
     }
 
-    // --- CASELOAD VIEW ---
     async function loadCaseload() {
       activePeriod = null;
       await fetchAllStudents();
@@ -140,7 +170,6 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    // --- CLASS PERIOD ROSTER VIEWS ---
     async function switchView(periodNum) {
       activePeriod = periodNum;
       await fetchAllStudents();
@@ -171,7 +200,6 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    // --- STUDENT PROFILE MODAL (3 GOALS, 2 OBJECTIVES EACH, DATA, TEACHERS) ---
     function openStudentModal(studentId) {
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
@@ -186,7 +214,6 @@
               <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
             </div>
 
-            <!-- TAB 1: DATA & GRAPHS -->
             <div id="data-tab" class="tab-content active">
               <h3>Progress Tracker</h3>
               <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px;">
@@ -211,11 +238,9 @@
               <canvas id="progressChart" style="max-height: 260px;"></canvas>
             </div>
 
-            <!-- TAB 2: GOALS & OBJECTIVES (3 GOALS x 2 OBJECTIVES) -->
             <div id="goals-tab" class="tab-content">
               <h3>IEP Goals & Objectives</h3>
               
-              <!-- GOAL AREA 1 -->
               <div class="goal-box">
                 <h4>Goal Area 1</h4>
                 <label>Goal Description:</label>
@@ -226,7 +251,6 @@
                 <input type="text" id="g1_o2" value="${student.obj_1_2 || ''}">
               </div>
 
-              <!-- GOAL AREA 2 -->
               <div class="goal-box">
                 <h4>Goal Area 2</h4>
                 <label>Goal Description:</label>
@@ -237,7 +261,6 @@
                 <input type="text" id="g2_o2" value="${student.obj_2_2 || ''}">
               </div>
 
-              <!-- GOAL AREA 3 -->
               <div class="goal-box">
                 <h4>Goal Area 3</h4>
                 <label>Goal Description:</label>
@@ -251,7 +274,6 @@
               <button onclick="saveAllGoals('${student.id}')">Save All 3 Goals & Objectives</button>
             </div>
 
-            <!-- TAB 3: PERIOD TEACHER ASSIGNMENTS -->
             <div id="teachers-tab" class="tab-content">
               <h3>Class Period Teacher Assignments</h3>
               <label>1st Hour Teacher Email:</label>
@@ -289,7 +311,6 @@
       if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     }
 
-    // --- SAVE GOALS & OBJECTIVES ---
     async function saveAllGoals(studentId) {
       const updates = {
         goal_1: document.getElementById('g1').value,
@@ -308,11 +329,10 @@
         alert('All 3 Goals & Objectives saved successfully!');
         closeModal();
       } else {
-        alert('Error saving goals. Ensure SQL update script was run in Supabase.');
+        alert('Error saving goals.');
       }
     }
 
-    // --- SAVE TEACHERS ---
     async function saveTeachers(studentId) {
       const updates = {
         teacher_p1: document.getElementById('tp1').value,
@@ -330,7 +350,6 @@
       }
     }
 
-    // --- PROGRESS LOGGING & GRAPHING ---
     async function logProgressData(studentId) {
       const objKey = document.getElementById('data-obj-select').value;
       const scoreVal = parseFloat(document.getElementById('data-score-input').value);
@@ -347,7 +366,7 @@
         document.getElementById('data-score-input').value = '';
         loadProgressChart(studentId);
       } else {
-        alert('Error logging data point. Please check table permissions.');
+        alert('Error logging data point.');
       }
     }
 
@@ -390,7 +409,6 @@
       });
     }
 
-    // --- ROSTER MODALS & CREATION ---
     function openAddToPeriodModal(periodNum) {
       const colName = `teacher_p${periodNum}`;
       const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
