@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progress Reporter - IEP Data Tracking</title>
+  <title>Progress Reporter - IEP Management</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --primary: #2563eb;
@@ -12,37 +13,39 @@
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
-      --border: #e2e8f0;
+      --border: #cbd5e1;
+      --danger: #dc2626;
       --success: #16a34a;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 960px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-    button { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    button.danger { background: #dc2626; }
-    .nav-btn.active { background: #1e40af; font-weight: bold; }
+    button.danger { background: var(--danger); }
     
-    /* MODAL STYLES */
+    /* MODAL & TABS */
     .modal-backdrop {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+      background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
     }
     .modal-content {
-      background: #fff; padding: 24px; border-radius: 12px; max-width: 650px; width: 90%; max-height: 85vh; overflow-y: auto;
+      background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto;
     }
     .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; padding-bottom: 8px; }
-    .tab-btn { background: transparent; color: var(--text); border: none; padding: 8px 12px; }
+    .tab-btn { background: transparent; color: var(--text); border: none; padding: 8px 12px; font-size: 15px; }
     .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    input, textarea, select { width: 100%; padding: 8px; margin: 6px 0 16px 0; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
-    textarea { min-height: 80px; }
+    .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 12px; margin-bottom: 16px; border-radius: 4px; }
+    label { font-weight: 600; font-size: 13px; display: block; margin-top: 8px; color: #334155; }
+    input, textarea, select { width: 100%; padding: 8px; margin: 4px 0 12px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
+    textarea { min-height: 60px; }
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
@@ -54,26 +57,26 @@
         <small id="user-display">Loading session...</small>
       </div>
       <div>
-        <button class="outline" onclick="loadCaseload(currentUserEmail)">My Caseload</button>
+        <button class="outline" onclick="loadCaseload()">My Caseload</button>
         <button class="danger" onclick="supabaseClient.auth.signOut().then(() => location.reload())">Sign Out</button>
       </div>
     </header>
 
-    <!-- PERIOD NAVIGATION -->
+    <!-- CLASS PERIOD & CASELOAD NAVIGATION -->
     <div class="grid">
-      <button class="nav-btn" onclick="switchView('p1', 1)">1st Hour</button>
-      <button class="nav-btn" onclick="switchView('p2', 2)">2nd Hour</button>
-      <button class="nav-btn" onclick="switchView('p3', 3)">3rd Hour</button>
-      <button class="nav-btn" onclick="switchView('p4', 4)">4th Hour</button>
-      <button class="nav-btn" onclick="switchView('p5', 5)">5th Hour</button>
-      <button class="nav-btn secondary" onclick="loadCaseload(currentUserEmail)">My Caseload</button>
+      <button class="nav-btn" onclick="switchView(1)">1st Hour</button>
+      <button class="nav-btn" onclick="switchView(2)">2nd Hour</button>
+      <button class="nav-btn" onclick="switchView(3)">3rd Hour</button>
+      <button class="nav-btn" onclick="switchView(4)">4th Hour</button>
+      <button class="nav-btn" onclick="switchView(5)">5th Hour</button>
+      <button class="nav-btn secondary" onclick="loadCaseload()">My Caseload</button>
     </div>
 
-    <!-- MAIN VIEW CONTAINER -->
+    <!-- MAIN DASHBOARD CONTENT -->
     <div id="main-view"></div>
   </div>
 
-  <!-- MODAL CONTAINER -->
+  <!-- POPUP MODALS -->
   <div id="modal-root"></div>
 
   <script>
@@ -84,50 +87,52 @@
     let currentUserEmail = '';
     let currentUserId = '';
     let allStudents = [];
-    let currentPeriod = null;
+    let activePeriod = null;
+    let chartInstance = null;
 
     async function initApp() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
-        document.getElementById('main-view').innerHTML = '<p>Please log in to access the reporter.</p>';
+        document.getElementById('main-view').innerHTML = '<p>Please log in to access your dashboard.</p>';
         return;
       }
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
       document.getElementById('user-display').innerText = `${currentUserEmail} (Staff)`;
       
-      fetchAllStudents();
-      loadCaseload(currentUserEmail);
+      await fetchAllStudents();
+      loadCaseload();
     }
 
     async function fetchAllStudents() {
       const { data, error } = await supabaseClient.from('students').select('*');
-      if (!error && data) {
-        allStudents = data;
-      }
+      if (!error && data) allStudents = data;
     }
 
-    // --- CASELOAD VIEW & NEW STUDENT CREATION ---
-    async function loadCaseload(email) {
-      currentPeriod = null;
+    // --- CASELOAD VIEW ---
+    async function loadCaseload() {
+      activePeriod = null;
       await fetchAllStudents();
-      const myCaseload = allStudents.filter(s => s.case_manager_email === email);
+      const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
       
       let html = `
         <div class="flex-between" style="margin-bottom: 16px;">
-          <h2>My Caseload (${email})</h2>
+          <h2>My Caseload (${currentUserEmail})</h2>
           <button onclick="openCreateStudentModal()">+ Add New Student to System</button>
         </div>
       `;
 
       if (myCaseload.length === 0) {
-        html += '<p>No students found for this view.</p>';
+        html += '<p>No students assigned to your caseload.</p>';
       } else {
         myCaseload.forEach(student => {
           html += `
-            <div class="card flex-between" style="cursor:pointer;" onclick="openStudentModal('${student.id}')">
-              <h3>${student.first_name} ${student.last_name}</h3>
-              <button class="outline" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Manage IEP / Schedule</button>
+            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
+              <div>
+                <h3 style="margin:0 0 4px 0;">${student.first_name} ${student.last_name}</h3>
+                <small style="color:#64748b;">Case Manager: ${student.case_manager_email}</small>
+              </div>
+              <button class="outline" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Open Profile & IEP</button>
             </div>
           `;
         });
@@ -135,22 +140,22 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    // --- PERIOD ROSTER VIEWS ---
-    async function switchView(periodKey, periodNum) {
-      currentPeriod = periodNum;
+    // --- CLASS PERIOD ROSTER VIEWS ---
+    async function switchView(periodNum) {
+      activePeriod = periodNum;
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
       const periodRoster = allStudents.filter(s => s[colName] === currentUserEmail);
 
       let html = `
         <div class="flex-between" style="margin-bottom: 16px;">
-          <h2>${periodNum}th Hour Roster</h2>
+          <h2>${periodNum}th Hour Class Roster</h2>
           <button onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student to Roster</button>
         </div>
       `;
 
       if (periodRoster.length === 0) {
-        html += '<p>No students in this class period roster.</p>';
+        html += '<p>No students rostered in this class period.</p>';
       } else {
         periodRoster.forEach(student => {
           html += `
@@ -158,7 +163,7 @@
               <div onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
                 <h3 style="margin:0;">${student.first_name} ${student.last_name}</h3>
               </div>
-              <button class="danger" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">Remove from Class</button>
+              <button class="danger" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">Remove from Hour</button>
             </div>
           `;
         });
@@ -166,7 +171,7 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    // --- STUDENT PROFILE MODAL WITH TABS ---
+    // --- STUDENT PROFILE MODAL (3 GOALS, 2 OBJECTIVES EACH, DATA, TEACHERS) ---
     function openStudentModal(studentId) {
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
@@ -176,28 +181,77 @@
           <div class="modal-content">
             <h2>${student.first_name} ${student.last_name}</h2>
             <div class="tab-buttons">
-              <button class="tab-btn active" onclick="switchTab('data-tab', this)">Data & Graphs</button>
-              <button class="tab-btn" onclick="switchTab('goals-tab', this)">Goals & Objectives</button>
+              <button class="tab-btn active" onclick="switchTab('data-tab', this); loadProgressChart('${student.id}');">Data & Graphs</button>
+              <button class="tab-btn" onclick="switchTab('goals-tab', this)">3 Goals & Objectives</button>
               <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
             </div>
 
             <!-- TAB 1: DATA & GRAPHS -->
             <div id="data-tab" class="tab-content active">
-              <h3>Progress Tracker & Visuals</h3>
-              <p>Graphs and entry logs for IEP objective tracking.</p>
+              <h3>Progress Tracker</h3>
+              <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px;">
+                <label>Select Objective to Track/View:</label>
+                <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
+                  <option value="obj_1_1">Goal 1 - Objective 1</option>
+                  <option value="obj_1_2">Goal 1 - Objective 2</option>
+                  <option value="obj_2_1">Goal 2 - Objective 1</option>
+                  <option value="obj_2_2">Goal 2 - Objective 2</option>
+                  <option value="obj_3_1">Goal 3 - Objective 1</option>
+                  <option value="obj_3_2">Goal 3 - Objective 2</option>
+                </select>
+                
+                <div style="display:flex; gap:8px; align-items:flex-end;">
+                  <div style="flex:1;">
+                    <label>Log Score / Percentage (%):</label>
+                    <input type="number" id="data-score-input" placeholder="e.g. 80">
+                  </div>
+                  <button onclick="logProgressData('${student.id}')">Log Data Point</button>
+                </div>
+              </div>
+              <canvas id="progressChart" style="max-height: 260px;"></canvas>
             </div>
 
-            <!-- TAB 2: GOALS & OBJECTIVES -->
+            <!-- TAB 2: GOALS & OBJECTIVES (3 GOALS x 2 OBJECTIVES) -->
             <div id="goals-tab" class="tab-content">
-              <h3>Goals & Objectives</h3>
-              <label>Goals Description:</label>
-              <textarea id="modal-goals">${student.goals || ''}</textarea>
-              <label>Objectives:</label>
-              <textarea id="modal-objectives">${student.objectives || ''}</textarea>
-              <button onclick="saveGoals('${student.id}')">Save IEP Data</button>
+              <h3>IEP Goals & Objectives</h3>
+              
+              <!-- GOAL AREA 1 -->
+              <div class="goal-box">
+                <h4>Goal Area 1</h4>
+                <label>Goal Description:</label>
+                <textarea id="g1">${student.goal_1 || ''}</textarea>
+                <label>Objective 1.1:</label>
+                <input type="text" id="g1_o1" value="${student.obj_1_1 || ''}">
+                <label>Objective 1.2:</label>
+                <input type="text" id="g1_o2" value="${student.obj_1_2 || ''}">
+              </div>
+
+              <!-- GOAL AREA 2 -->
+              <div class="goal-box">
+                <h4>Goal Area 2</h4>
+                <label>Goal Description:</label>
+                <textarea id="g2">${student.goal_2 || ''}</textarea>
+                <label>Objective 2.1:</label>
+                <input type="text" id="g2_o1" value="${student.obj_2_1 || ''}">
+                <label>Objective 2.2:</label>
+                <input type="text" id="g2_o2" value="${student.obj_2_2 || ''}">
+              </div>
+
+              <!-- GOAL AREA 3 -->
+              <div class="goal-box">
+                <h4>Goal Area 3</h4>
+                <label>Goal Description:</label>
+                <textarea id="g3">${student.goal_3 || ''}</textarea>
+                <label>Objective 3.1:</label>
+                <input type="text" id="g3_o1" value="${student.obj_3_1 || ''}">
+                <label>Objective 3.2:</label>
+                <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
+              </div>
+
+              <button onclick="saveAllGoals('${student.id}')">Save All 3 Goals & Objectives</button>
             </div>
 
-            <!-- TAB 3: ASSIGN TEACHERS -->
+            <!-- TAB 3: PERIOD TEACHER ASSIGNMENTS -->
             <div id="teachers-tab" class="tab-content">
               <h3>Class Period Teacher Assignments</h3>
               <label>1st Hour Teacher Email:</label>
@@ -210,7 +264,7 @@
               <input type="email" id="tp4" value="${student.teacher_p4 || ''}">
               <label>5th Hour Teacher Email:</label>
               <input type="email" id="tp5" value="${student.teacher_p5 || ''}">
-              <button onclick="saveTeachers('${student.id}')">Save Period Assignments</button>
+              <button onclick="saveTeachers('${student.id}')">Save Teacher Assignments</button>
             </div>
 
             <div style="margin-top: 20px; text-align: right;">
@@ -220,6 +274,7 @@
         </div>
       `;
       document.getElementById('modal-root').innerHTML = modalHTML;
+      setTimeout(() => loadProgressChart(studentId), 100);
     }
 
     function switchTab(tabId, btn) {
@@ -231,24 +286,33 @@
 
     function closeModal() {
       document.getElementById('modal-root').innerHTML = '';
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     }
 
-    // --- DATA SAVE HANDLERS ---
-    async function saveGoals(studentId) {
-      const goals = document.getElementById('modal-goals').value;
-      const objectives = document.getElementById('modal-objectives').value;
+    // --- SAVE GOALS & OBJECTIVES ---
+    async function saveAllGoals(studentId) {
+      const updates = {
+        goal_1: document.getElementById('g1').value,
+        obj_1_1: document.getElementById('g1_o1').value,
+        obj_1_2: document.getElementById('g1_o2').value,
+        goal_2: document.getElementById('g2').value,
+        obj_2_1: document.getElementById('g2_o1').value,
+        obj_2_2: document.getElementById('g2_o2').value,
+        goal_3: document.getElementById('g3').value,
+        obj_3_1: document.getElementById('g3_o1').value,
+        obj_3_2: document.getElementById('g3_o2').value,
+      };
 
-      const { error } = await supabaseClient
-        .from('students')
-        .update({ goals, objectives })
-        .eq('id', studentId);
-
+      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
-        alert('Goals updated successfully!');
+        alert('All 3 Goals & Objectives saved successfully!');
         closeModal();
+      } else {
+        alert('Error saving goals. Ensure SQL update script was run in Supabase.');
       }
     }
 
+    // --- SAVE TEACHERS ---
     async function saveTeachers(studentId) {
       const updates = {
         teacher_p1: document.getElementById('tp1').value,
@@ -262,21 +326,83 @@
       if (!error) {
         alert('Teachers assigned successfully!');
         closeModal();
-        if (currentPeriod) switchView(`p${currentPeriod}`, currentPeriod);
+        if (activePeriod) switchView(activePeriod);
       }
     }
 
-    // --- ROSTER MANAGEMENT MODALS ---
+    // --- PROGRESS LOGGING & GRAPHING ---
+    async function logProgressData(studentId) {
+      const objKey = document.getElementById('data-obj-select').value;
+      const scoreVal = parseFloat(document.getElementById('data-score-input').value);
+
+      if (isNaN(scoreVal)) return alert('Please enter a valid number.');
+
+      const { error } = await supabaseClient.from('progress_data').insert([{
+        student_id: studentId,
+        objective_key: objKey,
+        score: scoreVal
+      }]);
+
+      if (!error) {
+        document.getElementById('data-score-input').value = '';
+        loadProgressChart(studentId);
+      } else {
+        alert('Error logging data point. Please check table permissions.');
+      }
+    }
+
+    async function loadProgressChart(studentId) {
+      const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('objective_key', objKey)
+        .order('created_at', { ascending: true });
+
+      if (error || !data) return;
+
+      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+      const scores = data.map(d => d.score);
+
+      const ctx = document.getElementById('progressChart')?.getContext('2d');
+      if (!ctx) return;
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `Progress Score (%)`,
+            data: scores,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { min: 0, max: 100 } }
+        }
+      });
+    }
+
+    // --- ROSTER MODALS & CREATION ---
     function openAddToPeriodModal(periodNum) {
-      const unassigned = allStudents.filter(s => s[`teacher_p${periodNum}`] !== currentUserEmail);
+      const colName = `teacher_p${periodNum}`;
+      const unassigned = allStudents.filter(s => s[colName] !== currentUserEmail);
       let options = unassigned.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
 
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
             <h3>Add Existing Student to ${periodNum}th Hour</h3>
+            <label>Select Student from Existing Caseloads:</label>
             <select id="select-student-to-add">${options}</select>
-            <button onclick="addStudentToPeriod('${periodNum}')">Add to Class</button>
+            <button onclick="addStudentToPeriod(${periodNum})">Add to Class</button>
             <button class="secondary" onclick="closeModal()">Cancel</button>
           </div>
         </div>
@@ -292,7 +418,7 @@
       const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
       if (!error) {
         closeModal();
-        switchView(`p${periodNum}`, periodNum);
+        switchView(periodNum);
       }
     }
 
@@ -301,9 +427,7 @@
       updateData[`teacher_p${periodNum}`] = null;
 
       const { error } = await supabaseClient.from('students').update(updateData).eq('id', studentId);
-      if (!error) {
-        switchView(`p${periodNum}`, periodNum);
-      }
+      if (!error) switchView(periodNum);
     }
 
     function openCreateStudentModal() {
@@ -336,7 +460,7 @@
 
       if (!error) {
         closeModal();
-        loadCaseload(currentUserEmail);
+        loadCaseload();
       }
     }
 
