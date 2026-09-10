@@ -25,7 +25,6 @@
     
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
     
-    /* 3-COLUMN DASHBOARD CARD GRID */
     .student-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -61,7 +60,6 @@
     
     .goal-box { background: #f1f5f9; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
     
-    /* MINI GOAL CARD INSIDE STUDENT DASHBOARD */
     .obj-tile {
       background: #f8fafc;
       border: 1px solid var(--border);
@@ -117,6 +115,14 @@
     let activeNav = 'caseload';
     let activePeriod = null;
     let chartInstance = null;
+
+    function getTodayString() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
 
     async function initApp() {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -247,7 +253,7 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    /* CLASS PERIOD DASHBOARD VIEW (CARDS DASHBOARD) */
+    /* CLASS PERIOD DASHBOARD VIEW */
     async function switchView(periodNum) {
       updateNavHighlights(periodNum);
       activePeriod = periodNum;
@@ -278,58 +284,61 @@
         html += `</div>`;
       }
       document.getElementById('main-view').innerHTML = html;
+
+      // Check saved indicators strictly for current logged-in teacher for TODAY
+      periodRoster.forEach(student => restoreTeacherSavedState(student.id));
     }
 
     function renderStudentDashboardCard(student, periodNum) {
-      const objectives = [
+      const rawObjectives = [
         { key: 'obj_1_1', label: 'Ind. Living 1.1', text: student.obj_1_1 },
         { key: 'obj_1_2', label: 'Ind. Living 1.2', text: student.obj_1_2 },
         { key: 'obj_2_1', label: 'Post-Sec 2.1', text: student.obj_2_1 },
         { key: 'obj_2_2', label: 'Post-Sec 2.2', text: student.obj_2_2 },
         { key: 'obj_3_1', label: 'Employment 3.1', text: student.obj_3_1 },
         { key: 'obj_3_2', label: 'Employment 3.2', text: student.obj_3_2 },
+        { key: 'obj_4_1', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.1`, text: student.obj_4_1 },
+        { key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 }
       ];
 
-      if (student.goal_4 || student.obj_4_1 || student.obj_4_2) {
-        objectives.push({ key: 'obj_4_1', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.1`, text: student.obj_4_1 });
-        objectives.push({ key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 });
-      }
+      // Hide empty objective cards
+      const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
 
       let tilesHTML = '';
-      objectives.forEach(o => {
-        if (o.text && o.text.trim() !== '') {
-          tilesHTML += `
-            <div class="obj-tile" id="tile_${student.id}_${o.key}">
-              <div class="obj-tile-header">
-                <span>${o.label}</span>
-                <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Saved</span>
+      activeObjectives.forEach((o, index) => {
+        const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
+        tilesHTML += `
+          <div class="obj-tile" id="tile_${student.id}_${o.key}">
+            <div class="obj-tile-header">
+              <span>${o.label}</span>
+              <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Saved</span>
+            </div>
+            <div class="obj-text">${o.text}</div>
+            
+            <div class="entry-row">
+              <div>
+                <label style="margin-top:0;">Status</label>
+                <select id="status_${student.id}_${o.key}" style="margin:0;">
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Absent">Absent</option>
+                  <option value="No Opportunity">No Opportunity</option>
+                </select>
               </div>
-              <div class="obj-text">${o.text}</div>
-              
-              <div class="entry-row">
-                <div>
-                  <label style="margin-top:0;">Status</label>
-                  <select id="status_${student.id}_${o.key}" style="margin:0;">
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                    <option value="Absent">Absent</option>
-                    <option value="No Opportunity">No Opportunity</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="margin-top:0;">Prompts</label>
-                  <input type="number" id="prompts_${student.id}_${o.key}" placeholder="0" style="margin:0;" min="0">
-                </div>
-              </div>
-
-              <input type="text" id="notes_${student.id}_${o.key}" placeholder="Anecdotal notes..." style="margin-bottom:8px;">
-
-              <div style="text-align:right;">
-                <button class="sm" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}')">Log Entry</button>
+              <div>
+                <label style="margin-top:0;">Prompts</label>
+                <input type="number" id="prompts_${student.id}_${o.key}" placeholder="0" style="margin:0;" min="0">
               </div>
             </div>
-          `;
-        }
+
+            <input type="text" id="notes_${student.id}_${o.key}" placeholder="Anecdotal notes... (Press Enter to Log)" style="margin-bottom:8px;"
+              onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
+
+            <div style="text-align:right;">
+              <button class="sm" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log Entry</button>
+            </div>
+          </div>
+        `;
       });
 
       if (tilesHTML === '') {
@@ -355,11 +364,52 @@
       `;
     }
 
-    async function quickSaveData(studentId, objKey) {
+    async function restoreTeacherSavedState(studentId) {
+      const todayStr = getTodayString();
+      const startDate = `${todayStr}T00:00:00.000Z`;
+      const endDate = `${todayStr}T23:59:59.999Z`;
+
+      // Check strictly for entries by THIS TEACHER on TODAY'S DATE
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('objective_key')
+        .eq('student_id', studentId)
+        .eq('logged_by', currentUserEmail)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error || !data) return;
+
+      const savedObjKeys = data.map(d => d.objective_key);
+
+      document.querySelectorAll(`[id^="tile_${studentId}_"]`).forEach(tile => {
+        const objKey = tile.id.replace(`tile_${studentId}_`, '');
+        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+        const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+
+        if (savedObjKeys.includes(objKey)) {
+          tile.classList.add('saved-success');
+          if (badge) badge.style.display = 'inline-block';
+          if (btn) {
+            btn.innerText = '✓ Saved';
+            btn.style.backgroundColor = 'var(--success)';
+          }
+        } else {
+          tile.classList.remove('saved-success');
+          if (badge) badge.style.display = 'none';
+          if (btn) {
+            btn.innerText = 'Log Entry';
+            btn.style.backgroundColor = 'var(--primary)';
+          }
+        }
+      });
+    }
+
+    async function quickSaveData(studentId, objKey, nextObjKey = null) {
       const statusVal = document.getElementById(`status_${studentId}_${objKey}`)?.value || 'Yes';
       const promptsVal = parseInt(document.getElementById(`prompts_${studentId}_${objKey}`)?.value) || 0;
       const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
-      
+
       const btn = document.getElementById(`btn_${studentId}_${objKey}`);
       const tile = document.getElementById(`tile_${studentId}_${objKey}`);
       const badge = document.getElementById(`badge_${studentId}_${objKey}`);
@@ -369,7 +419,8 @@
         objective_key: objKey,
         status: statusVal,
         prompts: promptsVal,
-        notes: notesVal
+        notes: notesVal,
+        logged_by: currentUserEmail
       }]);
 
       if (!error) {
@@ -378,6 +429,11 @@
         if (btn) {
           btn.innerText = '✓ Saved';
           btn.style.backgroundColor = 'var(--success)';
+        }
+
+        // Auto-advance focus to next objective tile
+        if (nextObjKey) {
+          document.getElementById(`status_${studentId}_${nextObjKey}`)?.focus();
         }
       } else {
         alert('Error saving data entry.');
@@ -412,22 +468,32 @@
             <!-- TAB 1: DATA & GRAPHS -->
             <div id="data-tab" class="tab-content active">
               <h3>Progress Tracker Graph</h3>
-              <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px;">
-                <label>Select Objective to Inspect Chart:</label>
-                <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
-                  <option value="obj_1_1">Independent Living - Objective 1.1</option>
-                  <option value="obj_1_2">Independent Living - Objective 1.2</option>
-                  <option value="obj_2_1">Post-Secondary - Objective 2.1</option>
-                  <option value="obj_2_2">Post-Secondary - Objective 2.2</option>
-                  <option value="obj_3_1">Employment - Objective 3.1</option>
-                  <option value="obj_3_2">Employment - Objective 3.2</option>
-                  ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
-                </select>
+              <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px; display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label>Select Objective:</label>
+                  <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
+                    <option value="obj_1_1">Independent Living - Objective 1.1</option>
+                    <option value="obj_1_2">Independent Living - Objective 1.2</option>
+                    <option value="obj_2_1">Post-Secondary - Objective 2.1</option>
+                    <option value="obj_2_2">Post-Secondary - Objective 2.2</option>
+                    <option value="obj_3_1">Employment - Objective 3.1</option>
+                    <option value="obj_3_2">Employment - Objective 3.2</option>
+                    ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
+                  </select>
+                </div>
+
+                <div>
+                  <label>Metric Displayed:</label>
+                  <select id="chart-metric-select" onchange="loadProgressChart('${student.id}')">
+                    <option value="status">Status Trend (% Yes)</option>
+                    <option value="prompts">Prompt Count Trend</option>
+                  </select>
+                </div>
               </div>
               <canvas id="progressChart" style="max-height: 260px;"></canvas>
             </div>
 
-            <!-- TAB 2: STANDARDIZED GOALS & OBJECTIVES -->
+            <!-- TAB 2: GOALS & OBJECTIVES -->
             <div id="goals-tab" class="tab-content">
               <h3>IEP Goals & Objectives</h3>
               
@@ -501,7 +567,7 @@
               </div>
             </div>
 
-            <!-- TAB 3: DROPDOWN TEACHER ASSIGNMENTS -->
+            <!-- TAB 3: TEACHER ASSIGNMENTS -->
             <div id="teachers-tab" class="tab-content">
               <h3>Class Period Teacher Assignments</h3>
               <label>1st Hour Teacher:</label>
@@ -601,6 +667,8 @@
 
     async function loadProgressChart(studentId) {
       const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
+      const metric = document.getElementById('chart-metric-select')?.value || 'status';
+
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
@@ -611,7 +679,21 @@
       if (error || !data) return;
 
       const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const scores = data.map(d => d.status === 'Yes' ? 100 : 0);
+      
+      let scores = [];
+      let labelName = '';
+      let maxY = 100;
+
+      if (metric === 'prompts') {
+        scores = data.map(d => d.prompts || 0);
+        labelName = 'Prompts Required';
+        const maxPromptInSet = Math.max(...scores, 5);
+        maxY = maxPromptInSet + 2;
+      } else {
+        scores = data.map(d => d.status === 'Yes' ? 100 : 0);
+        labelName = 'Success Rate (% Yes)';
+        maxY = 100;
+      }
 
       const ctx = document.getElementById('progressChart')?.getContext('2d');
       if (!ctx) return;
@@ -623,17 +705,17 @@
         data: {
           labels: labels,
           datasets: [{
-            label: `Yes / Mastered Trend`,
+            label: labelName,
             data: scores,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            borderColor: metric === 'prompts' ? '#dc2626' : '#2563eb',
+            backgroundColor: metric === 'prompts' ? 'rgba(220, 38, 38, 0.1)' : 'rgba(37, 99, 235, 0.1)',
             fill: true,
-            tension: 0.3
+            tension: 0.2
           }]
         },
         options: {
           responsive: true,
-          scales: { y: { min: 0, max: 100 } }
+          scales: { y: { min: 0, max: maxY } }
         }
       });
     }
