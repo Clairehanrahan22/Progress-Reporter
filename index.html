@@ -13,6 +13,7 @@
       --card-bg: #ffffff;
       --text: #0f172a;
       --border: #e2e8f0;
+      --success: #16a34a;
     }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
     .container { max-width: 900px; margin: 0 auto; }
@@ -23,48 +24,58 @@
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
     button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    input, select { width: 100%; padding: 8px 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
+    input, select, textarea { width: 100%; padding: 8px 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
     .hidden { display: none !important; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 16px; }
-    .tab-btn { flex: 1; padding: 8px 16px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .tab-btn.active { background: var(--primary); color: white; }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .obj-card { background: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+    .opt-btn { background: #ffffff; color: #334155; border: 1px solid var(--border); padding: 6px 12px; margin-right: 4px; border-radius: 4px; }
+    .opt-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .auth-toggle { text-align: center; margin-top: 15px; color: var(--primary); cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- AUTH CARD -->
-  <div id="auth-section" class="card" style="max-width: 400px; margin: 40px auto;">
-    <h2>Progress Reporter Login</h2>
-    <div class="tabs">
-      <button type="button" id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Sign In</button>
-      <button type="button" id="tab-signup" class="tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
-    </div>
-    
-    <form id="auth-form" onsubmit="handleAuth(event)">
+  <!-- SIGN IN FORM -->
+  <div id="login-box" class="card" style="max-width: 400px; margin: 40px auto;">
+    <h2 style="margin-top:0;">Progress Reporter - Sign In</h2>
+    <form onsubmit="handleSignIn(event)">
       <label>School Email (@ahschools.us)</label>
-      <input type="email" id="auth-email" required placeholder="teacher@ahschools.us">
+      <input type="email" id="login-email" required placeholder="teacher@ahschools.us">
       
       <label>Password</label>
-      <input type="password" id="auth-password" required minlength="6">
+      <input type="password" id="login-password" required minlength="6">
       
-      <div id="signup-fields" class="hidden">
-        <label>Full Name</label>
-        <input type="text" id="auth-name" placeholder="First & Last Name">
-        
-        <label>Role</label>
-        <select id="auth-role">
-          <option value="Teacher">Teacher / Case Manager</option>
-          <option value="Paraprofessional">Paraprofessional</option>
-        </select>
-      </div>
-      
-      <button type="submit" id="auth-btn" style="width: 100%;">Sign In</button>
+      <button type="submit" style="width: 100%;">Sign In</button>
     </form>
+    <div class="auth-toggle" onclick="showForm('signup')">Need an account? Sign Up</div>
   </div>
 
-  <!-- MAIN APP -->
+  <!-- SIGN UP FORM -->
+  <div id="signup-box" class="card hidden" style="max-width: 400px; margin: 40px auto;">
+    <h2 style="margin-top:0;">Progress Reporter - Sign Up</h2>
+    <form onsubmit="handleSignUp(event)">
+      <label>Full Name</label>
+      <input type="text" id="signup-name" required placeholder="First & Last Name">
+
+      <label>School Email (@ahschools.us)</label>
+      <input type="email" id="signup-email" required placeholder="teacher@ahschools.us">
+      
+      <label>Password (6+ characters)</label>
+      <input type="password" id="signup-password" required minlength="6">
+      
+      <label>Role</label>
+      <select id="signup-role">
+        <option value="Teacher">Teacher / Case Manager</option>
+        <option value="Paraprofessional">Paraprofessional</option>
+      </select>
+      
+      <button type="submit" style="width: 100%;">Create Account</button>
+    </form>
+    <div class="auth-toggle" onclick="showForm('login')">Already have an account? Sign In</div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
   <div id="app-section" class="hidden">
     <header>
       <div>
@@ -111,6 +122,22 @@
           <div><label>5th Hour Teacher</label><input type="email" id="stu-p5" placeholder="teacher@ahschools.us"></div>
         </div>
 
+        <h3>Goals & Objectives</h3>
+        <p><strong>Independent Living</strong></p>
+        <input type="text" id="il-goal" placeholder="Goal Description">
+        <input type="text" id="il-obj1" placeholder="Objective 1">
+        <input type="text" id="il-obj2" placeholder="Objective 2">
+
+        <p><strong>Employment</strong></p>
+        <input type="text" id="emp-goal" placeholder="Goal Description">
+        <input type="text" id="emp-obj1" placeholder="Objective 1">
+        <input type="text" id="emp-obj2" placeholder="Objective 2">
+
+        <p><strong>Post-Secondary</strong></p>
+        <input type="text" id="ps-goal" placeholder="Goal Description">
+        <input type="text" id="ps-obj1" placeholder="Objective 1">
+        <input type="text" id="ps-obj2" placeholder="Objective 2">
+
         <button type="submit" style="margin-top: 15px;">Save Student to Roster</button>
       </form>
     </div>
@@ -140,47 +167,59 @@
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let currentUser = null;
-  let authMode = 'login';
+  let mySchedule = { p1: '', p2: '', p3: '', p4: '', p5: '' };
 
-  function switchAuthTab(mode) {
-    authMode = mode;
-    const isLogin = mode === 'login';
-    document.getElementById('tab-login').classList.toggle('active', isLogin);
-    document.getElementById('tab-signup').classList.toggle('active', !isLogin);
-    document.getElementById('signup-fields').classList.toggle('hidden', isLogin);
-    document.getElementById('auth-btn').innerText = isLogin ? 'Sign In' : 'Create Account';
+  function showForm(formType) {
+    if (formType === 'signup') {
+      document.getElementById('login-box').classList.add('hidden');
+      document.getElementById('signup-box').classList.remove('hidden');
+    } else {
+      document.getElementById('signup-box').classList.add('hidden');
+      document.getElementById('login-box').classList.remove('hidden');
+    }
   }
 
-  async function handleAuth(e) {
+  async function handleSignIn(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
 
     if (!email.toLowerCase().endsWith('@ahschools.us')) {
       alert('Please use your official @ahschools.us email address.');
       return;
     }
 
-    if (authMode === 'signup') {
-      const name = document.getElementById('auth-name').value;
-      const role = document.getElementById('auth-role').value;
-      const { data, error } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: name, role: role } }
-      });
-      if (error) {
-        alert('Sign Up Error: ' + error.message);
-      } else {
-        alert('Account successfully created! Logging you in...');
-        initializeApp();
-      }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert('Sign In Failed: ' + error.message);
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        alert('Login Error: ' + error.message);
-      } else {
-        initializeApp();
-      }
+      initializeApp();
+    }
+  }
+
+  async function handleSignUp(e) {
+    e.preventDefault();
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const role = document.getElementById('signup-role').value;
+
+    if (!email.toLowerCase().endsWith('@ahschools.us')) {
+      alert('Please use your official @ahschools.us email address.');
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name, role: role } }
+    });
+
+    if (error) {
+      alert('Sign Up Failed: ' + error.message);
+    } else {
+      alert('Account created successfully!');
+      initializeApp();
     }
   }
 
@@ -188,15 +227,154 @@
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       currentUser = user;
-      document.getElementById('auth-section').classList.add('hidden');
+      document.getElementById('login-box').classList.add('hidden');
+      document.getElementById('signup-box').classList.add('hidden');
       document.getElementById('app-section').classList.remove('hidden');
       document.getElementById('user-display').innerText = `${user.user_metadata.full_name || user.email} (${user.user_metadata.role || 'Staff'})`;
+      
+      const savedPref = localStorage.getItem('my_schedule_' + user.id);
+      if (savedPref) {
+        mySchedule = JSON.parse(savedPref);
+        document.getElementById('pref-p1').value = mySchedule.p1 || '';
+        document.getElementById('pref-p2').value = mySchedule.p2 || '';
+        document.getElementById('pref-p3').value = mySchedule.p3 || '';
+        document.getElementById('pref-p4').value = mySchedule.p4 || '';
+        document.getElementById('pref-p5').value = mySchedule.p5 || '';
+      }
     }
   }
 
   function openScheduleModal() { document.getElementById('schedule-modal').classList.remove('hidden'); }
   function closeScheduleModal() { document.getElementById('schedule-modal').classList.add('hidden'); }
-  function saveScheduleModal() { closeScheduleModal(); alert('Schedule preferences saved!'); }
+  
+  function saveScheduleModal() {
+    mySchedule = {
+      p1: document.getElementById('pref-p1').value.trim(),
+      p2: document.getElementById('pref-p2').value.trim(),
+      p3: document.getElementById('pref-p3').value.trim(),
+      p4: document.getElementById('pref-p4').value.trim(),
+      p5: document.getElementById('pref-p5').value.trim()
+    };
+    if (currentUser) localStorage.setItem('my_schedule_' + currentUser.id, JSON.stringify(mySchedule));
+    closeScheduleModal();
+    alert('Schedule saved successfully!');
+  }
+
+  async function handleAddStudent(e) {
+    e.preventDefault();
+    const studentData = {
+      first_name: document.getElementById('stu-fname').value,
+      last_name: document.getElementById('stu-lname').value,
+      case_manager_email: document.getElementById('stu-cm').value,
+      teacher_p1: document.getElementById('stu-p1').value,
+      teacher_p2: document.getElementById('stu-p2').value,
+      teacher_p3: document.getElementById('stu-p3').value,
+      teacher_p4: document.getElementById('stu-p4').value,
+      teacher_p5: document.getElementById('stu-p5').value,
+      il_goal: document.getElementById('il-goal').value,
+      il_obj1: document.getElementById('il-obj1').value,
+      il_obj2: document.getElementById('il-obj2').value,
+      emp_goal: document.getElementById('emp-goal').value,
+      emp_obj1: document.getElementById('emp-obj1').value,
+      emp_obj2: document.getElementById('emp-obj2').value,
+      ps_goal: document.getElementById('ps-goal').value,
+      ps_obj1: document.getElementById('ps-obj1').value,
+      ps_obj2: document.getElementById('ps-obj2').value
+    };
+
+    const { error } = await supabase.from('students').insert([studentData]);
+    if (error) alert('Error saving student: ' + error.message);
+    else { alert('Student added successfully!'); toggleRosterView(); }
+  }
+
+  async function loadPeriodView(periodNum) {
+    const assignedTeacher = mySchedule['p' + periodNum] || currentUser.email;
+    document.getElementById('view-title').innerText = `Period ${periodNum} Roster (${assignedTeacher})`;
+    
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq(`teacher_p${periodNum}`, assignedTeacher);
+
+    if (error) alert('Error loading roster: ' + error.message);
+    else renderStudentCards(students || []);
+  }
+
+  async function loadCaseloadView() {
+    document.getElementById('view-title').innerText = `My Caseload (${currentUser.email})`;
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('case_manager_email', currentUser.email);
+
+    if (error) alert('Error loading caseload: ' + error.message);
+    else renderStudentCards(students || []);
+  }
+
+  function renderStudentCards(students) {
+    const container = document.getElementById('student-cards');
+    if (students.length === 0) {
+      container.innerHTML = '<p style="color:#64748b;">No students found for this view.</p>';
+      return;
+    }
+
+    container.innerHTML = students.map(s => `
+      <div class="card">
+        <h3>${s.first_name} ${s.last_name}</h3>
+        ${renderObjectiveSection(s.id, 'Independent Living', s.il_goal, s.il_obj1, s.il_obj2)}
+        ${renderObjectiveSection(s.id, 'Employment', s.emp_goal, s.emp_obj1, s.emp_obj2)}
+        ${renderObjectiveSection(s.id, 'Post-Secondary', s.ps_goal, s.ps_obj1, s.ps_obj2)}
+      </div>
+    `).join('');
+  }
+
+  function renderObjectiveSection(studentId, title, goal, obj1, obj2) {
+    if (!goal) return '';
+    return `
+      <div style="margin-top:10px;">
+        <strong>${title}:</strong> ${goal}
+        ${obj1 ? renderObjectiveCard(studentId, title + ' Obj 1', obj1) : ''}
+        ${obj2 ? renderObjectiveCard(studentId, title + ' Obj 2', obj2) : ''}
+      </div>
+    `;
+  }
+
+  function renderObjectiveCard(studentId, objTitle, objText) {
+    return `
+      <div class="obj-card">
+        <div><strong>${objTitle}:</strong> ${objText}</div>
+        <div style="margin-top:8px;">
+          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'YES')">YES</button>
+          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'NO')">NO</button>
+          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'Absent')">Absent</button>
+          <button class="opt-btn" onclick="logData('${studentId}', '${objTitle}', 'No Opp')">No Opp</button>
+          <select style="width:auto; display:inline-block; margin:0 4px;" id="prompts-${studentId}-${objTitle}">
+            <option value="0 Prompts">0 Prompts</option>
+            <option value="1 Prompt">1 Prompt</option>
+            <option value="2 Prompts">2 Prompts</option>
+            <option value="3+ Prompts">3+ Prompts</option>
+          </select>
+        </div>
+      </div>
+    `;
+  }
+
+  async function logData(studentId, objective, status) {
+    const promptCount = document.getElementById(`prompts-${studentId}-${objective}`).value;
+    const logEntry = {
+      student_id: studentId,
+      objective_name: objective,
+      status: status,
+      prompts: promptCount,
+      logged_by: currentUser.email,
+      created_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase.from('logs').insert([logEntry]);
+    if (error) alert('Error logging data: ' + error.message);
+    else alert(`Saved: ${status} (${promptCount})`);
+  }
+
   async function handleSignOut() { await supabase.auth.signOut(); location.reload(); }
   function toggleRosterView() {
     document.getElementById('roster-view').classList.toggle('hidden');
