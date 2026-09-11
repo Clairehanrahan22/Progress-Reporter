@@ -66,9 +66,9 @@
       background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(2px); display: flex; justify-content: center; align-items: center; z-index: 1000;
     }
     .modal-content {
-      background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      background: #fff; padding: 24px; border-radius: 12px; max-width: 800px; width: 92%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     }
-    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; }
+    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; flex-wrap: wrap; }
     .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
     .tab-content { display: none; }
@@ -204,7 +204,7 @@
     }
     .para-chip span { margin-left: 8px; color: var(--danger); font-weight: bold; cursor: pointer; }
 
-    input[type="text"], input[type="email"], input[type="password"], select, textarea {
+    input[type="text"], input[type="email"], input[type="password"], input[type="date"], select, textarea {
       width: 100%;
       padding: 8px 10px;
       margin-top: 4px;
@@ -256,6 +256,7 @@
     }
 
     function formatUserEmailInput(inputVal) {
+      if (!inputVal) return '';
       let cleaned = inputVal.trim().toLowerCase();
       if (!cleaned) return '';
       if (cleaned.endsWith('@ahschools.us')) {
@@ -383,7 +384,6 @@
                 <h3 style="margin:0 0 4px 0; font-size:16px;">${student.first_name} ${student.last_name}</h3>
                 <small style="color:var(--text-muted);">CM: ${student.case_manager_email}</small>
               </div>
-              <!-- REPLACED BUTTON: Changed from 'Setup IEP' to blue 'edit' button -->
               <button class="sm" style="background:#2563eb; color:white; border-radius:16px; padding: 4px 16px; text-transform: lowercase; font-weight:600;" onclick="event.stopPropagation(); openStudentModal('${student.id}')">edit</button>
             </div>
           `;
@@ -393,7 +393,6 @@
       document.getElementById('main-view').innerHTML = html;
     }
 
-    /* CLASS PERIOD DASHBOARD VIEW */
     async function switchView(periodNum) {
       updateNavHighlights(periodNum);
       activePeriod = periodNum;
@@ -412,8 +411,7 @@
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div>
-            <button class="outline" style="margin-right:8px;" onclick="openManageParasModal(${periodNum})">👥 Paraprofessionals</button>
-            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student</button>
+            <button onclick="openCreateStudentModal()">+ Add Student</button>
           </div>
         </div>
       `;
@@ -422,7 +420,7 @@
         html += `
           <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
             <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            <button class="outline" onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student</button>
+            <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
           </div>
         `;
       } else {
@@ -612,7 +610,7 @@
       }
     }
 
-    /* IEP SETUP & GRAPHS MODAL */
+    /* PROPOSED TAB NAVIGATION LAYOUT MODAL */
     async function openStudentModal(studentId) {
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
@@ -625,15 +623,111 @@
               <button class="danger sm" onclick="closeModal()">✕ Close</button>
             </div>
 
+            <!-- 4 Proposed Tabs Navigation -->
             <div class="tab-buttons">
-              <button class="tab-btn active" id="tab-btn-setup" onclick="switchModalTab('setup')">IEP Setup</button>
+              <button class="tab-btn active" id="tab-btn-goals" onclick="switchModalTab('goals')">IEP Goals & Objectives</button>
               <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
+              <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
+              <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
             </div>
 
-            <!-- TAB 1: SETUP IEP & PERIODS -->
-            <div id="tab-content-setup" class="tab-content active">
-              <form id="student-setup-form" onsubmit="saveStudentSetup(event, '${student.id}')">
-                <h3>Student Profile & Case Manager</h3>
+            <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
+
+              <!-- TAB 1: IEP GOALS & OBJECTIVES -->
+              <div id="tab-content-goals" class="tab-content active">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                  Add, edit, reorder, or archive IEP goals and specific objectives for the student.
+                </p>
+
+                <div class="goal-box">
+                  <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
+                  <label>Objective 1.1</label>
+                  <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
+                  <label>Objective 1.2</label>
+                  <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
+                  <label>Objective 2.1</label>
+                  <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
+                  <label>Objective 2.2</label>
+                  <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
+                  <label>Objective 3.1</label>
+                  <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
+                  <label>Objective 3.2</label>
+                  <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
+                  <label>Domain Name</label>
+                  <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
+                  <label>Objective 4.1</label>
+                  <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
+                  <label>Objective 4.2</label>
+                  <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
+                </div>
+              </div>
+
+              <!-- TAB 2: DATA & GRAPHS -->
+              <div id="tab-content-data" class="tab-content">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                  View raw progress tracking data logs, visual line graphs/charts, filter by date ranges, and export reports.
+                </p>
+
+                <div style="margin-bottom:16px;">
+                  <label>Select Objective to View:</label>
+                  <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
+                    <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
+                  </select>
+                </div>
+
+                <div style="height:260px; position:relative; margin-bottom:24px;">
+                  <canvas id="progress-chart-canvas"></canvas>
+                </div>
+
+                <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
+                <div id="data-history-table">Loading logs...</div>
+              </div>
+
+              <!-- TAB 3: ASSIGNED TEACHERS -->
+              <div id="tab-content-teachers" class="tab-content">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                  Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
+                </p>
+
+                <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  ${[1, 2, 3, 4, 5].map(p => `
+                    <div>
+                      <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
+                      <div class="email-input-wrapper">
+                        <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
+                        <div class="email-domain-tag">@ahschools.us</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- TAB 4: STUDENT SETUP -->
+              <div id="tab-content-setup" class="tab-content">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                  Edit core profile information (Student Name, ID, Grade/Age, Case Manager email, active IEP start/end dates, and contact info).
+                </p>
+
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                   <div>
                     <label>First Name</label>
@@ -651,84 +745,39 @@
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
 
-                <h3>Class Schedule & Period Teachers</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  ${[1, 2, 3, 4, 5].map(p => `
-                    <div>
-                      <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
-                      <div class="email-input-wrapper">
-                        <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
-                        <div class="email-domain-tag">@ahschools.us</div>
-                      </div>
-                    </div>
-                  `).join('')}
+                  <div>
+                    <label>Grade / Age</label>
+                    <input type="text" id="edit_grade_age" value="${student.grade_age || ''}" placeholder="e.g. 10th Grade / Age 16">
+                  </div>
+                  <div>
+                    <label>Student ID</label>
+                    <input type="text" id="edit_student_id_code" value="${student.student_id_code || ''}" placeholder="e.g. 1092834">
+                  </div>
                 </div>
 
-                <h3>IEP Goals & Objectives</h3>
-                <div class="goal-box">
-                  <h4>Goal 1: Independent Living</h4>
-                  <label>Objective 1.1</label>
-                  <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
-                  <label>Objective 1.2</label>
-                  <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  <div>
+                    <label>IEP Start Date</label>
+                    <input type="date" id="edit_iep_start" value="${student.iep_start_date || ''}">
+                  </div>
+                  <div>
+                    <label>IEP End / Review Date</label>
+                    <input type="date" id="edit_iep_end" value="${student.iep_end_date || ''}">
+                  </div>
                 </div>
 
-                <div class="goal-box">
-                  <h4>Goal 2: Post-Secondary Education</h4>
-                  <label>Objective 2.1</label>
-                  <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
-                  <label>Objective 2.2</label>
-                  <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
-                </div>
-
-                <div class="goal-box">
-                  <h4>Goal 3: Employment</h4>
-                  <label>Objective 3.1</label>
-                  <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
-                  <label>Objective 3.2</label>
-                  <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
-                </div>
-
-                <div class="goal-box">
-                  <h4>Goal 4 (Custom Domain)</h4>
-                  <label>Domain Name</label>
-                  <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
-                  <label>Objective 4.1</label>
-                  <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
-                  <label>Objective 4.2</label>
-                  <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
-                </div>
-
-                <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                  <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
-                  <button type="submit">Save Changes</button>
-                </div>
-              </form>
-            </div>
-
-            <!-- TAB 2: DATA LOGS & CHARTS -->
-            <div id="tab-content-data" class="tab-content">
-              <div style="margin-bottom:16px;">
-                <label>Select Objective to View:</label>
-                <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
-                  <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
-                </select>
+                <label>Guardian / Contact Info</label>
+                <textarea id="edit_contact_info" rows="2" placeholder="Parent/Guardian Names, Phone Numbers, Emergency Contacts...">${student.contact_info || ''}</textarea>
               </div>
 
-              <div style="height:280px; position:relative; margin-bottom:24px;">
-                <canvas id="progress-chart-canvas"></canvas>
+              <!-- Action Footer Buttons -->
+              <div style="display:flex; justify-style:space-between; justify-content:space-between; margin-top:24px; padding-top:12px; border-top:1px solid var(--border-light);">
+                <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
+                <button type="submit">Save Changes</button>
               </div>
+            </form>
 
-              <h4>Logged Data History</h4>
-              <div id="data-history-table">Loading logs...</div>
-            </div>
           </div>
         </div>
       `;
@@ -749,11 +798,12 @@
     }
 
     async function renderObjectiveChart(studentId) {
-      const objKey = document.getElementById('chart-obj-select').value;
+      const selectEl = document.getElementById('chart-obj-select');
       const canvasEl = document.getElementById('progress-chart-canvas');
       const historyTableEl = document.getElementById('data-history-table');
 
-      if (!canvasEl) return;
+      if (!selectEl || !canvasEl) return;
+      const objKey = selectEl.value;
 
       const { data, error } = await supabaseClient
         .from('progress_data')
@@ -763,102 +813,114 @@
         .order('created_at', { ascending: true });
 
       if (error) {
-        historyTableEl.innerText = 'Error loading progress history.';
+        if (historyTableEl) historyTableEl.innerHTML = '<p style="color:red;">Error loading history.</p>';
         return;
       }
+
+      if (data.length === 0) {
+        if (historyTableEl) historyTableEl.innerHTML = '<p style="color:var(--text-muted);">No entries logged for this objective yet.</p>';
+        if (activeChartInstance) activeChartInstance.destroy();
+        return;
+      }
+
+      // History Table Render
+      let tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Prompts</th>
+              <th>Notes</th>
+              <th>Logged By</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      data.slice().reverse().forEach(row => {
+        tableHtml += `
+          <tr>
+            <td>${new Date(row.created_at).toLocaleDateString()}</td>
+            <td><strong>${row.status}</strong></td>
+            <td>${row.prompts !== null ? row.prompts : '-'}</td>
+            <td>${row.notes || '-'}</td>
+            <td>${row.logged_by}</td>
+          </tr>
+        `;
+      });
+      tableHtml += '</tbody></table>';
+      if (historyTableEl) historyTableEl.innerHTML = tableHtml;
+
+      // Chart Render
+      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+      const chartValues = data.map(d => {
+        if (d.status === 'Yes') return 100;
+        if (d.status === 'No') return 0;
+        return null;
+      });
 
       if (activeChartInstance) {
         activeChartInstance.destroy();
       }
 
-      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const promptValues = data.map(d => parseInt(d.prompts) || 0);
-
-      activeChartInstance = new Chart(canvasEl, {
+      const ctx = canvasEl.getContext('2d');
+      activeChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Prompts Count',
-            data: promptValues,
+            label: 'Success Rate (Yes = 100%, No = 0%)',
+            data: chartValues,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            fill: true,
-            tension: 0.3
+            spanGaps: true,
+            tension: 0.2,
+            fill: true
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            y: { min: 0, max: 100 }
           }
         }
       });
-
-      if (data.length === 0) {
-        historyTableEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No logged data recorded for this objective yet.</p>';
-      } else {
-        let tableHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Prompts</th>
-                <th>Notes</th>
-                <th>Logged By</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        data.slice().reverse().forEach(row => {
-          tableHTML += `
-            <tr>
-              <td>${new Date(row.created_at).toLocaleString()}</td>
-              <td>${row.status || '-'}</td>
-              <td>${row.prompts || '0'}</td>
-              <td>${row.notes || ''}</td>
-              <td>${row.logged_by || '-'}</td>
-            </tr>
-          `;
-        });
-        tableHTML += `</tbody></table>`;
-        historyTableEl.innerHTML = tableHTML;
-      }
     }
 
-    function closeModal() {
-      document.getElementById('modal-root').innerHTML = '';
-    }
+    async function saveStudentChanges(e, studentId) {
+      e.preventDefault();
 
-    async function saveStudentSetup(event, studentId) {
-      event.preventDefault();
-      const firstName = document.getElementById('edit_first_name').value;
-      const lastName = document.getElementById('edit_last_name').value;
-      const cmVal = document.getElementById('edit_cm_email').value;
-
-      const updates = {
-        first_name: firstName,
-        last_name: lastName,
-        case_manager_email: formatUserEmailInput(cmVal),
+      const updatedPayload = {
+        first_name: document.getElementById('edit_first_name').value.trim(),
+        last_name: document.getElementById('edit_last_name').value.trim(),
+        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email').value),
+        
         teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1').value),
         teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2').value),
         teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3').value),
         teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4').value),
         teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5').value),
-        obj_1_1: document.getElementById('edit_obj_1_1').value,
-        obj_1_2: document.getElementById('edit_obj_1_2').value,
-        obj_2_1: document.getElementById('edit_obj_2_1').value,
-        obj_2_2: document.getElementById('edit_obj_2_2').value,
-        obj_3_1: document.getElementById('edit_obj_3_1').value,
-        obj_3_2: document.getElementById('edit_obj_3_2').value,
-        goal_4_domain: document.getElementById('edit_goal_4_domain').value,
-        obj_4_1: document.getElementById('edit_obj_4_1').value,
-        obj_4_2: document.getElementById('edit_obj_4_2').value
+
+        obj_1_1: document.getElementById('edit_obj_1_1').value.trim(),
+        obj_1_2: document.getElementById('edit_obj_1_2').value.trim(),
+        obj_2_1: document.getElementById('edit_obj_2_1').value.trim(),
+        obj_2_2: document.getElementById('edit_obj_2_2').value.trim(),
+        obj_3_1: document.getElementById('edit_obj_3_1').value.trim(),
+        obj_3_2: document.getElementById('edit_obj_3_2').value.trim(),
+        goal_4_domain: document.getElementById('edit_goal_4_domain').value.trim(),
+        obj_4_1: document.getElementById('edit_obj_4_1').value.trim(),
+        obj_4_2: document.getElementById('edit_obj_4_2').value.trim(),
+
+        grade_age: document.getElementById('edit_grade_age')?.value.trim() || null,
+        student_id_code: document.getElementById('edit_student_id_code')?.value.trim() || null,
+        iep_start_date: document.getElementById('edit_iep_start')?.value || null,
+        iep_end_date: document.getElementById('edit_iep_end')?.value || null,
+        contact_info: document.getElementById('edit_contact_info')?.value.trim() || null
       };
 
-      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
+      const { error } = await supabaseClient.from('students').update(updatedPayload).eq('id', studentId);
+
       if (!error) {
         closeModal();
         if (activePeriod) {
@@ -867,13 +929,15 @@
           loadCaseload();
         }
       } else {
-        alert('Failed to save student profile updates.');
+        alert('Error saving student details.');
       }
     }
 
     async function deleteStudent(studentId) {
-      if (!confirm('Are you sure you want to permanently delete this student record?')) return;
+      if (!confirm('Are you sure you want to delete this student and all associated logs?')) return;
+
       const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
+
       if (!error) {
         closeModal();
         if (activePeriod) {
@@ -882,36 +946,35 @@
           loadCaseload();
         }
       } else {
-        alert('Could not delete student record.');
+        alert('Error deleting student record.');
       }
     }
 
     function openCreateStudentModal() {
       const modalHTML = `
         <div class="modal-backdrop">
-          <div class="modal-content">
-            <div class="flex-between" style="margin-bottom:12px;">
+          <div class="modal-content" style="max-width:500px;">
+            <div class="flex-between" style="margin-bottom:16px;">
               <h2 style="margin:0;">Add New Student</h2>
               <button class="danger sm" onclick="closeModal()">✕ Close</button>
             </div>
-            <form onsubmit="createNewStudent(event)">
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                <div>
-                  <label>First Name</label>
-                  <input type="text" id="new_first_name" required>
-                </div>
-                <div>
-                  <label>Last Name</label>
-                  <input type="text" id="new_last_name" required>
-                </div>
-              </div>
+
+            <form onsubmit="handleCreateStudent(event)">
+              <label>First Name</label>
+              <input type="text" id="create_first_name" required>
+
+              <label>Last Name</label>
+              <input type="text" id="create_last_name" required>
+
               <label>Case Manager Email Username</label>
               <div class="email-input-wrapper">
-                <input type="text" id="new_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
+                <input type="text" id="create_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
                 <div class="email-domain-tag">@ahschools.us</div>
               </div>
-              <div style="text-align:right; margin-top:20px;">
-                <button type="submit">Create Student Record</button>
+
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+                <button type="button" class="outline" onclick="closeModal()">Cancel</button>
+                <button type="submit">Create Student</button>
               </div>
             </form>
           </div>
@@ -920,145 +983,46 @@
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    async function createNewStudent(event) {
-      event.preventDefault();
-      const firstName = document.getElementById('new_first_name').value;
-      const lastName = document.getElementById('new_last_name').value;
-      const cmVal = document.getElementById('new_cm_email').value;
+    async function handleCreateStudent(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('create_first_name').value.trim();
+      const lastName = document.getElementById('create_last_name').value.trim();
+      const cmEmail = formatUserEmailInput(document.getElementById('create_cm_email').value);
 
-      const { data, error } = await supabaseClient.from('students').insert([{
+      const newStudent = {
         first_name: firstName,
         last_name: lastName,
-        case_manager_email: formatUserEmailInput(cmVal)
-      }]).select();
+        case_manager_email: cmEmail,
+        created_by: currentUserEmail
+      };
 
-      if (!error && data && data.length > 0) {
-        closeModal();
-        openStudentModal(data[0].id);
-      } else {
-        alert('Failed to create student record.');
+      if (activePeriod) {
+        newStudent[`teacher_p${activePeriod}`] = currentUserEmail;
       }
-    }
 
-    function openAddToPeriodModal(periodNum) {
-      const myRoster = allStudents;
-      let optionsHTML = myRoster.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
+      const { error } = await supabaseClient.from('students').insert([newStudent]);
 
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Add Student to ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-            <label>Select Student</label>
-            <select id="add-period-student-select">${optionsHTML}</select>
-            <div style="text-align:right; margin-top:20px;">
-              <button onclick="confirmAddStudentToPeriod(${periodNum})">Assign to Class</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function confirmAddStudentToPeriod(periodNum) {
-      const studentId = document.getElementById('add-period-student-select').value;
-      const updates = {};
-      updates[`teacher_p${periodNum}`] = currentUserEmail;
-
-      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
         closeModal();
-        switchView(periodNum);
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
       } else {
-        alert('Unable to assign student to period.');
+        alert('Error creating student.');
       }
     }
 
-    function openManageParasModal(periodNum) {
-      const colName = `paras_p${periodNum}`;
-      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
-
-      let parasList = [];
-      periodStudents.forEach(s => {
-        if (Array.isArray(s[colName])) {
-          s[colName].forEach(p => { if (!parasList.includes(p)) parasList.push(p); });
-        }
-      });
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Paraprofessionals - ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-
-            <p style="font-size:13px; color:var(--text-muted);">Assigned paras will see all students in your ${getOrdinalSuffix(periodNum)} hour class grid to log IEP progress.</p>
-
-            <div style="margin-bottom:16px;">
-              <h4>Currently Assigned Paras:</h4>
-              ${parasList.length === 0 ? '<p style="font-size:12px; color:var(--text-muted);">No paras assigned yet.</p>' : ''}
-              <div>
-                ${parasList.map(p => `
-                  <span class="para-chip">
-                    ${p}
-                    <span onclick="removeParaFromPeriod('${p}', ${periodNum})">✕</span>
-                  </span>
-                `).join('')}
-              </div>
-            </div>
-
-            <label>Add Paraprofessional Username</label>
-            <div class="email-input-wrapper">
-              <input type="text" id="new_para_email" placeholder="e.g. john.doe">
-              <div class="email-domain-tag">@ahschools.us</div>
-            </div>
-
-            <div style="text-align:right; margin-top:16px;">
-              <button onclick="addParaToPeriod(${periodNum})">Add Paraprofessional</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function addParaToPeriod(periodNum) {
-      const inputVal = document.getElementById('new_para_email').value;
-      if (!inputVal) return;
-      const formattedEmail = formatUserEmailInput(inputVal);
-
-      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
-      const colName = `paras_p${periodNum}`;
-
-      for (let s of periodStudents) {
-        let currentParas = Array.isArray(s[colName]) ? [...s[colName]] : [];
-        if (!currentParas.includes(formattedEmail)) {
-          currentParas.push(formattedEmail);
-          await supabaseClient.from('students').update({ [colName]: currentParas }).eq('id', s.id);
-        }
+    function closeModal() {
+      if (activeChartInstance) {
+        activeChartInstance.destroy();
+        activeChartInstance = null;
       }
-
-      await fetchStaffMembers();
-      openManageParasModal(periodNum);
+      document.getElementById('modal-root').innerHTML = '';
     }
 
-    async function removeParaFromPeriod(paraEmail, periodNum) {
-      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
-      const colName = `paras_p${periodNum}`;
-
-      for (let s of periodStudents) {
-        let currentParas = Array.isArray(s[colName]) ? [...s[colName]] : [];
-        currentParas = currentParas.filter(p => p !== paraEmail);
-        await supabaseClient.from('students').update({ [colName]: currentParas }).eq('id', s.id);
-      }
-
-      openManageParasModal(periodNum);
-    }
-
-    initApp();
+    window.onload = initApp;
   </script>
 </body>
 </html>
