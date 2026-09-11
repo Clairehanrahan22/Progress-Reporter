@@ -69,7 +69,7 @@
       background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     }
     .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; }
-    .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; }
+    .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -204,6 +204,17 @@
     }
     .para-chip span { margin-left: 8px; color: var(--danger); font-weight: bold; cursor: pointer; }
 
+    input[type="text"], input[type="email"], input[type="password"], select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
     th, td { border: 1px solid var(--border-light); padding: 8px; text-align: left; }
     th { background-color: #f1f5f9; font-weight: 600; }
@@ -227,6 +238,7 @@
     let allStaffEmails = [];
     let activeNav = 'caseload';
     let activePeriod = null;
+    let activeChartInstance = null;
 
     function getTodayString() {
       const today = new Date();
@@ -245,6 +257,7 @@
 
     function formatUserEmailInput(inputVal) {
       let cleaned = inputVal.trim().toLowerCase();
+      if (!cleaned) return '';
       if (cleaned.endsWith('@ahschools.us')) {
         return cleaned;
       }
@@ -455,13 +468,11 @@
         
         tilesHTML += `
           <div class="table-layout-grid" id="tile_${student.id}_${o.key}">
-            <!-- ROW 1: Objective Context Bar (No duplicate student/CM info) -->
             <div class="grid-row">
               <div class="grid-cell cell-highlight-purple" style="flex: 1.5; font-size:13px;">${o.gNum} ${o.objNum}</div>
               <div class="grid-cell cell-header" style="flex: 5; font-size:13px; text-align: left; justify-content: flex-start;">${o.domain}</div>
             </div>
 
-            <!-- ROW 2: Objective & Prompt Header -->
             <div class="grid-row">
               <div class="grid-cell cell-body" style="flex: 5.3; font-weight: 600; padding: 12px 10px;">
                 ${o.text}
@@ -470,7 +481,6 @@
               <div class="grid-cell cell-header" style="flex: 1.2; background-color: #e5e7eb;">Prompts</div>
             </div>
 
-            <!-- ROW 3: Interactive Button Choices & Prompts Dropdown -->
             <div class="grid-row">
               <div class="grid-cell" style="flex: 5.3; padding: 0;">
                 <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
@@ -492,7 +502,6 @@
               </div>
             </div>
 
-            <!-- ROW 4: Notes & Logging Action Area -->
             <div class="grid-row">
               <div class="grid-cell cell-header" style="flex: 1.2; background-color: #f3f4f6;">Notes</div>
               <div class="grid-cell" style="flex: 4.1; padding: 0;">
@@ -601,6 +610,356 @@
       } else {
         alert('Error saving data entry.');
       }
+    }
+
+    /* IEP SETUP & GRAPHS MODAL */
+    async function openStudentModal(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">${student.first_name} ${student.last_name}</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+
+            <div class="tab-buttons">
+              <button class="tab-btn active" id="tab-btn-setup" onclick="switchModalTab('setup')">IEP Setup</button>
+              <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
+            </div>
+
+            <!-- TAB 1: SETUP IEP & PERIODS -->
+            <div id="tab-content-setup" class="tab-content active">
+              <form id="student-setup-form" onsubmit="saveStudentSetup(event, '${student.id}')">
+                <h3>Student Profile & Case Manager</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  <div>
+                    <label>First Name</label>
+                    <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
+                  </div>
+                  <div>
+                    <label>Last Name</label>
+                    <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
+                  </div>
+                </div>
+
+                <label>Case Manager Email Username</label>
+                <div class="email-input-wrapper">
+                  <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
+                  <div class="email-domain-tag">@ahschools.us</div>
+                </div>
+
+                <h3>Class Schedule & Period Teachers</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  ${[1, 2, 3, 4, 5].map(p => `
+                    <div>
+                      <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
+                      <div class="email-input-wrapper">
+                        <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
+                        <div class="email-domain-tag">@ahschools.us</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <h3>IEP Goals & Objectives</h3>
+                <div class="goal-box">
+                  <h4>Goal 1: Independent Living</h4>
+                  <label>Objective 1.1</label>
+                  <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
+                  <label>Objective 1.2</label>
+                  <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4>Goal 2: Post-Secondary Education</h4>
+                  <label>Objective 2.1</label>
+                  <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
+                  <label>Objective 2.2</label>
+                  <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4>Goal 3: Employment</h4>
+                  <label>Objective 3.1</label>
+                  <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
+                  <label>Objective 3.2</label>
+                  <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
+                </div>
+
+                <div class="goal-box">
+                  <h4>Goal 4 (Custom Domain)</h4>
+                  <label>Domain Name</label>
+                  <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
+                  <label>Objective 4.1</label>
+                  <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
+                  <label>Objective 4.2</label>
+                  <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                  <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
+                  <button type="submit">Save Changes</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- TAB 2: DATA LOGS & CHARTS -->
+            <div id="tab-content-data" class="tab-content">
+              <div style="margin-bottom:16px;">
+                <label>Select Objective to View:</label>
+                <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
+                  <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
+                  <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
+                </select>
+              </div>
+
+              <div style="height:280px; position:relative; margin-bottom:24px;">
+                <canvas id="progress-chart-canvas"></canvas>
+              </div>
+
+              <h4>Logged Data History</h4>
+              <div id="data-history-table">Loading logs...</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    function switchModalTab(tabName, studentId = null) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+      document.getElementById(`tab-content-${tabName}`).classList.add('active');
+
+      if (tabName === 'data' && studentId) {
+        renderObjectiveChart(studentId);
+      }
+    }
+
+    async function renderObjectiveChart(studentId) {
+      const objKey = document.getElementById('chart-obj-select').value;
+      const canvasEl = document.getElementById('progress-chart-canvas');
+      const historyTableEl = document.getElementById('data-history-table');
+
+      if (!canvasEl) return;
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('objective_key', objKey)
+        .order('created_at', { ascending: true });
+
+      if (error || !data || data.length === 0) {
+        if (activeChartInstance) activeChartInstance.destroy();
+        historyTableEl.innerHTML = `<p style="color:var(--text-muted); font-size:13px;">No logged data for this objective yet.</p>`;
+        return;
+      }
+
+      // Populate Table
+      let tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Date / Time</th>
+              <th>Status</th>
+              <th>Prompts</th>
+              <th>Notes</th>
+              <th>Logged By</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(d => `
+              <tr>
+                <td>${new Date(d.created_at).toLocaleDateString()} ${new Date(d.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                <td><strong>${d.status}</strong></td>
+                <td>${d.prompts || '0'}</td>
+                <td>${d.notes || '-'}</td>
+                <td>${d.logged_by || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      historyTableEl.innerHTML = tableHTML;
+
+      // Render Chart
+      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+      const chartValues = data.map(d => d.status === 'Yes' ? 100 : (d.status === 'No' ? 0 : null));
+
+      if (activeChartInstance) activeChartInstance.destroy();
+
+      const ctx = canvasEl.getContext('2d');
+      activeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Success Rate %',
+            data: chartValues,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            spanGaps: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100 }
+          }
+        }
+      });
+    }
+
+    async function saveStudentSetup(event, studentId) {
+      event.preventDefault();
+
+      const updatedPayload = {
+        first_name: document.getElementById('edit_first_name').value.trim(),
+        last_name: document.getElementById('edit_last_name').value.trim(),
+        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email').value),
+        teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1').value),
+        teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2').value),
+        teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3').value),
+        teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4').value),
+        teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5').value),
+        obj_1_1: document.getElementById('edit_obj_1_1').value.trim(),
+        obj_1_2: document.getElementById('edit_obj_1_2').value.trim(),
+        obj_2_1: document.getElementById('edit_obj_2_1').value.trim(),
+        obj_2_2: document.getElementById('edit_obj_2_2').value.trim(),
+        obj_3_1: document.getElementById('edit_obj_3_1').value.trim(),
+        obj_3_2: document.getElementById('edit_obj_3_2').value.trim(),
+        goal_4_domain: document.getElementById('edit_goal_4_domain').value.trim(),
+        obj_4_1: document.getElementById('edit_obj_4_1').value.trim(),
+        obj_4_2: document.getElementById('edit_obj_4_2').value.trim()
+      };
+
+      const { error } = await supabaseClient.from('students').update(updatedPayload).eq('id', studentId);
+
+      if (!error) {
+        closeModal();
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
+      } else {
+        alert('Error saving student details: ' + error.message);
+      }
+    }
+
+    /* CREATE NEW STUDENT MODAL */
+    function openCreateStudentModal() {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add New Student</h3>
+            <form onsubmit="handleCreateStudent(event)">
+              <label>First Name</label>
+              <input type="text" id="create_first_name" required placeholder="e.g. Jeremiah">
+
+              <label>Last Name</label>
+              <input type="text" id="create_last_name" required placeholder="e.g. T.">
+
+              <label>Case Manager Email Username</label>
+              <div class="email-input-wrapper">
+                <input type="text" id="create_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
+                <div class="email-domain-tag">@ahschools.us</div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit">Create Student</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function handleCreateStudent(event) {
+      event.preventDefault();
+      const first_name = document.getElementById('create_first_name').value.trim();
+      const last_name = document.getElementById('create_last_name').value.trim();
+      const case_manager_email = formatUserEmailInput(document.getElementById('create_cm_email').value);
+
+      const { data, error } = await supabaseClient.from('students').insert([{
+        first_name,
+        last_name,
+        case_manager_email
+      }]).select();
+
+      if (!error && data && data.length > 0) {
+        closeModal();
+        openStudentModal(data[0].id);
+      } else {
+        alert('Error creating student.');
+      }
+    }
+
+    /* ADD STUDENT TO PERIOD MODAL */
+    async function openAddToPeriodModal(periodNum) {
+      await fetchAllStudents();
+      const colName = `teacher_p${periodNum}`;
+
+      const unassignedStudents = allStudents.filter(s => s[colName] !== currentUserEmail);
+
+      let modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Add Student to ${getOrdinalSuffix(periodNum)} Hour</h3>
+            ${unassignedStudents.length === 0 ? '<p style="color:var(--text-muted);">All available students are already in this class roster.</p>' : `
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+                ${unassignedStudents.map(s => `
+                  <div class="flex-between" style="padding:10px; border:1px solid var(--border-light); border-radius:6px;">
+                    <div><strong>${s.first_name} ${s.last_name}</strong> (${s.case_manager_email || 'No CM'})</div>
+                    <button class="sm" onclick="addStudentToPeriod('${s.id}', ${periodNum})">+ Add</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+            <div style="margin-top:20px; text-align:right;">
+              <button class="secondary" onclick="closeModal()">Done</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function addStudentToPeriod(studentId, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      await supabaseClient.from('students').update({ [colName]: currentUserEmail }).eq('id', studentId);
+      openAddToPeriodModal(periodNum);
+    }
+
+    async function removeStudentFromPeriod(studentId, periodNum) {
+      if (!confirm('Remove student from this period roster?')) return;
+      const colName = `teacher_p${periodNum}`;
+      await supabaseClient.from('students').update({ [colName]: null }).eq('id', studentId);
+      switchView(periodNum);
+    }
+
+    async function deleteStudent(studentId) {
+      if (!confirm('Are you sure you want to delete this student and all associated logs? This action cannot be undone.')) return;
+      await supabaseClient.from('students').delete().eq('id', studentId);
+      closeModal();
+      loadCaseload();
     }
 
     /* PARAPROFESSIONAL MANAGEMENT MODAL */
