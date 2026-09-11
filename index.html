@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Student Management & Data Tracking System</title>
+  <title>IEP Caseload Tracker App</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -11,8 +11,8 @@
       --card-bg: #ffffff;
       --text: #0f172a;
       --text-muted: #64748b;
-      --border: #cbd5e1;
-      --border-dark: #334155;
+      --border: #334155;
+      --border-light: #cbd5e1;
       --success: #16a34a;
     }
 
@@ -21,183 +21,110 @@
       background: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 24px;
+      padding: 0;
     }
+
+    .top-nav {
+      background: #0f172a;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .top-nav h2 { margin: 0; font-size: 18px; }
+
+    .nav-links button {
+      background: transparent;
+      color: #94a3b8;
+      border: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .nav-links button.active, .nav-links button:hover { color: white; }
 
     .app-container {
       max-width: 900px;
-      margin: 0 auto;
+      margin: 24px auto;
+      padding: 0 16px;
     }
 
-    /* Top Navigation Header */
-    .app-header {
+    .view-page { display: none; }
+    .view-page.active { display: block; }
+
+    /* Caseload Table */
+    .caseload-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+    }
+
+    .caseload-table {
+      width: 100%;
       background: white;
-      padding: 16px 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+      border-radius: 10px;
+      border: 1px solid var(--border-light);
+      border-collapse: collapse;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
-    .student-info h1 {
-      margin: 0;
-      font-size: 22px;
+    .caseload-table th, .caseload-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
     }
 
-    .student-info p {
-      margin: 4px 0 0 0;
+    .caseload-table th {
+      background: #f1f5f9;
+      font-size: 12px;
+      text-transform: uppercase;
       color: var(--text-muted);
-      font-size: 14px;
     }
 
-    .action-btn {
+    .student-link {
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .student-link:hover { text-decoration: underline; }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-sm:hover { background: #f1f5f9; }
+
+    .btn-primary {
       background: var(--primary);
       color: white;
       border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .action-btn:hover {
-      background: var(--primary-hover);
-    }
-
-    /* Modal Overlay */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(15, 23, 42, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal-container {
-      width: 100%;
-      max-width: 800px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-
-    .modal-header {
-      padding: 16px 24px;
-      background: #f8fafc;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .close-btn {
-      background: #fee2e2;
-      color: #ef4444;
-      border: none;
-      padding: 6px 12px;
+      padding: 8px 16px;
       border-radius: 6px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
     }
 
-    /* Navigation Tabs */
-    .tabs-nav {
-      display: flex;
-      background: #f1f5f9;
-      border-bottom: 1px solid var(--border);
-      padding: 0 16px;
-      gap: 8px;
-    }
-
-    .tab-btn {
-      padding: 12px 16px;
-      border: none;
-      background: transparent;
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: all 0.2s;
-    }
-
-    .tab-btn:hover {
-      color: var(--primary);
-    }
-
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-      background: white;
-    }
-
-    .tab-content {
-      padding: 24px;
-      min-height: 320px;
-    }
-
-    .panel {
-      display: none;
-    }
-
-    .panel.active {
-      display: block;
-    }
-
-    /* Form Styles */
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-    }
-
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-
-    .placeholder-box {
-      background: #f8fafc;
-      border: 2px dashed var(--border);
-      padding: 30px;
-      text-align: center;
-      border-radius: 8px;
-      color: var(--text-muted);
-    }
-
-    /* Main View Tracking Cards */
+    /* Logging Cards */
     .tracking-card {
       background: white;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-light);
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
     .card-meta {
@@ -234,15 +161,14 @@
 
     .btn-pill {
       background: #f1f5f9;
-      border: 2px solid var(--border);
+      border: 2px solid var(--border-light);
       border-radius: 20px;
       padding: 8px 18px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
     }
 
-    .btn-pill:hover, .btn-pill.selected {
+    .btn-pill.selected {
       background: var(--primary);
       color: white;
       border-color: var(--primary);
@@ -257,188 +183,256 @@
     .log-row input {
       flex: 1;
       padding: 10px 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-light);
       border-radius: 6px;
     }
 
     .log-row select {
       padding: 10px 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-light);
       border-radius: 6px;
     }
 
-    .btn-submit {
-      background: var(--success);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
-      font-weight: 700;
-      cursor: pointer;
+    /* Edit Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
     }
+
+    .modal-container {
+      width: 100%; max-width: 800px;
+      background: white; border-radius: 12px;
+      border: 1px solid var(--border-light); overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 16px 24px; background: #f8fafc;
+      border-bottom: 1px solid var(--border-light);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .tabs-nav {
+      display: flex; background: #f1f5f9;
+      border-bottom: 1px solid var(--border-light); padding: 0 16px; gap: 8px;
+    }
+
+    .tab-btn {
+      padding: 12px 16px; border: none; background: transparent;
+      font-weight: 600; font-size: 14px; color: var(--text-muted);
+      cursor: pointer; border-bottom: 3px solid transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--primary); border-bottom-color: var(--primary); background: white;
+    }
+
+    .tab-content { padding: 24px; min-height: 280px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
   </style>
 </head>
 <body>
 
-<div class="app-container">
-
-  <!-- Student Bar -->
-  <div class="app-header">
-    <div class="student-info">
-      <h1>Jeremiah T.</h1>
-      <p>CM: claire.hanrahan@ahschools.us</p>
-    </div>
-    <div>
-      <button class="action-btn" onclick="openModal()">Edit Student Settings</button>
+  <div class="top-nav">
+    <h2>IEP Progress Tracker</h2>
+    <div class="nav-links">
+      <button class="active" onclick="navigateTo('caseload-page')">My Caseload</button>
+      <button onclick="alert('Reports View')">Reports</button>
     </div>
   </div>
 
-  <!-- Objective Card 1 -->
-  <div class="tracking-card">
-    <div class="card-meta">
-      <span class="badge">G 2 Obj 1</span>
-      <span style="color: var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
-    </div>
-    <div class="question-banner">
-      Did Jeremiah identify an appropriate conversation topic for the person he was talking to?
-    </div>
-    <div class="button-group">
-      <button class="btn-pill selected">yes</button>
-      <button class="btn-pill">no</button>
-      <button class="btn-pill">no opportunity</button>
-      <button class="btn-pill">absent</button>
-    </div>
-    <div class="log-row">
-      <select>
-        <option>0 Prompts</option>
-        <option>1 Prompt</option>
-        <option>2 Prompts</option>
-      </select>
-      <input type="text" placeholder="Type notes here...">
-      <button class="btn-submit">Log</button>
-    </div>
-  </div>
+  <div class="app-container">
 
-  <!-- Objective Card 2 -->
-  <div class="tracking-card">
-    <div class="card-meta">
-      <span class="badge">G 2 Obj 2</span>
-      <span style="color: var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
-    </div>
-    <div class="question-banner">
-      Did Jeremiah correctly interpret the other person's social cues?
-    </div>
-    <div class="button-group">
-      <button class="btn-pill">yes</button>
-      <button class="btn-pill">no</button>
-      <button class="btn-pill">no opportunity</button>
-      <button class="btn-pill">absent</button>
-    </div>
-    <div class="log-row">
-      <select>
-        <option>0 Prompts</option>
-        <option>1 Prompt</option>
-        <option>2 Prompts</option>
-      </select>
-      <input type="text" placeholder="Type notes here...">
-      <button class="btn-submit">Log</button>
-    </div>
-  </div>
-
-</div>
-
-<!-- Student Edit View Modal -->
-<div class="modal-overlay" id="editModal" style="display: none;">
-  <div class="modal-container">
-    
-    <!-- Modal Header -->
-    <div class="modal-header">
-      <div>
-        <div class="modal-title">Edit Student Profile</div>
-        <div style="font-size: 13px; color: var(--text-muted);">Jeremiah T. • ID: #84920</div>
-      </div>
-      <button class="close-btn" onclick="closeModal()">✕ Close</button>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="tabs-nav">
-      <button class="tab-btn active" onclick="switchTab('goals', this)">IEP Goals & Objectives</button>
-      <button class="tab-btn" onclick="switchTab('data', this)">Data & Graphs</button>
-      <button class="tab-btn" onclick="switchTab('teachers', this)">Assigned Teachers</button>
-      <button class="tab-btn" onclick="switchTab('setup', this)">Student Setup</button>
-    </div>
-
-    <!-- Tab Panels -->
-    <div class="tab-content">
-      
-      <!-- Tab 1: IEP Goals & Objectives -->
-      <div id="tab-goals" class="panel active">
-        <h3 style="margin-top:0;">IEP Goals & Objectives</h3>
-        <p style="color:var(--text-muted); font-size:14px;">Manage specific IEP targets and tracking criteria for Jeremiah.</p>
-        <div class="placeholder-box">
-          🎯 <strong>Goal 1: Social Communication</strong><br>
-          • Objective 1: Identify appropriate conversation topics<br>
-          • Objective 2: Interpret social cues accurately<br><br>
-          <button class="action-btn">+ Add Objective</button>
+    <!-- PAGE 1: CASELOAD HOME LANDING PAGE -->
+    <div id="caseload-page" class="view-page active">
+      <div class="caseload-header">
+        <div>
+          <h1 style="margin:0;">My Caseload</h1>
+          <p style="color:var(--text-muted); margin:4px 0 0 0;">Select a student to log data or click edit to update goals.</p>
         </div>
+        <button class="btn-primary">+ Add New Student</button>
       </div>
 
-      <!-- Tab 2: Data & Graphs -->
-      <div id="tab-data" class="panel">
-        <h3 style="margin-top:0;">Data & Graphs</h3>
-        <p style="color:var(--text-muted); font-size:14px;">View aggregated log data and performance charts.</p>
-        <div class="placeholder-box">
-          📈 [Chart Area: Line Graph showing trial success % over time]
-          <br><br>
-          <small>Filtered Range: September 2026</small>
-        </div>
+      <table class="caseload-table">
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Case Manager</th>
+            <th>Active Goals</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="student-link" onclick="openStudentData('Jeremiah T.', 'claire.hanrahan@ahschools.us')">Jeremiah T.</span></td>
+            <td>claire.hanrahan@ahschools.us</td>
+            <td>2 Objectives</td>
+            <td>
+              <button class="btn-sm" onclick="openStudentData('Jeremiah T.', 'claire.hanrahan@ahschools.us')">Log Data</button>
+              <button class="btn-sm" onclick="openEditModal('Jeremiah T.', 'claire.hanrahan@ahschools.us')">Edit Student</button>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="student-link" onclick="openStudentData('Alex M.', 'claire.hanrahan@ahschools.us')">Alex M.</span></td>
+            <td>claire.hanrahan@ahschools.us</td>
+            <td>3 Objectives</td>
+            <td>
+              <button class="btn-sm" onclick="openStudentData('Alex M.', 'claire.hanrahan@ahschools.us')">Log Data</button>
+              <button class="btn-sm" onclick="openEditModal('Alex M.', 'claire.hanrahan@ahschools.us')">Edit Student</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGE 2: INDIVIDUAL STUDENT DATA LOGGING PAGE -->
+    <div id="student-data-page" class="view-page">
+      <div style="margin-bottom:16px;">
+        <button class="btn-sm" onclick="navigateTo('caseload-page')">← Back to Caseload</button>
       </div>
 
-      <!-- Tab 3: Assigned Teachers -->
-      <div id="tab-teachers" class="panel">
-        <h3 style="margin-top:0;">Assigned Teachers</h3>
-        <p style="color:var(--text-muted); font-size:14px;">Assign educational staff who have permission to track data for this student.</p>
-        <div class="form-group">
-          <label>Case Manager</label>
-          <input type="text" value="Claire Hanrahan (claire.hanrahan@ahschools.us)">
+      <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:16px 20px; border-radius:10px; border:1px solid var(--border-light); margin-bottom:20px;">
+        <div>
+          <h1 id="selected-student-name" style="margin:0; font-size:22px;">Jeremiah T.</h1>
+          <p id="selected-student-cm" style="margin:4px 0 0 0; color:var(--text-muted);">CM: claire.hanrahan@ahschools.us</p>
         </div>
-        <div class="form-group">
-          <label>Assigned Instructors / Specialists</label>
-          <select multiple style="height:100px;">
-            <option selected>Mr. Davis (Math)</option>
-            <option selected>Ms. Thompson (English)</option>
-            <option>Mrs. Gable (Speech Pathologist)</option>
+        <button class="btn-primary" onclick="openEditModalFromLogging()">Edit Student Settings</button>
+      </div>
+
+      <!-- Objective Card 1 -->
+      <div class="tracking-card">
+        <div class="card-meta">
+          <span class="badge">G 2 Obj 1</span>
+          <span style="color:var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
+        </div>
+        <div class="question-banner">
+          Did Jeremiah identify an appropriate conversation topic for the person he was talking to?
+        </div>
+        <div class="button-group">
+          <button class="btn-pill selected">yes</button>
+          <button class="btn-pill">no</button>
+          <button class="btn-pill">no opportunity</button>
+          <button class="btn-pill">absent</button>
+        </div>
+        <div class="log-row">
+          <!-- Restored 0 to 3 Prompts Selector -->
+          <select>
+            <option value="0">0 Prompts</option>
+            <option value="1">1 Prompt</option>
+            <option value="2">2 Prompts</option>
+            <option value="3">3 Prompts</option>
           </select>
+          <input type="text" placeholder="Type notes here...">
+          <button class="btn-primary" style="background:var(--success);">Log</button>
         </div>
       </div>
 
-      <!-- Tab 4: Student Setup -->
-      <div id="tab-setup" class="panel">
-        <h3 style="margin-top:0;">Student Setup</h3>
-        <p style="color:var(--text-muted); font-size:14px;">Manage basic student account preferences and details.</p>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-          <div class="form-group">
-            <label>First Name</label>
-            <input type="text" value="Jeremiah">
-          </div>
-          <div class="form-group">
-            <label>Last Name Initial</label>
-            <input type="text" value="T.">
-          </div>
+      <!-- Objective Card 2 -->
+      <div class="tracking-card">
+        <div class="card-meta">
+          <span class="badge">G 2 Obj 2</span>
+          <span style="color:var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
         </div>
-        <div class="form-group">
-          <label>Case Manager Email Address</label>
-          <input type="email" value="claire.hanrahan@ahschools.us">
+        <div class="question-banner">
+          Did Jeremiah correctly interpret the other person's social cues?
+        </div>
+        <div class="button-group">
+          <button class="btn-pill">yes</button>
+          <button class="btn-pill">no</button>
+          <button class="btn-pill">no opportunity</button>
+          <button class="btn-pill">absent</button>
+        </div>
+        <div class="log-row">
+          <!-- Restored 0 to 3 Prompts Selector -->
+          <select>
+            <option value="0">0 Prompts</option>
+            <option value="1">1 Prompt</option>
+            <option value="2">2 Prompts</option>
+            <option value="3">3 Prompts</option>
+          </select>
+          <input type="text" placeholder="Type notes here...">
+          <button class="btn-primary" style="background:var(--success);">Log</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- EDIT STUDENT MODAL VIEW (WITH 4 TABS) -->
+  <div class="modal-overlay" id="editModal" style="display:none;">
+    <div class="modal-container">
+      
+      <div class="modal-header">
+        <div>
+          <strong style="font-size:18px;" id="modal-student-title">Edit Student Profile</strong>
+        </div>
+        <button class="btn-sm" style="background:#fee2e2; color:#ef4444; border:none;" onclick="closeModal()">✕ Close</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('goals', this)">IEP Goals & Objectives</button>
+        <button class="tab-btn" onclick="switchTab('data', this)">Data & Graphs</button>
+        <button class="tab-btn" onclick="switchTab('teachers', this)">Assigned Teachers</button>
+        <button class="tab-btn" onclick="switchTab('setup', this)">Student Setup</button>
+      </div>
+
+      <div class="tab-content">
+        <!-- Tab 1: IEP Goals & Objectives -->
+        <div id="tab-goals" class="panel active">
+          <h4 style="margin-top:0;">IEP Goals & Objectives</h4>
+          <p style="color:var(--text-muted); font-size:14px;">Edit objectives and prompt criteria for this student.</p>
+        </div>
+        <!-- Tab 2: Data & Graphs -->
+        <div id="tab-data" class="panel">
+          <h4 style="margin-top:0;">Data & Graphs</h4>
+          <p style="color:var(--text-muted); font-size:14px;">View raw logs and trend charts.</p>
+        </div>
+        <!-- Tab 3: Assigned Teachers -->
+        <div id="tab-teachers" class="panel">
+          <h4 style="margin-top:0;">Assigned Teachers</h4>
+          <p style="color:var(--text-muted); font-size:14px;">Assign staff permissions for data collection.</p>
+        </div>
+        <!-- Tab 4: Student Setup -->
+        <div id="tab-setup" class="panel">
+          <h4 style="margin-top:0;">Student Setup</h4>
+          <p style="color:var(--text-muted); font-size:14px;">Update student name, ID, and case manager contact info.</p>
         </div>
       </div>
 
     </div>
   </div>
-</div>
 
 <script>
-  function openModal() {
+  let activeStudent = "Jeremiah T.";
+  let activeEmail = "claire.hanrahan@ahschools.us";
+
+  function navigateTo(pageId) {
+    document.querySelectorAll('.view-page').forEach(page => page.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+  }
+
+  function openStudentData(studentName, cmEmail) {
+    activeStudent = studentName;
+    activeEmail = cmEmail;
+    document.getElementById('selected-student-name').innerText = studentName;
+    document.getElementById('selected-student-cm').innerText = 'CM: ' + cmEmail;
+    navigateTo('student-data-page');
+  }
+
+  function openEditModal(studentName, cmEmail) {
+    activeStudent = studentName;
+    activeEmail = cmEmail;
+    document.getElementById('modal-student-title').innerText = 'Edit ' + studentName;
     document.getElementById('editModal').style.display = 'flex';
+  }
+
+  function openEditModalFromLogging() {
+    openEditModal(activeStudent, activeEmail);
   }
 
   function closeModal() {
@@ -446,12 +440,9 @@
   }
 
   function switchTab(tabId, element) {
-    // Hide all tab panels
     document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
-    // Remove active state from all tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
-    // Show target panel and set tab button to active
     document.getElementById('tab-' + tabId).classList.add('active');
     element.classList.add('active');
   }
