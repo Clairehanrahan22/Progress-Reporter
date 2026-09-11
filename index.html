@@ -724,7 +724,7 @@
               <!-- TAB 4: STUDENT SETUP -->
               <div id="tab-content-setup" class="tab-content">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  Edit core profile information (Student Name, ID, Grade/Age, Case Manager email, active IEP start/end dates, and contact info).
+                  Edit basic profile information and case manager details.
                 </p>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
@@ -743,31 +743,6 @@
                   <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  <div>
-                    <label>Grade / Age</label>
-                    <input type="text" id="edit_grade_age" value="${student.grade_age || ''}" placeholder="e.g. 10th Grade / Age 16">
-                  </div>
-                  <div>
-                    <label>Student ID</label>
-                    <input type="text" id="edit_student_id_code" value="${student.student_id_code || ''}" placeholder="e.g. 1092834">
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  <div>
-                    <label>IEP Start Date</label>
-                    <input type="date" id="edit_iep_start" value="${student.iep_start_date || ''}">
-                  </div>
-                  <div>
-                    <label>IEP End / Review Date</label>
-                    <input type="date" id="edit_iep_end" value="${student.iep_end_date || ''}">
-                  </div>
-                </div>
-
-                <label>Guardian / Contact Info</label>
-                <textarea id="edit_guardian_info" rows="3" placeholder="Guardian names, phone numbers, notes...">${student.guardian_info || ''}</textarea>
               </div>
 
               <div class="flex-between" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
@@ -810,12 +785,6 @@
         first_name: document.getElementById('edit_first_name')?.value.trim(),
         last_name: document.getElementById('edit_last_name')?.value.trim(),
         case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email')?.value),
-        
-        grade_age: document.getElementById('edit_grade_age')?.value.trim() || null,
-        student_id_code: document.getElementById('edit_student_id_code')?.value.trim() || null,
-        iep_start_date: document.getElementById('edit_iep_start')?.value || null,
-        iep_end_date: document.getElementById('edit_iep_end')?.value || null,
-        guardian_info: document.getElementById('edit_guardian_info')?.value.trim() || null,
 
         obj_1_1: document.getElementById('edit_obj_1_1')?.value.trim() || null,
         obj_1_2: document.getElementById('edit_obj_1_2')?.value.trim() || null,
