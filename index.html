@@ -110,8 +110,7 @@
     }
 
     .cell-header { background-color: #d1d5db; color: #111827; }
-    .cell-highlight-cyan { background-color: #06b6d4; color: white; font-size: 16px; }
-    .cell-highlight-purple { background-color: #d8b4fe; color: #1e1b4b; }
+    .cell-highlight-purple { background-color: #d8b4fe; color: #1e1b4b; font-weight: 700; }
     .cell-body { background-color: #f3f4f6; color: #1f2937; justify-content: flex-start; text-align: left; }
 
     /* Button Selector Controls */
@@ -450,21 +449,16 @@
 
       const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
 
-      let cmFirstName = (student.case_manager_email || '').split('@')[0].split('.')[0] || 'CM';
-      cmFirstName = cmFirstName.charAt(0).toUpperCase() + cmFirstName.slice(1);
-
       let tilesHTML = '';
       activeObjectives.forEach((o, index) => {
         const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
         
         tilesHTML += `
           <div class="table-layout-grid" id="tile_${student.id}_${o.key}">
-            <!-- ROW 1: Header Context Bar -->
+            <!-- ROW 1: Objective Context Bar (No duplicate student/CM info) -->
             <div class="grid-row">
-              <div class="grid-cell cell-header" style="flex: 1.2;">${cmFirstName}</div>
-              <div class="grid-cell cell-highlight-cyan" style="flex: 2.5;">${student.first_name}</div>
-              <div class="grid-cell cell-highlight-purple" style="flex: 1.3; font-size:12px;">${o.gNum} ${o.objNum}</div>
-              <div class="grid-cell cell-header" style="flex: 1.5; font-size:12px;">${o.domain}</div>
+              <div class="grid-cell cell-highlight-purple" style="flex: 1.5; font-size:13px;">${o.gNum} ${o.objNum}</div>
+              <div class="grid-cell cell-header" style="flex: 5; font-size:13px; text-align: left; justify-content: flex-start;">${o.domain}</div>
             </div>
 
             <!-- ROW 2: Objective & Prompt Header -->
@@ -519,10 +513,10 @@
 
       return `
         <div class="card">
-          <div class="flex-between" style="margin-bottom:12px;">
+          <div class="flex-between" style="margin-bottom:14px;">
             <div>
-              <h3 style="margin:0; font-size:16px;">${student.first_name} ${student.last_name}</h3>
-              <small style="color:var(--text-muted);">CM: ${student.case_manager_email}</small>
+              <h3 style="margin:0; font-size:18px; font-weight: 700;">${student.first_name} ${student.last_name}</h3>
+              <small style="color:var(--text-muted); font-weight: 500;">CM: ${student.case_manager_email || 'Unassigned'}</small>
             </div>
             <div>
               <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP / Graphs</button>
