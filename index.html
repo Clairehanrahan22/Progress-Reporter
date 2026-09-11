@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progress Reporter - IEP Management</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Student Management & Data Tracking System</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -14,1055 +11,451 @@
       --card-bg: #ffffff;
       --text: #0f172a;
       --text-muted: #64748b;
-      --border: #334155;
-      --border-light: #cbd5e1;
-      --danger: #dc2626;
-      --active-btn: #0f172a;
+      --border: #cbd5e1;
+      --border-dark: #334155;
       --success: #16a34a;
-      --success-bg: #f0fdf4;
-      --cell-bg: #f1f5f9;
-      --header-bg: #e2e8f0;
-      --accent-cyan: #06b6d4;
-      --accent-purple: #c084fc;
     }
 
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
-    .container { max-width: 1280px; margin: 0 auto; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 24px; }
-    
-    .student-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
-      gap: 24px;
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+    }
+
+    .app-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Top Navigation Header */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 24px;
+      background: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
     }
 
-    .card { 
-      background: var(--card-bg); 
-      border: 2px solid var(--border); 
-      border-radius: 8px; 
-      padding: 16px; 
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
-    }
-    
-    button { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
-    button:hover { background: var(--primary-hover); }
-    button.secondary { background: #64748b; }
-    button.outline { background: transparent; border: 1px solid var(--border-light); color: var(--text); }
-    button.outline:hover { background: #f1f5f9; }
-    button.danger { background: #fee2e2; color: var(--danger); }
-    button.danger:hover { background: #fca5a5; }
-    button.success { background: var(--success); }
-    button.sm { padding: 5px 10px; font-size: 12px; }
-    
-    .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-
-    .login-box { max-width: 400px; margin: 80px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-
-    .modal-backdrop {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(2px); display: flex; justify-content: center; align-items: center; z-index: 1000;
-    }
-    .modal-content {
-      background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-    }
-    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; }
-    .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    
-    .goal-box { background: #f8fafc; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
-
-    /* Custom Table Grid Layout Styles */
-    .table-layout-grid {
-      border: 2px solid var(--border);
-      background-color: var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      margin-bottom: 16px;
-      border-radius: 4px;
-      overflow: hidden;
+    .student-info h1 {
+      margin: 0;
+      font-size: 22px;
     }
 
-    .grid-row {
-      display: flex;
-      background-color: white;
-      min-height: 40px;
+    .student-info p {
+      margin: 4px 0 0 0;
+      color: var(--text-muted);
+      font-size: 14px;
     }
 
-    .grid-cell {
-      padding: 8px 10px;
+    .action-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 13px;
-      border-right: 2px solid var(--border);
-      box-sizing: border-box;
-      text-align: center;
-    }
-    .grid-cell:last-child {
-      border-right: none;
+      z-index: 1000;
     }
 
-    .cell-header { background-color: #d1d5db; color: #111827; }
-    .cell-highlight-purple { background-color: #d8b4fe; color: #1e1b4b; font-weight: 700; }
-    .cell-body { background-color: #f3f4f6; color: #1f2937; justify-content: flex-start; text-align: left; }
-
-    /* Button Selector Controls */
-    .status-btn-group {
-      display: flex;
+    .modal-container {
       width: 100%;
-      height: 100%;
-      gap: 0;
-    }
-    .status-btn {
-      flex: 1;
+      max-width: 800px;
       background: white;
-      color: #0f172a;
-      border: none;
-      border-right: 2px solid var(--border);
-      border-radius: 0;
-      font-weight: bold;
-      font-size: 12px;
-      padding: 10px 4px;
-      cursor: pointer;
-      text-transform: lowercase;
-    }
-    .status-btn:last-child { border-right: none; }
-    .status-btn:hover { background: #e2e8f0; }
-    .status-btn.selected {
-      background: var(--primary) !important;
-      color: white !important;
-    }
-
-    .grid-input-select {
-      width: 100%;
-      height: 100%;
-      border: none;
-      outline: none;
-      background: white;
-      font-weight: bold;
-      font-size: 13px;
-      padding: 4px 8px;
-    }
-
-    .grid-input-text {
-      width: 100%;
-      height: 100%;
-      border: none;
-      outline: none;
-      font-size: 13px;
-      padding: 6px 10px;
-      box-sizing: border-box;
-    }
-
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
-
-    .saved-badge {
-      display: none;
-      background: #bbf7d0;
-      color: #166534;
-      font-size: 11px;
-      font-weight: bold;
-      padding: 2px 8px;
       border-radius: 12px;
-      margin-left: auto;
-    }
-
-    .email-input-wrapper {
-      display: flex;
-      align-items: center;
-      border: 1px solid var(--border-light);
-      border-radius: 6px;
-      background: #fff;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
       overflow: hidden;
-      margin-bottom: 10px;
-    }
-    .email-input-wrapper input { border: none !important; margin: 0 !important; outline: none; }
-    .email-domain-tag {
-      background: #f1f5f9;
-      padding: 6px 10px;
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 600;
-      border-left: 1px solid var(--border-light);
     }
 
-    .para-chip {
-      display: inline-flex;
+    .modal-header {
+      padding: 16px 24px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      background: #e2e8f0;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 12px;
-      margin: 4px 4px 4px 0;
     }
-    .para-chip span { margin-left: 8px; color: var(--danger); font-weight: bold; cursor: pointer; }
 
-    input[type="text"], input[type="email"], input[type="password"], select, textarea {
-      width: 100%;
-      padding: 8px 10px;
-      margin-top: 4px;
-      margin-bottom: 12px;
-      border: 1px solid var(--border-light);
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: #fee2e2;
+      color: #ef4444;
+      border: none;
+      padding: 6px 12px;
       border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
     }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-    th, td { border: 1px solid var(--border-light); padding: 8px; text-align: left; }
-    th { background-color: #f1f5f9; font-weight: 600; }
+    /* Navigation Tabs */
+    .tabs-nav {
+      display: flex;
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: white;
+    }
+
+    .tab-content {
+      padding: 24px;
+      min-height: 320px;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .placeholder-box {
+      background: #f8fafc;
+      border: 2px dashed var(--border);
+      padding: 30px;
+      text-align: center;
+      border-radius: 8px;
+      color: var(--text-muted);
+    }
+
+    /* Main View Tracking Cards */
+    .tracking-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      background: #f3e8ff;
+      color: #6b21a8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .question-banner {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-pill {
+      background: #f1f5f9;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-pill:hover, .btn-pill.selected {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .log-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .log-row input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .log-row select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .btn-submit {
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div class="container" id="app-root">
-    <div style="text-align:center; margin-top:50px; color: var(--text-muted);">Loading application...</div>
+
+<div class="app-container">
+
+  <!-- Student Bar -->
+  <div class="app-header">
+    <div class="student-info">
+      <h1>Jeremiah T.</h1>
+      <p>CM: claire.hanrahan@ahschools.us</p>
+    </div>
+    <div>
+      <button class="action-btn" onclick="openModal()">Edit Student Settings</button>
+    </div>
   </div>
 
-  <div id="modal-root"></div>
+  <!-- Objective Card 1 -->
+  <div class="tracking-card">
+    <div class="card-meta">
+      <span class="badge">G 2 Obj 1</span>
+      <span style="color: var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
+    </div>
+    <div class="question-banner">
+      Did Jeremiah identify an appropriate conversation topic for the person he was talking to?
+    </div>
+    <div class="button-group">
+      <button class="btn-pill selected">yes</button>
+      <button class="btn-pill">no</button>
+      <button class="btn-pill">no opportunity</button>
+      <button class="btn-pill">absent</button>
+    </div>
+    <div class="log-row">
+      <select>
+        <option>0 Prompts</option>
+        <option>1 Prompt</option>
+        <option>2 Prompts</option>
+      </select>
+      <input type="text" placeholder="Type notes here...">
+      <button class="btn-submit">Log</button>
+    </div>
+  </div>
 
-  <script>
-    const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- Objective Card 2 -->
+  <div class="tracking-card">
+    <div class="card-meta">
+      <span class="badge">G 2 Obj 2</span>
+      <span style="color: var(--text-muted); font-size:13px; font-weight:600;">Post-Sec</span>
+    </div>
+    <div class="question-banner">
+      Did Jeremiah correctly interpret the other person's social cues?
+    </div>
+    <div class="button-group">
+      <button class="btn-pill">yes</button>
+      <button class="btn-pill">no</button>
+      <button class="btn-pill">no opportunity</button>
+      <button class="btn-pill">absent</button>
+    </div>
+    <div class="log-row">
+      <select>
+        <option>0 Prompts</option>
+        <option>1 Prompt</option>
+        <option>2 Prompts</option>
+      </select>
+      <input type="text" placeholder="Type notes here...">
+      <button class="btn-submit">Log</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Student Edit View Modal -->
+<div class="modal-overlay" id="editModal" style="display: none;">
+  <div class="modal-container">
     
-    let currentUserEmail = '';
-    let currentUserId = '';
-    let allStudents = [];
-    let allStaffEmails = [];
-    let activeNav = 'caseload';
-    let activePeriod = null;
-    let activeChartInstance = null;
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Edit Student Profile</div>
+        <div style="font-size: 13px; color: var(--text-muted);">Jeremiah T. • ID: #84920</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">✕ Close</button>
+    </div>
 
-    function getTodayString() {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('goals', this)">IEP Goals & Objectives</button>
+      <button class="tab-btn" onclick="switchTab('data', this)">Data & Graphs</button>
+      <button class="tab-btn" onclick="switchTab('teachers', this)">Assigned Teachers</button>
+      <button class="tab-btn" onclick="switchTab('setup', this)">Student Setup</button>
+    </div>
 
-    function getOrdinalSuffix(num) {
-      if (num === 1) return '1st';
-      if (num === 2) return '2nd';
-      if (num === 3) return '3rd';
-      return `${num}th`;
-    }
-
-    function formatUserEmailInput(inputVal) {
-      let cleaned = inputVal.trim().toLowerCase();
-      if (!cleaned) return '';
-      if (cleaned.endsWith('@ahschools.us')) {
-        return cleaned;
-      }
-      return `${cleaned}@ahschools.us`;
-    }
-
-    async function initApp() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+    <!-- Tab Panels -->
+    <div class="tab-content">
       
-      if (!session) {
-        renderLogin();
-        return;
-      }
-      
-      currentUserEmail = session.user.email;
-      currentUserId = session.user.id;
-
-      await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
-
-      renderDashboard();
-      await fetchStaffMembers();
-      await fetchAllStudents();
-      loadCaseload();
-    }
-
-    function renderLogin() {
-      document.getElementById('app-root').innerHTML = `
-        <div class="login-box">
-          <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
-          <label>Email Address</label>
-          <input type="email" id="login-email" placeholder="teacher@school.org">
-          <label>Password</label>
-          <input type="password" id="login-pass" placeholder="••••••••">
-          <button style="width:100%; margin-top:10px;" onclick="handleLogin()">Sign In</button>
-          <p id="login-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+      <!-- Tab 1: IEP Goals & Objectives -->
+      <div id="tab-goals" class="panel active">
+        <h3 style="margin-top:0;">IEP Goals & Objectives</h3>
+        <p style="color:var(--text-muted); font-size:14px;">Manage specific IEP targets and tracking criteria for Jeremiah.</p>
+        <div class="placeholder-box">
+          🎯 <strong>Goal 1: Social Communication</strong><br>
+          • Objective 1: Identify appropriate conversation topics<br>
+          • Objective 2: Interpret social cues accurately<br><br>
+          <button class="action-btn">+ Add Objective</button>
         </div>
-      `;
-    }
+      </div>
 
-    async function handleLogin() {
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-pass').value;
-      const errorEl = document.getElementById('login-error');
+      <!-- Tab 2: Data & Graphs -->
+      <div id="tab-data" class="panel">
+        <h3 style="margin-top:0;">Data & Graphs</h3>
+        <p style="color:var(--text-muted); font-size:14px;">View aggregated log data and performance charts.</p>
+        <div class="placeholder-box">
+          📈 [Chart Area: Line Graph showing trial success % over time]
+          <br><br>
+          <small>Filtered Range: September 2026</small>
+        </div>
+      </div>
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) {
-        errorEl.innerText = error.message;
-      } else {
-        initApp();
-      }
-    }
+      <!-- Tab 3: Assigned Teachers -->
+      <div id="tab-teachers" class="panel">
+        <h3 style="margin-top:0;">Assigned Teachers</h3>
+        <p style="color:var(--text-muted); font-size:14px;">Assign educational staff who have permission to track data for this student.</p>
+        <div class="form-group">
+          <label>Case Manager</label>
+          <input type="text" value="Claire Hanrahan (claire.hanrahan@ahschools.us)">
+        </div>
+        <div class="form-group">
+          <label>Assigned Instructors / Specialists</label>
+          <select multiple style="height:100px;">
+            <option selected>Mr. Davis (Math)</option>
+            <option selected>Ms. Thompson (English)</option>
+            <option>Mrs. Gable (Speech Pathologist)</option>
+          </select>
+        </div>
+      </div>
 
-    function renderDashboard() {
-      document.getElementById('app-root').innerHTML = `
-        <header>
-          <div>
-            <h1 style="margin:0; font-size:24px; font-weight:700;">IEP Progress Reporter</h1>
-            <small style="color:var(--text-muted);">${currentUserEmail} (Staff)</small>
+      <!-- Tab 4: Student Setup -->
+      <div id="tab-setup" class="panel">
+        <h3 style="margin-top:0;">Student Setup</h3>
+        <p style="color:var(--text-muted); font-size:14px;">Manage basic student account preferences and details.</p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" value="Jeremiah">
           </div>
-          <div>
-            <button class="danger sm" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
-          </div>
-        </header>
-
-        <div class="grid">
-          <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
-          <button id="nav-p2" class="nav-btn outline" onclick="switchView(2)">2nd Hour</button>
-          <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
-          <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
-          <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
-          <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
-        </div>
-
-        <div id="main-view"></div>
-      `;
-    }
-
-    function updateNavHighlights(selectedNav) {
-      activeNav = selectedNav;
-      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
-      if (selectedNav === 'caseload') {
-        document.getElementById('nav-caseload')?.classList.add('active-nav');
-      } else {
-        document.getElementById(`nav-p${selectedNav}`)?.classList.add('active-nav');
-      }
-    }
-
-    async function fetchStaffMembers() {
-      const { data } = await supabaseClient.from('staff_members').select('email');
-      if (data && data.length > 0) {
-        allStaffEmails = data.map(s => s.email);
-      } else {
-        allStaffEmails = [currentUserEmail];
-      }
-    }
-
-    async function fetchAllStudents() {
-      const { data, error } = await supabaseClient.from('students').select('*');
-      if (!error && data) allStudents = data;
-    }
-
-    async function loadCaseload() {
-      updateNavHighlights('caseload');
-      activePeriod = null;
-      await fetchAllStudents();
-      const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
-      
-      let html = `
-        <div class="flex-between" style="margin-bottom: 20px;">
-          <h2 style="margin:0; font-size:20px;">My Caseload</h2>
-          <button onclick="openCreateStudentModal()">+ Add New Student</button>
-        </div>
-      `;
-
-      if (myCaseload.length === 0) {
-        html += '<p style="color:var(--text-muted); font-size:14px;">No students on your caseload yet.</p>';
-      } else {
-        html += `<div class="student-grid">`;
-        myCaseload.forEach(student => {
-          html += `
-            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: center;">
-              <div>
-                <h3 style="margin:0 0 4px 0; font-size:16px;">${student.first_name} ${student.last_name}</h3>
-                <small style="color:var(--text-muted);">CM: ${student.case_manager_email}</small>
-              </div>
-              <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Setup IEP</button>
-            </div>
-          `;
-        });
-        html += `</div>`;
-      }
-      document.getElementById('main-view').innerHTML = html;
-    }
-
-    /* CLASS PERIOD DASHBOARD VIEW */
-    async function switchView(periodNum) {
-      updateNavHighlights(periodNum);
-      activePeriod = periodNum;
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
-      
-      const periodRoster = allStudents.filter(s => {
-        const isTeacher = s[colName] === currentUserEmail;
-        const parasArr = s[paraColName] || [];
-        const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
-        return isTeacher || isPara;
-      });
-
-      let html = `
-        <div class="flex-between" style="margin-bottom: 20px;">
-          <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
-          <div>
-            <button class="outline" style="margin-right:8px;" onclick="openManageParasModal(${periodNum})">👥 Paraprofessionals</button>
-            <button onclick="openAddToPeriodModal(${periodNum})">+ Add Student</button>
+          <div class="form-group">
+            <label>Last Name Initial</label>
+            <input type="text" value="T.">
           </div>
         </div>
-      `;
-
-      if (periodRoster.length === 0) {
-        html += `
-          <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
-            <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            <button class="outline" onclick="openAddToPeriodModal(${periodNum})">+ Add Existing Student</button>
-          </div>
-        `;
-      } else {
-        html += `<div class="student-grid">`;
-        periodRoster.forEach(student => {
-          html += renderStudentDashboardCard(student, periodNum);
-        });
-        html += `</div>`;
-      }
-      document.getElementById('main-view').innerHTML = html;
-
-      periodRoster.forEach(student => restoreTeacherSavedState(student.id));
-    }
-
-    function selectStatusOption(studentId, objKey, selectedVal) {
-      document.getElementById(`status_input_${studentId}_${objKey}`).value = selectedVal;
-      const buttons = document.querySelectorAll(`.status-btn-${studentId}-${objKey}`);
-      buttons.forEach(btn => {
-        if (btn.getAttribute('data-value') === selectedVal) {
-          btn.classList.add('selected');
-        } else {
-          btn.classList.remove('selected');
-        }
-      });
-    }
-
-    function renderStudentDashboardCard(student, periodNum) {
-      const rawObjectives = [
-        { key: 'obj_1_1', gNum: 'G 1', objNum: 'Obj 1', domain: 'Ind. Living', text: student.obj_1_1 },
-        { key: 'obj_1_2', gNum: 'G 1', objNum: 'Obj 2', domain: 'Ind. Living', text: student.obj_1_2 },
-        { key: 'obj_2_1', gNum: 'G 2', objNum: 'Obj 1', domain: 'Post-Sec', text: student.obj_2_1 },
-        { key: 'obj_2_2', gNum: 'G 2', objNum: 'Obj 2', domain: 'Post-Sec', text: student.obj_2_2 },
-        { key: 'obj_3_1', gNum: 'G 3', objNum: 'Obj 1', domain: 'Employment', text: student.obj_3_1 },
-        { key: 'obj_3_2', gNum: 'G 3', objNum: 'Obj 2', domain: 'Employment', text: student.obj_3_2 },
-        { key: 'obj_4_1', gNum: 'G 4', objNum: 'Obj 1', domain: student.goal_4_domain || 'Extra', text: student.obj_4_1 },
-        { key: 'obj_4_2', gNum: 'G 4', objNum: 'Obj 2', domain: student.goal_4_domain || 'Extra', text: student.obj_4_2 }
-      ];
-
-      const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
-
-      let tilesHTML = '';
-      activeObjectives.forEach((o, index) => {
-        const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
-        
-        tilesHTML += `
-          <div class="table-layout-grid" id="tile_${student.id}_${o.key}">
-            <div class="grid-row">
-              <div class="grid-cell cell-highlight-purple" style="flex: 1.5; font-size:13px;">${o.gNum} ${o.objNum}</div>
-              <div class="grid-cell cell-header" style="flex: 5; font-size:13px; text-align: left; justify-content: flex-start;">${o.domain}</div>
-            </div>
-
-            <div class="grid-row">
-              <div class="grid-cell cell-body" style="flex: 5.3; font-weight: 600; padding: 12px 10px;">
-                ${o.text}
-                <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
-              </div>
-              <div class="grid-cell cell-header" style="flex: 1.2; background-color: #e5e7eb;">Prompts</div>
-            </div>
-
-            <div class="grid-row">
-              <div class="grid-cell" style="flex: 5.3; padding: 0;">
-                <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
-                <div class="status-btn-group">
-                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">yes</button>
-                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">no</button>
-                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">no opportunity</button>
-                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">absent</button>
-                </div>
-              </div>
-              <div class="grid-cell" style="flex: 1.2; padding: 0;">
-                <select class="grid-input-select" id="prompts_${student.id}_${o.key}">
-                  <option value="0">0</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="3+">3+</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid-row">
-              <div class="grid-cell cell-header" style="flex: 1.2; background-color: #f3f4f6;">Notes</div>
-              <div class="grid-cell" style="flex: 4.1; padding: 0;">
-                <input type="text" class="grid-input-text" id="notes_${student.id}_${o.key}" placeholder="Type notes here..."
-                  onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
-              </div>
-              <div class="grid-cell" style="flex: 1.2; padding: 0; background-color: white;">
-                <button style="width:100%; height:100%; border-radius:0;" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      if (tilesHTML === '') {
-        tilesHTML = `<p style="color:var(--text-muted); font-size:12px; font-style:italic;">No active objectives set for this student.</p>`;
-      }
-
-      return `
-        <div class="card">
-          <div class="flex-between" style="margin-bottom:14px;">
-            <div>
-              <h3 style="margin:0; font-size:18px; font-weight: 700;">${student.first_name} ${student.last_name}</h3>
-              <small style="color:var(--text-muted); font-weight: 500;">CM: ${student.case_manager_email || 'Unassigned'}</small>
-            </div>
-            <div>
-              <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP / Graphs</button>
-              <button class="danger sm" title="Remove student" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">✕</button>
-            </div>
-          </div>
-          <div>
-            ${tilesHTML}
-          </div>
+        <div class="form-group">
+          <label>Case Manager Email Address</label>
+          <input type="email" value="claire.hanrahan@ahschools.us">
         </div>
-      `;
-    }
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal() {
+    document.getElementById('editModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+
+  function switchTab(tabId, element) {
+    // Hide all tab panels
+    document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+    // Remove active state from all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show target panel and set tab button to active
+    document.getElementById('tab-' + tabId).classList.add('active');
+    element.classList.add('active');
+  }
+</script>
 
-    async function restoreTeacherSavedState(studentId) {
-      const todayStr = getTodayString();
-      const startDate = `${todayStr}T00:00:00.000Z`;
-      const endDate = `${todayStr}T23:59:59.999Z`;
-
-      const { data, error } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('logged_by', currentUserEmail)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-
-      if (error || !data) return;
-
-      data.forEach(entry => {
-        const objKey = entry.objective_key;
-        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
-        const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-        const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
-        const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
-
-        if (entry.status) {
-          selectStatusOption(studentId, objKey, entry.status);
-        }
-        if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
-        if (notesEl && entry.notes) notesEl.value = entry.notes;
-
-        if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
-      });
-    }
-
-    async function quickSaveData(studentId, objKey, nextObjKey = null) {
-      const statusVal = document.getElementById(`status_input_${studentId}_${objKey}`)?.value;
-      const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
-      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
-
-      if (!statusVal) {
-        alert('Please select a Status (Yes, No, No Opportunity, or Absent) before logging.');
-        return;
-      }
-
-      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
-      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-
-      const { error } = await supabaseClient.from('progress_data').insert([{
-        student_id: studentId,
-        objective_key: objKey,
-        status: statusVal,
-        prompts: promptsVal,
-        notes: notesVal,
-        logged_by: currentUserEmail
-      }]);
-
-      if (!error) {
-        if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
-
-        if (nextObjKey) {
-          document.getElementById(`notes_${studentId}_${nextObjKey}`)?.focus();
-        }
-      } else {
-        alert('Error saving data entry.');
-      }
-    }
-
-    /* IEP SETUP & GRAPHS MODAL */
-    async function openStudentModal(studentId) {
-      const student = allStudents.find(s => s.id === studentId);
-      if (!student) return;
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">${student.first_name} ${student.last_name}</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-
-            <div class="tab-buttons">
-              <button class="tab-btn active" id="tab-btn-setup" onclick="switchModalTab('setup')">IEP Setup</button>
-              <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
-            </div>
-
-            <!-- TAB 1: SETUP IEP & PERIODS -->
-            <div id="tab-content-setup" class="tab-content active">
-              <form id="student-setup-form" onsubmit="saveStudentSetup(event, '${student.id}')">
-                <h3>Student Profile & Case Manager</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  <div>
-                    <label>First Name</label>
-                    <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
-                  </div>
-                  <div>
-                    <label>Last Name</label>
-                    <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
-                  </div>
-                </div>
-
-                <label>Case Manager Email Username</label>
-                <div class="email-input-wrapper">
-                  <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
-                  <div class="email-domain-tag">@ahschools.us</div>
-                </div>
-
-                <h3>Class Schedule & Period Teachers</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  ${[1, 2, 3, 4, 5].map(p => `
-                    <div>
-                      <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
-                      <div class="email-input-wrapper">
-                        <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
-                        <div class="email-domain-tag">@ahschools.us</div>
-                      </div>
-                    </div>
-                  `).join('')}
-                </div>
-
-                <h3>IEP Goals & Objectives</h3>
-                <div class="goal-box">
-                  <h4>Goal 1: Independent Living</h4>
-                  <label>Objective 1.1</label>
-                  <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
-                  <label>Objective 1.2</label>
-                  <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
-                </div>
-
-                <div class="goal-box">
-                  <h4>Goal 2: Post-Secondary Education</h4>
-                  <label>Objective 2.1</label>
-                  <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
-                  <label>Objective 2.2</label>
-                  <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
-                </div>
-
-                <div class="goal-box">
-                  <h4>Goal 3: Employment</h4>
-                  <label>Objective 3.1</label>
-                  <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
-                  <label>Objective 3.2</label>
-                  <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
-                </div>
-
-                <div class="goal-box">
-                  <h4>Goal 4 (Custom Domain)</h4>
-                  <label>Domain Name</label>
-                  <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
-                  <label>Objective 4.1</label>
-                  <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
-                  <label>Objective 4.2</label>
-                  <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
-                </div>
-
-                <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                  <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
-                  <button type="submit">Save Changes</button>
-                </div>
-              </form>
-            </div>
-
-            <!-- TAB 2: DATA LOGS & CHARTS -->
-            <div id="tab-content-data" class="tab-content">
-              <div style="margin-bottom:16px;">
-                <label>Select Objective to View:</label>
-                <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
-                  <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
-                </select>
-              </div>
-
-              <div style="height:280px; position:relative; margin-bottom:24px;">
-                <canvas id="progress-chart-canvas"></canvas>
-              </div>
-
-              <h4>Logged Data History</h4>
-              <div id="data-history-table">Loading logs...</div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    function switchModalTab(tabName, studentId = null) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-      document.getElementById(`tab-btn-${tabName}`).classList.add('active');
-      document.getElementById(`tab-content-${tabName}`).classList.add('active');
-
-      if (tabName === 'data' && studentId) {
-        renderObjectiveChart(studentId);
-      }
-    }
-
-    async function renderObjectiveChart(studentId) {
-      const objKey = document.getElementById('chart-obj-select').value;
-      const canvasEl = document.getElementById('progress-chart-canvas');
-      const historyTableEl = document.getElementById('data-history-table');
-
-      if (!canvasEl) return;
-
-      const { data, error } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('objective_key', objKey)
-        .order('created_at', { ascending: true });
-
-      if (error || !data || data.length === 0) {
-        if (activeChartInstance) activeChartInstance.destroy();
-        historyTableEl.innerHTML = `<p style="color:var(--text-muted); font-size:13px;">No logged data for this objective yet.</p>`;
-        return;
-      }
-
-      // Populate Table
-      let tableHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Date / Time</th>
-              <th>Status</th>
-              <th>Prompts</th>
-              <th>Notes</th>
-              <th>Logged By</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(d => `
-              <tr>
-                <td>${new Date(d.created_at).toLocaleDateString()} ${new Date(d.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                <td><strong>${d.status}</strong></td>
-                <td>${d.prompts || '0'}</td>
-                <td>${d.notes || '-'}</td>
-                <td>${d.logged_by || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-      historyTableEl.innerHTML = tableHTML;
-
-      // Render Chart
-      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const chartValues = data.map(d => d.status === 'Yes' ? 100 : (d.status === 'No' ? 0 : null));
-
-      if (activeChartInstance) activeChartInstance.destroy();
-
-      const ctx = canvasEl.getContext('2d');
-      activeChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Success Rate %',
-            data: chartValues,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            spanGaps: true,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { min: 0, max: 100 }
-          }
-        }
-      });
-    }
-
-    async function saveStudentSetup(event, studentId) {
-      event.preventDefault();
-
-      const updatedPayload = {
-        first_name: document.getElementById('edit_first_name').value.trim(),
-        last_name: document.getElementById('edit_last_name').value.trim(),
-        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email').value),
-        teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1').value),
-        teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2').value),
-        teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3').value),
-        teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4').value),
-        teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5').value),
-        obj_1_1: document.getElementById('edit_obj_1_1').value.trim(),
-        obj_1_2: document.getElementById('edit_obj_1_2').value.trim(),
-        obj_2_1: document.getElementById('edit_obj_2_1').value.trim(),
-        obj_2_2: document.getElementById('edit_obj_2_2').value.trim(),
-        obj_3_1: document.getElementById('edit_obj_3_1').value.trim(),
-        obj_3_2: document.getElementById('edit_obj_3_2').value.trim(),
-        goal_4_domain: document.getElementById('edit_goal_4_domain').value.trim(),
-        obj_4_1: document.getElementById('edit_obj_4_1').value.trim(),
-        obj_4_2: document.getElementById('edit_obj_4_2').value.trim()
-      };
-
-      const { error } = await supabaseClient.from('students').update(updatedPayload).eq('id', studentId);
-
-      if (!error) {
-        closeModal();
-        if (activePeriod) {
-          switchView(activePeriod);
-        } else {
-          loadCaseload();
-        }
-      } else {
-        alert('Error saving student details: ' + error.message);
-      }
-    }
-
-    /* CREATE NEW STUDENT MODAL */
-    function openCreateStudentModal() {
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3>Add New Student</h3>
-            <form onsubmit="handleCreateStudent(event)">
-              <label>First Name</label>
-              <input type="text" id="create_first_name" required placeholder="e.g. Jeremiah">
-
-              <label>Last Name</label>
-              <input type="text" id="create_last_name" required placeholder="e.g. T.">
-
-              <label>Case Manager Email Username</label>
-              <div class="email-input-wrapper">
-                <input type="text" id="create_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
-                <div class="email-domain-tag">@ahschools.us</div>
-              </div>
-
-              <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit">Create Student</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function handleCreateStudent(event) {
-      event.preventDefault();
-      const first_name = document.getElementById('create_first_name').value.trim();
-      const last_name = document.getElementById('create_last_name').value.trim();
-      const case_manager_email = formatUserEmailInput(document.getElementById('create_cm_email').value);
-
-      const { data, error } = await supabaseClient.from('students').insert([{
-        first_name,
-        last_name,
-        case_manager_email
-      }]).select();
-
-      if (!error && data && data.length > 0) {
-        closeModal();
-        openStudentModal(data[0].id);
-      } else {
-        alert('Error creating student.');
-      }
-    }
-
-    /* ADD STUDENT TO PERIOD MODAL */
-    async function openAddToPeriodModal(periodNum) {
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
-
-      const unassignedStudents = allStudents.filter(s => s[colName] !== currentUserEmail);
-
-      let modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3>Add Student to ${getOrdinalSuffix(periodNum)} Hour</h3>
-            ${unassignedStudents.length === 0 ? '<p style="color:var(--text-muted);">All available students are already in this class roster.</p>' : `
-              <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-                ${unassignedStudents.map(s => `
-                  <div class="flex-between" style="padding:10px; border:1px solid var(--border-light); border-radius:6px;">
-                    <div><strong>${s.first_name} ${s.last_name}</strong> (${s.case_manager_email || 'No CM'})</div>
-                    <button class="sm" onclick="addStudentToPeriod('${s.id}', ${periodNum})">+ Add</button>
-                  </div>
-                `).join('')}
-              </div>
-            `}
-            <div style="margin-top:20px; text-align:right;">
-              <button class="secondary" onclick="closeModal()">Done</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function addStudentToPeriod(studentId, periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      await supabaseClient.from('students').update({ [colName]: currentUserEmail }).eq('id', studentId);
-      openAddToPeriodModal(periodNum);
-    }
-
-    async function removeStudentFromPeriod(studentId, periodNum) {
-      if (!confirm('Remove student from this period roster?')) return;
-      const colName = `teacher_p${periodNum}`;
-      await supabaseClient.from('students').update({ [colName]: null }).eq('id', studentId);
-      switchView(periodNum);
-    }
-
-    async function deleteStudent(studentId) {
-      if (!confirm('Are you sure you want to delete this student and all associated logs? This action cannot be undone.')) return;
-      await supabaseClient.from('students').delete().eq('id', studentId);
-      closeModal();
-      loadCaseload();
-    }
-
-    /* PARAPROFESSIONAL MANAGEMENT MODAL */
-    async function openManageParasModal(periodNum) {
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
-
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      let currentParasSet = new Set();
-      periodStudents.forEach(s => {
-        const arr = s[paraColName];
-        if (Array.isArray(arr)) {
-          arr.forEach(p => currentParasSet.add(p));
-        }
-      });
-
-      const currentParas = Array.from(currentParasSet);
-
-      let chipsHTML = currentParas.map(pEmail => `
-        <div class="para-chip">
-          ${pEmail}
-          <span onclick="removeParaFromPeriod('${pEmail}', ${periodNum})">✕</span>
-        </div>
-      `).join('');
-
-      if (chipsHTML === '') {
-        chipsHTML = `<p style="color:var(--text-muted); font-size:13px;">No paraprofessionals currently assigned to your ${getOrdinalSuffix(periodNum)} hour.</p>`;
-      }
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3>Manage Paraprofessionals - ${getOrdinalSuffix(periodNum)} Hour</h3>
-            <p style="font-size:13px; color:var(--text-muted);">Assigned paraprofessionals will get full access to view and log data for all students in your ${getOrdinalSuffix(periodNum)} hour class.</p>
-            
-            <div style="margin-bottom: 16px;">
-              <label>Assigned Paras:</label>
-              <div style="margin-top:6px;">${chipsHTML}</div>
-            </div>
-
-            <hr style="border:none; border-top:1px solid var(--border-light); margin:16px 0;">
-
-            <label>Add Paraprofessional Username:</label>
-            <div class="email-input-wrapper">
-              <input type="text" id="para-username-input" placeholder="e.g. john.doe" style="flex:1;">
-              <div class="email-domain-tag">@ahschools.us</div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
-              <button class="secondary" onclick="closeModal()">Done</button>
-              <button onclick="addParaToPeriod(${periodNum})">+ Grant Access</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function addParaToPeriod(periodNum) {
-      const inputEl = document.getElementById('para-username-input');
-      if (!inputEl || !inputEl.value.trim()) return;
-
-      const fullEmail = formatUserEmailInput(inputEl.value);
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
-
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      for (const student of periodStudents) {
-        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
-        if (!existingParas.includes(fullEmail)) {
-          existingParas.push(fullEmail);
-          await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
-        }
-      }
-
-      await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
-
-      openManageParasModal(periodNum);
-    }
-
-    async function removeParaFromPeriod(paraEmail, periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
-
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      for (const student of periodStudents) {
-        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
-        existingParas = existingParas.filter(p => p !== paraEmail);
-        await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
-      }
-
-      openManageParasModal(periodNum);
-    }
-
-    function closeModal() {
-      document.getElementById('modal-root').innerHTML = '';
-    }
-
-    initApp();
-  </script>
 </body>
 </html>
