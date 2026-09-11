@@ -528,8 +528,8 @@
               <small style="color:var(--text-muted); font-weight: 500;">CM: ${student.case_manager_email || 'Unassigned'}</small>
             </div>
             <div>
-              <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP / Graphs</button>
-              <button class="danger sm" title="Remove student" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">✕</button>
+              <!-- REPLACED BUTTON: Combined IEP/Graphs & Remove into single edit button -->
+              <button class="sm" style="background:#2563eb; color:white; border-radius:16px; padding: 4px 16px; text-transform: lowercase; font-weight:600;" onclick="openStudentModal('${student.id}')">edit</button>
             </div>
           </div>
           <div>
@@ -762,94 +762,103 @@
         .eq('objective_key', objKey)
         .order('created_at', { ascending: true });
 
-      if (error || !data || data.length === 0) {
-        if (activeChartInstance) activeChartInstance.destroy();
-        historyTableEl.innerHTML = `<p style="color:var(--text-muted); font-size:13px;">No logged data for this objective yet.</p>`;
+      if (error) {
+        historyTableEl.innerText = 'Error loading progress history.';
         return;
       }
 
-      // Populate Table
-      let tableHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Date / Time</th>
-              <th>Status</th>
-              <th>Prompts</th>
-              <th>Notes</th>
-              <th>Logged By</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(d => `
-              <tr>
-                <td>${new Date(d.created_at).toLocaleDateString()} ${new Date(d.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                <td><strong>${d.status}</strong></td>
-                <td>${d.prompts || '0'}</td>
-                <td>${d.notes || '-'}</td>
-                <td>${d.logged_by || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-      historyTableEl.innerHTML = tableHTML;
+      if (activeChartInstance) {
+        activeChartInstance.destroy();
+      }
 
-      // Render Chart
       const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const chartValues = data.map(d => d.status === 'Yes' ? 100 : (d.status === 'No' ? 0 : null));
+      const promptValues = data.map(d => parseInt(d.prompts) || 0);
 
-      if (activeChartInstance) activeChartInstance.destroy();
-
-      const ctx = canvasEl.getContext('2d');
-      activeChartInstance = new Chart(ctx, {
+      activeChartInstance = new Chart(canvasEl, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Success Rate %',
-            data: chartValues,
+            label: 'Prompts Count',
+            data: promptValues,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            spanGaps: true,
-            tension: 0.2
+            fill: true,
+            tension: 0.3
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { min: 0, max: 100 }
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
           }
         }
       });
+
+      if (data.length === 0) {
+        historyTableEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No logged data recorded for this objective yet.</p>';
+      } else {
+        let tableHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Prompts</th>
+                <th>Notes</th>
+                <th>Logged By</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        data.slice().reverse().forEach(row => {
+          tableHTML += `
+            <tr>
+              <td>${new Date(row.created_at).toLocaleString()}</td>
+              <td>${row.status || '-'}</td>
+              <td>${row.prompts || '0'}</td>
+              <td>${row.notes || ''}</td>
+              <td>${row.logged_by || '-'}</td>
+            </tr>
+          `;
+        });
+        tableHTML += `</tbody></table>`;
+        historyTableEl.innerHTML = tableHTML;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal-root').innerHTML = '';
     }
 
     async function saveStudentSetup(event, studentId) {
       event.preventDefault();
+      const firstName = document.getElementById('edit_first_name').value;
+      const lastName = document.getElementById('edit_last_name').value;
+      const cmVal = document.getElementById('edit_cm_email').value;
 
-      const updatedPayload = {
-        first_name: document.getElementById('edit_first_name').value.trim(),
-        last_name: document.getElementById('edit_last_name').value.trim(),
-        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email').value),
+      const updates = {
+        first_name: firstName,
+        last_name: lastName,
+        case_manager_email: formatUserEmailInput(cmVal),
         teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1').value),
         teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2').value),
         teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3').value),
         teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4').value),
         teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5').value),
-        obj_1_1: document.getElementById('edit_obj_1_1').value.trim(),
-        obj_1_2: document.getElementById('edit_obj_1_2').value.trim(),
-        obj_2_1: document.getElementById('edit_obj_2_1').value.trim(),
-        obj_2_2: document.getElementById('edit_obj_2_2').value.trim(),
-        obj_3_1: document.getElementById('edit_obj_3_1').value.trim(),
-        obj_3_2: document.getElementById('edit_obj_3_2').value.trim(),
-        goal_4_domain: document.getElementById('edit_goal_4_domain').value.trim(),
-        obj_4_1: document.getElementById('edit_obj_4_1').value.trim(),
-        obj_4_2: document.getElementById('edit_obj_4_2').value.trim()
+        obj_1_1: document.getElementById('edit_obj_1_1').value,
+        obj_1_2: document.getElementById('edit_obj_1_2').value,
+        obj_2_1: document.getElementById('edit_obj_2_1').value,
+        obj_2_2: document.getElementById('edit_obj_2_2').value,
+        obj_3_1: document.getElementById('edit_obj_3_1').value,
+        obj_3_2: document.getElementById('edit_obj_3_2').value,
+        goal_4_domain: document.getElementById('edit_goal_4_domain').value,
+        obj_4_1: document.getElementById('edit_obj_4_1').value,
+        obj_4_2: document.getElementById('edit_obj_4_2').value
       };
 
-      const { error } = await supabaseClient.from('students').update(updatedPayload).eq('id', studentId);
-
+      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
       if (!error) {
         closeModal();
         if (activePeriod) {
@@ -858,32 +867,51 @@
           loadCaseload();
         }
       } else {
-        alert('Error saving student details: ' + error.message);
+        alert('Failed to save student profile updates.');
       }
     }
 
-    /* CREATE NEW STUDENT MODAL */
+    async function deleteStudent(studentId) {
+      if (!confirm('Are you sure you want to permanently delete this student record?')) return;
+      const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
+      if (!error) {
+        closeModal();
+        if (activePeriod) {
+          switchView(activePeriod);
+        } else {
+          loadCaseload();
+        }
+      } else {
+        alert('Could not delete student record.');
+      }
+    }
+
     function openCreateStudentModal() {
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
-            <h3>Add New Student</h3>
-            <form onsubmit="handleCreateStudent(event)">
-              <label>First Name</label>
-              <input type="text" id="create_first_name" required placeholder="e.g. Jeremiah">
-
-              <label>Last Name</label>
-              <input type="text" id="create_last_name" required placeholder="e.g. T.">
-
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Add New Student</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <form onsubmit="createNewStudent(event)">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div>
+                  <label>First Name</label>
+                  <input type="text" id="new_first_name" required>
+                </div>
+                <div>
+                  <label>Last Name</label>
+                  <input type="text" id="new_last_name" required>
+                </div>
+              </div>
               <label>Case Manager Email Username</label>
               <div class="email-input-wrapper">
-                <input type="text" id="create_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
+                <input type="text" id="new_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
                 <div class="email-domain-tag">@ahschools.us</div>
               </div>
-
-              <div style="display:flex; justify-content:space-between; margin-top:20px;">
-                <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit">Create Student</button>
+              <div style="text-align:right; margin-top:20px;">
+                <button type="submit">Create Student Record</button>
               </div>
             </form>
           </div>
@@ -892,49 +920,41 @@
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    async function handleCreateStudent(event) {
+    async function createNewStudent(event) {
       event.preventDefault();
-      const first_name = document.getElementById('create_first_name').value.trim();
-      const last_name = document.getElementById('create_last_name').value.trim();
-      const case_manager_email = formatUserEmailInput(document.getElementById('create_cm_email').value);
+      const firstName = document.getElementById('new_first_name').value;
+      const lastName = document.getElementById('new_last_name').value;
+      const cmVal = document.getElementById('new_cm_email').value;
 
       const { data, error } = await supabaseClient.from('students').insert([{
-        first_name,
-        last_name,
-        case_manager_email
+        first_name: firstName,
+        last_name: lastName,
+        case_manager_email: formatUserEmailInput(cmVal)
       }]).select();
 
       if (!error && data && data.length > 0) {
         closeModal();
         openStudentModal(data[0].id);
       } else {
-        alert('Error creating student.');
+        alert('Failed to create student record.');
       }
     }
 
-    /* ADD STUDENT TO PERIOD MODAL */
-    async function openAddToPeriodModal(periodNum) {
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
+    function openAddToPeriodModal(periodNum) {
+      const myRoster = allStudents;
+      let optionsHTML = myRoster.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
 
-      const unassignedStudents = allStudents.filter(s => s[colName] !== currentUserEmail);
-
-      let modalHTML = `
+      const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
-            <h3>Add Student to ${getOrdinalSuffix(periodNum)} Hour</h3>
-            ${unassignedStudents.length === 0 ? '<p style="color:var(--text-muted);">All available students are already in this class roster.</p>' : `
-              <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-                ${unassignedStudents.map(s => `
-                  <div class="flex-between" style="padding:10px; border:1px solid var(--border-light); border-radius:6px;">
-                    <div><strong>${s.first_name} ${s.last_name}</strong> (${s.case_manager_email || 'No CM'})</div>
-                    <button class="sm" onclick="addStudentToPeriod('${s.id}', ${periodNum})">+ Add</button>
-                  </div>
-                `).join('')}
-              </div>
-            `}
-            <div style="margin-top:20px; text-align:right;">
-              <button class="secondary" onclick="closeModal()">Done</button>
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Add Student to ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <label>Select Student</label>
+            <select id="add-period-student-select">${optionsHTML}</select>
+            <div style="text-align:right; margin-top:20px;">
+              <button onclick="confirmAddStudentToPeriod(${periodNum})">Assign to Class</button>
             </div>
           </div>
         </div>
@@ -942,77 +962,62 @@
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    async function addStudentToPeriod(studentId, periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      await supabaseClient.from('students').update({ [colName]: currentUserEmail }).eq('id', studentId);
-      openAddToPeriodModal(periodNum);
+    async function confirmAddStudentToPeriod(periodNum) {
+      const studentId = document.getElementById('add-period-student-select').value;
+      const updates = {};
+      updates[`teacher_p${periodNum}`] = currentUserEmail;
+
+      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
+      if (!error) {
+        closeModal();
+        switchView(periodNum);
+      } else {
+        alert('Unable to assign student to period.');
+      }
     }
 
-    async function removeStudentFromPeriod(studentId, periodNum) {
-      if (!confirm('Remove student from this period roster?')) return;
-      const colName = `teacher_p${periodNum}`;
-      await supabaseClient.from('students').update({ [colName]: null }).eq('id', studentId);
-      switchView(periodNum);
-    }
+    function openManageParasModal(periodNum) {
+      const colName = `paras_p${periodNum}`;
+      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
 
-    async function deleteStudent(studentId) {
-      if (!confirm('Are you sure you want to delete this student and all associated logs? This action cannot be undone.')) return;
-      await supabaseClient.from('students').delete().eq('id', studentId);
-      closeModal();
-      loadCaseload();
-    }
-
-    /* PARAPROFESSIONAL MANAGEMENT MODAL */
-    async function openManageParasModal(periodNum) {
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
-
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      let currentParasSet = new Set();
+      let parasList = [];
       periodStudents.forEach(s => {
-        const arr = s[paraColName];
-        if (Array.isArray(arr)) {
-          arr.forEach(p => currentParasSet.add(p));
+        if (Array.isArray(s[colName])) {
+          s[colName].forEach(p => { if (!parasList.includes(p)) parasList.push(p); });
         }
       });
-
-      const currentParas = Array.from(currentParasSet);
-
-      let chipsHTML = currentParas.map(pEmail => `
-        <div class="para-chip">
-          ${pEmail}
-          <span onclick="removeParaFromPeriod('${pEmail}', ${periodNum})">✕</span>
-        </div>
-      `).join('');
-
-      if (chipsHTML === '') {
-        chipsHTML = `<p style="color:var(--text-muted); font-size:13px;">No paraprofessionals currently assigned to your ${getOrdinalSuffix(periodNum)} hour.</p>`;
-      }
 
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
-            <h3>Manage Paraprofessionals - ${getOrdinalSuffix(periodNum)} Hour</h3>
-            <p style="font-size:13px; color:var(--text-muted);">Assigned paraprofessionals will get full access to view and log data for all students in your ${getOrdinalSuffix(periodNum)} hour class.</p>
-            
-            <div style="margin-bottom: 16px;">
-              <label>Assigned Paras:</label>
-              <div style="margin-top:6px;">${chipsHTML}</div>
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Paraprofessionals - ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
             </div>
 
-            <hr style="border:none; border-top:1px solid var(--border-light); margin:16px 0;">
+            <p style="font-size:13px; color:var(--text-muted);">Assigned paras will see all students in your ${getOrdinalSuffix(periodNum)} hour class grid to log IEP progress.</p>
 
-            <label>Add Paraprofessional Username:</label>
+            <div style="margin-bottom:16px;">
+              <h4>Currently Assigned Paras:</h4>
+              ${parasList.length === 0 ? '<p style="font-size:12px; color:var(--text-muted);">No paras assigned yet.</p>' : ''}
+              <div>
+                ${parasList.map(p => `
+                  <span class="para-chip">
+                    ${p}
+                    <span onclick="removeParaFromPeriod('${p}', ${periodNum})">✕</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+
+            <label>Add Paraprofessional Username</label>
             <div class="email-input-wrapper">
-              <input type="text" id="para-username-input" placeholder="e.g. john.doe" style="flex:1;">
+              <input type="text" id="new_para_email" placeholder="e.g. john.doe">
               <div class="email-domain-tag">@ahschools.us</div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
-              <button class="secondary" onclick="closeModal()">Done</button>
-              <button onclick="addParaToPeriod(${periodNum})">+ Grant Access</button>
+            <div style="text-align:right; margin-top:16px;">
+              <button onclick="addParaToPeriod(${periodNum})">Add Paraprofessional</button>
             </div>
           </div>
         </div>
@@ -1021,45 +1026,36 @@
     }
 
     async function addParaToPeriod(periodNum) {
-      const inputEl = document.getElementById('para-username-input');
-      if (!inputEl || !inputEl.value.trim()) return;
+      const inputVal = document.getElementById('new_para_email').value;
+      if (!inputVal) return;
+      const formattedEmail = formatUserEmailInput(inputVal);
 
-      const fullEmail = formatUserEmailInput(inputEl.value);
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
+      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
+      const colName = `paras_p${periodNum}`;
 
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      for (const student of periodStudents) {
-        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
-        if (!existingParas.includes(fullEmail)) {
-          existingParas.push(fullEmail);
-          await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+      for (let s of periodStudents) {
+        let currentParas = Array.isArray(s[colName]) ? [...s[colName]] : [];
+        if (!currentParas.includes(formattedEmail)) {
+          currentParas.push(formattedEmail);
+          await supabaseClient.from('students').update({ [colName]: currentParas }).eq('id', s.id);
         }
       }
 
-      await supabaseClient.from('staff_members').upsert({ email: fullEmail }, { onConflict: 'email' });
-
+      await fetchStaffMembers();
       openManageParasModal(periodNum);
     }
 
     async function removeParaFromPeriod(paraEmail, periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      const paraColName = `paras_p${periodNum}`;
+      const periodStudents = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
+      const colName = `paras_p${periodNum}`;
 
-      const periodStudents = allStudents.filter(s => s[colName] === currentUserEmail);
-
-      for (const student of periodStudents) {
-        let existingParas = Array.isArray(student[paraColName]) ? [...student[paraColName]] : [];
-        existingParas = existingParas.filter(p => p !== paraEmail);
-        await supabaseClient.from('students').update({ [paraColName]: existingParas }).eq('id', student.id);
+      for (let s of periodStudents) {
+        let currentParas = Array.isArray(s[colName]) ? [...s[colName]] : [];
+        currentParas = currentParas.filter(p => p !== paraEmail);
+        await supabaseClient.from('students').update({ [colName]: currentParas }).eq('id', s.id);
       }
 
       openManageParasModal(periodNum);
-    }
-
-    function closeModal() {
-      document.getElementById('modal-root').innerHTML = '';
     }
 
     initApp();
