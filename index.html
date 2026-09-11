@@ -14,12 +14,18 @@
       --card-bg: #ffffff;
       --text: #0f172a;
       --text-muted: #64748b;
-      --border: #e2e8f0;
+      --border: #334155;
+      --border-light: #cbd5e1;
       --danger: #dc2626;
       --active-btn: #0f172a;
       --success: #16a34a;
       --success-bg: #f0fdf4;
+      --cell-bg: #f1f5f9;
+      --header-bg: #e2e8f0;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #c084fc;
     }
+
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
     .container { max-width: 1280px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -28,23 +34,23 @@
     
     .student-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+      gap: 24px;
       margin-bottom: 24px;
     }
 
     .card { 
       background: var(--card-bg); 
-      border: 1px solid var(--border); 
-      border-radius: 12px; 
-      padding: 18px; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04); 
+      border: 2px solid var(--border); 
+      border-radius: 8px; 
+      padding: 16px; 
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
     }
     
     button { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
-    button.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    button.outline { background: transparent; border: 1px solid var(--border-light); color: var(--text); }
     button.outline:hover { background: #f1f5f9; }
     button.danger { background: #fee2e2; color: var(--danger); }
     button.danger:hover { background: #fca5a5; }
@@ -53,7 +59,7 @@
     
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
 
-    .login-box { max-width: 400px; margin: 80px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .login-box { max-width: 400px; margin: 80px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 
     .modal-backdrop {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -62,38 +68,100 @@
     .modal-content {
       background: #fff; padding: 24px; border-radius: 12px; max-width: 750px; width: 92%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     }
-    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; padding-bottom: 8px; }
+    .tab-buttons { display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; }
     .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; }
     .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
     .goal-box { background: #f8fafc; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
-    
-    .obj-tile {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 12px;
-      transition: all 0.2s ease;
+
+    /* Custom Table Grid Layout Styles */
+    .table-layout-grid {
+      border: 2px solid var(--border);
+      background-color: var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      overflow: hidden;
     }
 
-    .obj-tile.saved-success {
-      background: var(--success-bg);
-      border-color: #86efac;
+    .grid-row {
+      display: flex;
+      background-color: white;
+      min-height: 40px;
     }
 
-    .obj-tile-header { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-    .obj-text { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4; }
+    .grid-cell {
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      border-right: 2px solid var(--border);
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .grid-cell:last-child {
+      border-right: none;
+    }
 
-    .entry-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 8px; }
-    
-    label { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-top: 4px; color: #475569; }
-    .help-note { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-style: italic; }
-    input, textarea, select { width: 100%; padding: 7px 10px; margin: 3px 0 6px 0; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 13px; background: #fff; }
-    input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
-    textarea { min-height: 55px; }
+    .cell-header { background-color: #d1d5db; color: #111827; }
+    .cell-highlight-cyan { background-color: #06b6d4; color: white; font-size: 16px; }
+    .cell-highlight-purple { background-color: #d8b4fe; color: #1e1b4b; }
+    .cell-body { background-color: #f3f4f6; color: #1f2937; justify-content: flex-start; text-align: left; }
+
+    /* Button Selector Controls */
+    .status-btn-group {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      gap: 0;
+    }
+    .status-btn {
+      flex: 1;
+      background: white;
+      color: #0f172a;
+      border: none;
+      border-right: 2px solid var(--border);
+      border-radius: 0;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 10px 4px;
+      cursor: pointer;
+      text-transform: lowercase;
+    }
+    .status-btn:last-child { border-right: none; }
+    .status-btn:hover { background: #e2e8f0; }
+    .status-btn.selected {
+      background: var(--primary) !important;
+      color: white !important;
+    }
+
+    .grid-input-select {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: white;
+      font-weight: bold;
+      font-size: 13px;
+      padding: 4px 8px;
+    }
+
+    .grid-input-text {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      padding: 6px 10px;
+      box-sizing: border-box;
+    }
+
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
     .saved-badge {
@@ -104,29 +172,26 @@
       font-weight: bold;
       padding: 2px 8px;
       border-radius: 12px;
+      margin-left: auto;
     }
 
     .email-input-wrapper {
       display: flex;
       align-items: center;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-light);
       border-radius: 6px;
       background: #fff;
       overflow: hidden;
       margin-bottom: 10px;
     }
-    .email-input-wrapper input {
-      border: none !important;
-      margin: 0 !important;
-      outline: none;
-    }
+    .email-input-wrapper input { border: none !important; margin: 0 !important; outline: none; }
     .email-domain-tag {
       background: #f1f5f9;
       padding: 6px 10px;
       font-size: 13px;
       color: var(--text-muted);
       font-weight: 600;
-      border-left: 1px solid var(--border);
+      border-left: 1px solid var(--border-light);
     }
 
     .para-chip {
@@ -138,36 +203,10 @@
       font-size: 12px;
       margin: 4px 4px 4px 0;
     }
-    .para-chip span {
-      margin-left: 8px;
-      color: var(--danger);
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .student-search-list {
-      max-height: 280px;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      margin-top: 8px;
-    }
-    .student-search-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .student-search-item:last-child {
-      border-bottom: none;
-    }
-    .student-search-item:hover {
-      background: #f8fafc;
-    }
+    .para-chip span { margin-left: 8px; color: var(--danger); font-weight: bold; cursor: pointer; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    th, td { border: 1px solid var(--border-light); padding: 8px; text-align: left; }
     th { background-color: #f1f5f9; font-weight: 600; }
   </style>
 </head>
@@ -189,7 +228,6 @@
     let allStaffEmails = [];
     let activeNav = 'caseload';
     let activePeriod = null;
-    let chartInstance = null;
 
     function getTodayString() {
       const today = new Date();
@@ -386,53 +424,90 @@
       periodRoster.forEach(student => restoreTeacherSavedState(student.id));
     }
 
+    function selectStatusOption(studentId, objKey, selectedVal) {
+      document.getElementById(`status_input_${studentId}_${objKey}`).value = selectedVal;
+      const buttons = document.querySelectorAll(`.status-btn-${studentId}-${objKey}`);
+      buttons.forEach(btn => {
+        if (btn.getAttribute('data-value') === selectedVal) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+    }
+
     function renderStudentDashboardCard(student, periodNum) {
       const rawObjectives = [
-        { key: 'obj_1_1', label: 'Ind. Living 1.1', text: student.obj_1_1 },
-        { key: 'obj_1_2', label: 'Ind. Living 1.2', text: student.obj_1_2 },
-        { key: 'obj_2_1', label: 'Post-Sec 2.1', text: student.obj_2_1 },
-        { key: 'obj_2_2', label: 'Post-Sec 2.2', text: student.obj_2_2 },
-        { key: 'obj_3_1', label: 'Employment 3.1', text: student.obj_3_1 },
-        { key: 'obj_3_2', label: 'Employment 3.2', text: student.obj_3_2 },
-        { key: 'obj_4_1', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.1`, text: student.obj_4_1 },
-        { key: 'obj_4_2', label: `Goal 4 (${student.goal_4_domain || 'Extra'}) 4.2`, text: student.obj_4_2 }
+        { key: 'obj_1_1', gNum: 'G 1', objNum: 'Obj 1', domain: 'Ind. Living', text: student.obj_1_1 },
+        { key: 'obj_1_2', gNum: 'G 1', objNum: 'Obj 2', domain: 'Ind. Living', text: student.obj_1_2 },
+        { key: 'obj_2_1', gNum: 'G 2', objNum: 'Obj 1', domain: 'Post-Sec', text: student.obj_2_1 },
+        { key: 'obj_2_2', gNum: 'G 2', objNum: 'Obj 2', domain: 'Post-Sec', text: student.obj_2_2 },
+        { key: 'obj_3_1', gNum: 'G 3', objNum: 'Obj 1', domain: 'Employment', text: student.obj_3_1 },
+        { key: 'obj_3_2', gNum: 'G 3', objNum: 'Obj 2', domain: 'Employment', text: student.obj_3_2 },
+        { key: 'obj_4_1', gNum: 'G 4', objNum: 'Obj 1', domain: student.goal_4_domain || 'Extra', text: student.obj_4_1 },
+        { key: 'obj_4_2', gNum: 'G 4', objNum: 'Obj 2', domain: student.goal_4_domain || 'Extra', text: student.obj_4_2 }
       ];
 
       const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
 
+      let cmFirstName = (student.case_manager_email || '').split('@')[0].split('.')[0] || 'CM';
+      cmFirstName = cmFirstName.charAt(0).toUpperCase() + cmFirstName.slice(1);
+
       let tilesHTML = '';
       activeObjectives.forEach((o, index) => {
         const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
+        
         tilesHTML += `
-          <div class="obj-tile" id="tile_${student.id}_${o.key}">
-            <div class="obj-tile-header">
-              <span>${o.label}</span>
-              <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
+          <div class="table-layout-grid" id="tile_${student.id}_${o.key}">
+            <!-- ROW 1: Header Context Bar -->
+            <div class="grid-row">
+              <div class="grid-cell cell-header" style="flex: 1.2;">${cmFirstName}</div>
+              <div class="grid-cell cell-highlight-cyan" style="flex: 2.5;">${student.first_name}</div>
+              <div class="grid-cell cell-highlight-purple" style="flex: 1.3; font-size:12px;">${o.gNum} ${o.objNum}</div>
+              <div class="grid-cell cell-header" style="flex: 1.5; font-size:12px;">${o.domain}</div>
             </div>
-            <div class="obj-text">${o.text}</div>
-            
-            <div class="entry-row">
-              <div>
-                <label>Status</label>
-                <select id="status_${student.id}_${o.key}">
-                  <option value="">-- Select Status --</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                  <option value="Absent">Absent</option>
-                  <option value="No Opportunity">No Opportunity</option>
+
+            <!-- ROW 2: Objective & Prompt Header -->
+            <div class="grid-row">
+              <div class="grid-cell cell-body" style="flex: 5.3; font-weight: 600; padding: 12px 10px;">
+                ${o.text}
+                <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
+              </div>
+              <div class="grid-cell cell-header" style="flex: 1.2; background-color: #e5e7eb;">Prompts</div>
+            </div>
+
+            <!-- ROW 3: Interactive Button Choices & Prompts Dropdown -->
+            <div class="grid-row">
+              <div class="grid-cell" style="flex: 5.3; padding: 0;">
+                <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
+                <div class="status-btn-group">
+                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">yes</button>
+                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">no</button>
+                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">no opportunity</button>
+                  <button type="button" class="status-btn status-btn-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">absent</button>
+                </div>
+              </div>
+              <div class="grid-cell" style="flex: 1.2; padding: 0;">
+                <select class="grid-input-select" id="prompts_${student.id}_${o.key}">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="3+">3+</option>
                 </select>
               </div>
-              <div>
-                <label>Prompts</label>
-                <input type="number" id="prompts_${student.id}_${o.key}" placeholder="e.g. 0" value="" min="0">
-              </div>
             </div>
 
-            <input type="text" id="notes_${student.id}_${o.key}" placeholder="Anecdotal notes..." style="margin-bottom:10px;"
-              onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
-
-            <div style="text-align:right;">
-              <button class="sm" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log Entry</button>
+            <!-- ROW 4: Notes & Logging Action Area -->
+            <div class="grid-row">
+              <div class="grid-cell cell-header" style="flex: 1.2; background-color: #f3f4f6;">Notes</div>
+              <div class="grid-cell" style="flex: 4.1; padding: 0;">
+                <input type="text" class="grid-input-text" id="notes_${student.id}_${o.key}" placeholder="Type notes here..."
+                  onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
+              </div>
+              <div class="grid-cell" style="flex: 1.2; padding: 0; background-color: white;">
+                <button style="width:100%; height:100%; border-radius:0;" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
+              </div>
             </div>
           </div>
         `;
@@ -444,14 +519,14 @@
 
       return `
         <div class="card">
-          <div class="flex-between" style="margin-bottom:14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+          <div class="flex-between" style="margin-bottom:12px;">
             <div>
               <h3 style="margin:0; font-size:16px;">${student.first_name} ${student.last_name}</h3>
               <small style="color:var(--text-muted);">CM: ${student.case_manager_email}</small>
             </div>
             <div>
               <button class="outline sm" onclick="openStudentModal('${student.id}')">IEP / Graphs</button>
-              <button class="danger sm" title="Remove student from period" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">✕</button>
+              <button class="danger sm" title="Remove student" onclick="removeStudentFromPeriod('${student.id}', ${periodNum})">✕</button>
             </div>
           </div>
           <div>
@@ -459,6 +534,79 @@
           </div>
         </div>
       `;
+    }
+
+    async function restoreTeacherSavedState(studentId) {
+      const todayStr = getTodayString();
+      const startDate = `${todayStr}T00:00:00.000Z`;
+      const endDate = `${todayStr}T23:59:59.999Z`;
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('logged_by', currentUserEmail)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error || !data) return;
+
+      data.forEach(entry => {
+        const objKey = entry.objective_key;
+        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+        const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+        const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
+        const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
+
+        if (entry.status) {
+          selectStatusOption(studentId, objKey, entry.status);
+        }
+        if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
+        if (notesEl && entry.notes) notesEl.value = entry.notes;
+
+        if (badge) badge.style.display = 'inline-block';
+        if (btn) {
+          btn.innerText = '✓ Logged';
+          btn.style.backgroundColor = 'var(--success)';
+        }
+      });
+    }
+
+    async function quickSaveData(studentId, objKey, nextObjKey = null) {
+      const statusVal = document.getElementById(`status_input_${studentId}_${objKey}`)?.value;
+      const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
+      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+
+      if (!statusVal) {
+        alert('Please select a Status (Yes, No, No Opportunity, or Absent) before logging.');
+        return;
+      }
+
+      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
+      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+
+      const { error } = await supabaseClient.from('progress_data').insert([{
+        student_id: studentId,
+        objective_key: objKey,
+        status: statusVal,
+        prompts: promptsVal,
+        notes: notesVal,
+        logged_by: currentUserEmail
+      }]);
+
+      if (!error) {
+        if (badge) badge.style.display = 'inline-block';
+        if (btn) {
+          btn.innerText = '✓ Logged';
+          btn.style.backgroundColor = 'var(--success)';
+        }
+
+        if (nextObjKey) {
+          document.getElementById(`notes_${studentId}_${nextObjKey}`)?.focus();
+        }
+      } else {
+        alert('Error saving data entry.');
+      }
     }
 
     /* PARAPROFESSIONAL MANAGEMENT MODAL */
@@ -501,7 +649,7 @@
               <div style="margin-top:6px;">${chipsHTML}</div>
             </div>
 
-            <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;">
+            <hr style="border:none; border-top:1px solid var(--border-light); margin:16px 0;">
 
             <label>Add Paraprofessional Username:</label>
             <div class="email-input-wrapper">
@@ -557,554 +705,11 @@
       openManageParasModal(periodNum);
     }
 
-    async function restoreTeacherSavedState(studentId) {
-      const todayStr = getTodayString();
-      const startDate = `${todayStr}T00:00:00.000Z`;
-      const endDate = `${todayStr}T23:59:59.999Z`;
-
-      const { data, error } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('logged_by', currentUserEmail)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-
-      if (error || !data) return;
-
-      data.forEach(entry => {
-        const objKey = entry.objective_key;
-        const tile = document.getElementById(`tile_${studentId}_${objKey}`);
-        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
-        const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-        const statusEl = document.getElementById(`status_${studentId}_${objKey}`);
-        const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
-        const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
-
-        if (statusEl && entry.status) statusEl.value = entry.status;
-        if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
-        if (notesEl && entry.notes) notesEl.value = entry.notes;
-
-        if (tile) tile.classList.add('saved-success');
-        if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
-      });
-    }
-
-    async function quickSaveData(studentId, objKey, nextObjKey = null) {
-      const statusVal = document.getElementById(`status_${studentId}_${objKey}`)?.value;
-      const promptsInput = document.getElementById(`prompts_${studentId}_${objKey}`)?.value;
-      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
-
-      if (!statusVal) {
-        alert('Please select a Status before logging.');
-        return;
-      }
-
-      const promptsVal = promptsInput !== '' ? parseInt(promptsInput) : 0;
-
-      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
-      const tile = document.getElementById(`tile_${studentId}_${objKey}`);
-      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-
-      const { error } = await supabaseClient.from('progress_data').insert([{
-        student_id: studentId,
-        objective_key: objKey,
-        status: statusVal,
-        prompts: promptsVal,
-        notes: notesVal,
-        logged_by: currentUserEmail
-      }]);
-
-      if (!error) {
-        if (tile) tile.classList.add('saved-success');
-        if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
-
-        if (nextObjKey) {
-          document.getElementById(`status_${studentId}_${nextObjKey}`)?.focus();
-        }
-      } else {
-        alert('Error saving data entry.');
-      }
-    }
-
-    function buildTeacherDropdownOptions(currentAssignedEmail) {
-      let options = `<option value="">-- Unassigned --</option>`;
-      allStaffEmails.forEach(email => {
-        const selected = (email === currentAssignedEmail) ? 'selected' : '';
-        options += `<option value="${email}" ${selected}>${email}</option>`;
-      });
-      return options;
-    }
-
-    async function openStudentModal(studentId) {
-      const student = allStudents.find(s => s.id === studentId);
-      if (!student) return;
-
-      const hasGoal4 = student.goal_4 || student.obj_4_1 || student.obj_4_2 || student.goal_4_domain;
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h2 style="margin-top:0;">${student.first_name} ${student.last_name}</h2>
-            <div class="tab-buttons">
-              <button class="tab-btn active" onclick="switchTab('goals-tab', this)">Goals & Objectives</button>
-              <button class="tab-btn" onclick="switchTab('data-tab', this); loadProgressChart('${student.id}');">Data & Graphs</button>
-              <button class="tab-btn" onclick="switchTab('teachers-tab', this)">Assign Teachers</button>
-              <button class="tab-btn" onclick="switchTab('history-tab', this); loadStudentHistory('${student.id}');">History Log</button>
-            </div>
-
-            <!-- TAB 1: GOALS & OBJECTIVES -->
-            <div id="goals-tab" class="tab-content active">
-              <h3>Active IEP Goals & Objectives</h3>
-              
-              <div class="goal-box">
-                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 1: Independent Living</h4>
-                <label>Goal Description:</label>
-                <textarea id="g1">${student.goal_1 || ''}</textarea>
-                
-                <label>Objective 1.1:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g1_o1" value="${student.obj_1_1 || ''}">
-                
-                <label>Objective 1.2:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g1_o2" value="${student.obj_1_2 || ''}">
-              </div>
-
-              <div class="goal-box">
-                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 2: Post-Secondary Education / Training</h4>
-                <label>Goal Description:</label>
-                <textarea id="g2">${student.goal_2 || ''}</textarea>
-                
-                <label>Objective 2.1:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g2_o1" value="${student.obj_2_1 || ''}">
-                
-                <label>Objective 2.2:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g2_o2" value="${student.obj_2_2 || ''}">
-              </div>
-
-              <div class="goal-box">
-                <h4 style="margin:0 0 8px 0; color:#1e40af;">Goal Area 3: Employment</h4>
-                <label>Goal Description:</label>
-                <textarea id="g3">${student.goal_3 || ''}</textarea>
-                
-                <label>Objective 3.1:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g3_o1" value="${student.obj_3_1 || ''}">
-                
-                <label>Objective 3.2:</label>
-                <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                <input type="text" id="g3_o2" value="${student.obj_3_2 || ''}">
-              </div>
-
-              <div id="goal4-container" style="display: ${hasGoal4 ? 'block' : 'none'};">
-                <div class="goal-box" style="border-left-color: #059669;">
-                  <h4 style="margin:0 0 8px 0; color:#065f46;">Goal Area 4 (Additional Goal)</h4>
-                  <label>Select Target Goal Area:</label>
-                  <select id="g4_domain">
-                    <option value="Independent Living" ${student.goal_4_domain === 'Independent Living' ? 'selected' : ''}>Independent Living</option>
-                    <option value="Post-Secondary Education/Training" ${student.goal_4_domain === 'Post-Secondary Education/Training' ? 'selected' : ''}>Post-Secondary Education / Training</option>
-                    <option value="Employment" ${student.goal_4_domain === 'Employment' ? 'selected' : ''}>Employment</option>
-                  </select>
-                  <label>Goal Description:</label>
-                  <textarea id="g4">${student.goal_4 || ''}</textarea>
-                  
-                  <label>Objective 4.1:</label>
-                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                  <input type="text" id="g4_o1" value="${student.obj_4_1 || ''}">
-                  
-                  <label>Objective 4.2:</label>
-                  <div class="help-note">Please state objectives as a question for easier logging (e.g., "Did Mia stay on task?")</div>
-                  <input type="text" id="g4_o2" value="${student.obj_4_2 || ''}">
-                </div>
-              </div>
-
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-                <button type="button" class="outline" id="add-g4-btn" style="display:${hasGoal4 ? 'none' : 'block'};" onclick="enableGoal4()">+ Add 4th Goal</button>
-                <button onclick="saveAllGoals('${student.id}')">Save Goals & Objectives</button>
-              </div>
-            </div>
-
-            <!-- TAB 2: DATA & GRAPHS -->
-            <div id="data-tab" class="tab-content">
-              <h3>Active IEP Progress Graph</h3>
-              <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:16px; display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
-                <div>
-                  <label>Select Active Objective:</label>
-                  <select id="data-obj-select" onchange="loadProgressChart('${student.id}')">
-                    <option value="obj_1_1">Independent Living - Objective 1.1</option>
-                    <option value="obj_1_2">Independent Living - Objective 1.2</option>
-                    <option value="obj_2_1">Post-Secondary - Objective 2.1</option>
-                    <option value="obj_2_2">Post-Secondary - Objective 2.2</option>
-                    <option value="obj_3_1">Employment - Objective 3.1</option>
-                    <option value="obj_3_2">Employment - Objective 3.2</option>
-                    ${hasGoal4 ? `<option value="obj_4_1">4th Goal - Objective 4.1</option><option value="obj_4_2">4th Goal - Objective 4.2</option>` : ''}
-                  </select>
-                </div>
-
-                <div>
-                  <label>Metric Displayed:</label>
-                  <select id="chart-metric-select" onchange="loadProgressChart('${student.id}')">
-                    <option value="status">Status Trend (% Yes)</option>
-                    <option value="prompts">Prompt Count Trend</option>
-                  </select>
-                </div>
-              </div>
-              <canvas id="progressChart" style="max-height: 260px;"></canvas>
-            </div>
-
-            <!-- TAB 3: ASSIGN TEACHERS -->
-            <div id="teachers-tab" class="tab-content">
-              <h3>Class Period Teacher Assignments</h3>
-              <label>1st Hour Teacher:</label>
-              <select id="tp1">${buildTeacherDropdownOptions(student.teacher_p1)}</select>
-              
-              <label>2nd Hour Teacher:</label>
-              <select id="tp2">${buildTeacherDropdownOptions(student.teacher_p2)}</select>
-
-              <label>3rd Hour Teacher:</label>
-              <select id="tp3">${buildTeacherDropdownOptions(student.teacher_p3)}</select>
-
-              <label>4th Hour Teacher:</label>
-              <select id="tp4">${buildTeacherDropdownOptions(student.teacher_p4)}</select>
-
-              <label>5th Hour Teacher:</label>
-              <select id="tp5">${buildTeacherDropdownOptions(student.teacher_p5)}</select>
-
-              <div style="text-align:right; margin-top:16px;">
-                <button onclick="saveTeacherAssignments('${student.id}')">Save Teacher Assignments</button>
-              </div>
-            </div>
-
-            <!-- TAB 4: HISTORY LOG -->
-            <div id="history-tab" class="tab-content">
-              <h3>Student Progress Entry History</h3>
-              <div id="history-log-content">Loading entry history...</div>
-            </div>
-
-            <div style="margin-top:20px; text-align:right;">
-              <button class="secondary" onclick="closeModal()">Close Window</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
     function closeModal() {
       document.getElementById('modal-root').innerHTML = '';
-      if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-      }
     }
 
-    function switchTab(tabId, btnEl) {
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId)?.classList.add('active');
-      if (btnEl) btnEl.classList.add('active');
-    }
-
-    function enableGoal4() {
-      document.getElementById('goal4-container').style.display = 'block';
-      document.getElementById('add-g4-btn').style.display = 'none';
-    }
-
-    async function saveAllGoals(studentId) {
-      const updates = {
-        goal_1: document.getElementById('g1').value,
-        obj_1_1: document.getElementById('g1_o1').value,
-        obj_1_2: document.getElementById('g1_o2').value,
-        goal_2: document.getElementById('g2').value,
-        obj_2_1: document.getElementById('g2_o1').value,
-        obj_2_2: document.getElementById('g2_o2').value,
-        goal_3: document.getElementById('g3').value,
-        obj_3_1: document.getElementById('g3_o1').value,
-        obj_3_2: document.getElementById('g3_o2').value,
-      };
-
-      const g4Container = document.getElementById('goal4-container');
-      if (g4Container && g4Container.style.display !== 'none') {
-        updates.goal_4_domain = document.getElementById('g4_domain').value;
-        updates.goal_4 = document.getElementById('g4').value;
-        updates.obj_4_1 = document.getElementById('g4_o1').value;
-        updates.obj_4_2 = document.getElementById('g4_o2').value;
-      }
-
-      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
-      if (!error) {
-        alert('Goals and objectives saved successfully!');
-        closeModal();
-        if (activePeriod) switchView(activePeriod);
-        else loadCaseload();
-      } else {
-        alert('Error saving goal data: ' + error.message);
-      }
-    }
-
-    async function saveTeacherAssignments(studentId) {
-      const updates = {
-        teacher_p1: document.getElementById('tp1').value,
-        teacher_p2: document.getElementById('tp2').value,
-        teacher_p3: document.getElementById('tp3').value,
-        teacher_p4: document.getElementById('tp4').value,
-        teacher_p5: document.getElementById('tp5').value,
-      };
-
-      const { error } = await supabaseClient.from('students').update(updates).eq('id', studentId);
-      if (!error) {
-        alert('Teacher assignments updated!');
-        closeModal();
-        if (activePeriod) switchView(activePeriod);
-        else loadCaseload();
-      } else {
-        alert('Error saving teacher assignments: ' + error.message);
-      }
-    }
-
-    async function loadProgressChart(studentId) {
-      const objKey = document.getElementById('data-obj-select')?.value || 'obj_1_1';
-      const metric = document.getElementById('chart-metric-select')?.value || 'status';
-
-      const { data, error } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('objective_key', objKey)
-        .order('created_at', { ascending: true });
-
-      if (error || !data) return;
-
-      const grouped = {};
-      data.forEach(entry => {
-        const dateStr = new Date(entry.created_at).toLocaleDateString();
-        if (!grouped[dateStr]) grouped[dateStr] = [];
-        grouped[dateStr].push(entry);
-      });
-
-      const labels = Object.keys(grouped);
-      const points = labels.map(date => {
-        const entries = grouped[date];
-        if (metric === 'status') {
-          const valid = entries.filter(e => e.status === 'Yes' || e.status === 'No');
-          if (valid.length === 0) return 0;
-          const yesCount = valid.filter(e => e.status === 'Yes').length;
-          return Math.round((yesCount / valid.length) * 100);
-        } else {
-          const totalPrompts = entries.reduce((acc, curr) => acc + (parseInt(curr.prompts) || 0), 0);
-          return Math.round(totalPrompts / entries.length);
-        }
-      });
-
-      const ctx = document.getElementById('progressChart');
-      if (!ctx) return;
-
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-
-      chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: metric === 'status' ? '% Yes Accuracy' : 'Avg Prompts Required',
-            data: points,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            fill: true,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: metric === 'status' ? 100 : undefined
-            }
-          }
-        }
-      });
-    }
-
-    async function loadStudentHistory(studentId) {
-      const container = document.getElementById('history-log-content');
-      if (!container) return;
-
-      const { data, error } = await supabaseClient
-        .from('progress_data')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false });
-
-      if (error || !data || data.length === 0) {
-        container.innerHTML = `<p style="color:var(--text-muted); font-size:13px;">No history records found for this student.</p>`;
-        return;
-      }
-
-      let tableHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Date/Time</th>
-              <th>Objective</th>
-              <th>Status</th>
-              <th>Prompts</th>
-              <th>Notes</th>
-              <th>Logged By</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      data.forEach(row => {
-        const dateFormatted = new Date(row.created_at).toLocaleString();
-        tableHTML += `
-          <tr>
-            <td>${dateFormatted}</td>
-            <td>${row.objective_key}</td>
-            <td>${row.status}</td>
-            <td>${row.prompts !== null ? row.prompts : '-'}</td>
-            <td>${row.notes || '-'}</td>
-            <td>${row.logged_by}</td>
-          </tr>
-        `;
-      });
-
-      tableHTML += `</tbody></table>`;
-      container.innerHTML = tableHTML;
-    }
-
-    /* MODALS: ADD/CREATE STUDENTS */
-    function openCreateStudentModal() {
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3 style="margin-top:0;">Add New Student to System</h3>
-            <label>First Name:</label>
-            <input type="text" id="new-fn" placeholder="e.g. Jane">
-            
-            <label>Last Name:</label>
-            <input type="text" id="new-ln" placeholder="e.g. Doe">
-
-            <label>Case Manager Email:</label>
-            <div class="email-input-wrapper">
-              <input type="text" id="new-cm-username" value="${currentUserEmail.replace('@ahschools.us','')}" style="flex:1;">
-              <div class="email-domain-tag">@ahschools.us</div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
-              <button class="secondary" onclick="closeModal()">Cancel</button>
-              <button onclick="createNewStudent()">Create Student</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function createNewStudent() {
-      const fn = document.getElementById('new-fn').value.trim();
-      const ln = document.getElementById('new-ln').value.trim();
-      const cmInput = document.getElementById('new-cm-username').value;
-      const cmEmail = formatUserEmailInput(cmInput);
-
-      if (!fn || !ln) {
-        alert('Please provide both first and last name.');
-        return;
-      }
-
-      const { error } = await supabaseClient.from('students').insert([{
-        first_name: fn,
-        last_name: ln,
-        case_manager_email: cmEmail
-      }]);
-
-      if (!error) {
-        closeModal();
-        loadCaseload();
-      } else {
-        alert('Error creating student: ' + error.message);
-      }
-    }
-
-    async function openAddToPeriodModal(periodNum) {
-      await fetchAllStudents();
-      const colName = `teacher_p${periodNum}`;
-      
-      const unassignedStudents = allStudents.filter(s => s[colName] !== currentUserEmail);
-
-      let listHTML = '';
-      unassignedStudents.forEach(student => {
-        listHTML += `
-          <div class="student-search-item">
-            <div>
-              <strong>${student.first_name} ${student.last_name}</strong>
-              <div style="font-size:11px; color:var(--text-muted);">CM: ${student.case_manager_email}</div>
-            </div>
-            <button class="sm" onclick="addStudentToPeriod('${student.id}', ${periodNum})">Add to ${getOrdinalSuffix(periodNum)} Hour</button>
-          </div>
-        `;
-      });
-
-      if (unassignedStudents.length === 0) {
-        listHTML = `<p style="padding:12px; color:var(--text-muted); font-size:13px; text-align:center;">All available students are already in your ${getOrdinalSuffix(periodNum)} hour class.</p>`;
-      }
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <h3 style="margin-top:0;">Add Student to ${getOrdinalSuffix(periodNum)} Hour</h3>
-            <p style="font-size:13px; color:var(--text-muted);">Select a student to add to your ${getOrdinalSuffix(periodNum)} hour roster:</p>
-            
-            <div class="student-search-list">
-              ${listHTML}
-            </div>
-
-            <div style="margin-top:20px; text-align:right;">
-              <button class="secondary" onclick="closeModal()">Done</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function addStudentToPeriod(studentId, periodNum) {
-      const colName = `teacher_p${periodNum}`;
-      const { error } = await supabaseClient.from('students').update({ [colName]: currentUserEmail }).eq('id', studentId);
-      if (!error) {
-        closeModal();
-        switchView(periodNum);
-      } else {
-        alert('Error adding student to period: ' + error.message);
-      }
-    }
-
-    async function removeStudentFromPeriod(studentId, periodNum) {
-      if (!confirm('Remove student from this period?')) return;
-      const colName = `teacher_p${periodNum}`;
-      const { error } = await supabaseClient.from('students').update({ [colName]: null }).eq('id', studentId);
-      if (!error) {
-        switchView(periodNum);
-      } else {
-        alert('Error removing student: ' + error.message);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', initApp);
+    initApp();
   </script>
 </body>
 </html>
