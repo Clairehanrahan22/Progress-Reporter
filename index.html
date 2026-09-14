@@ -71,7 +71,6 @@
     
     .goal-box { background: #f8fafc; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
 
-    /* Modern Objective Card Styles */
     .objective-card {
       border: 1px solid var(--border-light);
       border-radius: 12px;
@@ -289,7 +288,9 @@
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
 
-      await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
+      try {
+        await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
+      } catch (e) {}
 
       renderDashboard();
       await fetchStaffMembers();
@@ -547,7 +548,6 @@
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
-        .eq('logged_by', currentUserEmail)
         .gte('created_at', startDate)
         .lte('created_at', endDate);
 
@@ -587,14 +587,16 @@
       const btn = document.getElementById(`btn_${studentId}_${objKey}`);
       const badge = document.getElementById(`badge_${studentId}_${objKey}`);
 
-      const { error } = await supabaseClient.from('progress_data').insert([{
+      const payload = {
         student_id: studentId,
         objective_key: objKey,
         status: statusVal,
-        prompts: promptsVal,
+        prompts: String(promptsVal),
         notes: notesVal,
         logged_by: currentUserEmail
-      }]);
+      };
+
+      const { error } = await supabaseClient.from('progress_data').insert([payload]);
 
       if (!error) {
         if (badge) badge.style.display = 'inline-block';
@@ -607,7 +609,8 @@
           document.getElementById(`notes_${studentId}_${nextObjKey}`)?.focus();
         }
       } else {
-        alert('Error saving data entry.');
+        console.error("Supabase Error Details:", error);
+        alert(`Supabase Error (${error.code || 'UNKNOWN'}):\n${error.message}\n\nCheck RLS policies or column names in Supabase.`);
       }
     }
 
@@ -632,7 +635,6 @@
 
             <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
 
-              <!-- TAB 1: IEP GOALS & OBJECTIVES -->
               <div id="tab-content-goals" class="tab-content active">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
                   Add, edit, reorder, or archive IEP goals and specific objectives for the student.
@@ -673,7 +675,6 @@
                 </div>
               </div>
 
-              <!-- TAB 2: DATA & GRAPHS -->
               <div id="tab-content-data" class="tab-content">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
                   View raw progress tracking data logs, visual line graphs/charts, filter by date ranges, and export reports.
@@ -701,7 +702,6 @@
                 <div id="data-history-table">Loading logs...</div>
               </div>
 
-              <!-- TAB 3: ASSIGNED TEACHERS -->
               <div id="tab-content-teachers" class="tab-content">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
                   Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
@@ -721,7 +721,6 @@
                 </div>
               </div>
 
-              <!-- TAB 4: STUDENT SETUP -->
               <div id="tab-content-setup" class="tab-content">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
                   Edit basic profile information and case manager details.
@@ -931,7 +930,6 @@
         return;
       }
 
-      // Render Table
       let tableHtml = `
         <table>
           <thead>
@@ -962,7 +960,6 @@
       tableHtml += `</tbody></table>`;
       if (historyTableEl) historyTableEl.innerHTML = tableHtml;
 
-      // Render Chart
       const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
       const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
 
@@ -1004,7 +1001,6 @@
       });
     }
 
-    // Initialize Application
     window.addEventListener('DOMContentLoaded', initApp);
   </script>
 </body>
