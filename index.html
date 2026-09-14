@@ -255,6 +255,7 @@
     let activePeriod = null;
     let activeChartInstance = null;
     let activeChartView = 'line';
+    let showingSetPasswordScreen = false;
 
     const ADMIN_EMAILS = [
       'claire.hanrahan@ahschools.us',
@@ -312,6 +313,8 @@
 
     async function initApp() {
       const { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (showingSetPasswordScreen) return;
 
       if (!session) {
         renderLogin();
@@ -411,6 +414,8 @@
       if (error) {
         errorEl.innerText = error.message;
       } else {
+        showingSetPasswordScreen = false;
+        window.history.replaceState(null, '', window.location.pathname);
         initApp();
       }
     }
@@ -1384,8 +1389,14 @@
       }
     }
 
+    if (window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')) {
+      showingSetPasswordScreen = true;
+      renderSetPasswordScreen();
+    }
+
     supabaseClient.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
+        showingSetPasswordScreen = true;
         renderSetPasswordScreen();
       }
     });
