@@ -24,24 +24,24 @@
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
     .container { max-width: 1280px; margin: 0 auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    
+
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 24px; }
-    
+
     .student-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
       gap: 24px;
       margin-bottom: 24px;
     }
 
-    .card { 
-      background: var(--card-bg); 
-      border: 1px solid var(--border-card); 
-      border-radius: 16px; 
-      padding: 24px; 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); 
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
-    
+
     button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
     button:hover { background: var(--primary-hover); }
     button.secondary { background: #64748b; }
@@ -51,7 +51,7 @@
     button.danger:hover { background: #fca5a5; }
     button.success { background: var(--success); }
     button.sm { padding: 6px 14px; font-size: 13px; }
-    
+
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
 
     .login-box { max-width: 400px; margin: 80px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
@@ -68,7 +68,7 @@
     .tab-btn.active { border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    
+
     .goal-box { background: #f8fafc; border-left: 4px solid var(--primary); padding: 14px; margin-bottom: 16px; border-radius: 6px; }
 
     .objective-card {
@@ -243,7 +243,7 @@
     const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
+
     let currentUserEmail = '';
     let currentUserId = '';
     let allStudents = [];
@@ -279,12 +279,12 @@
 
     async function initApp() {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      
+
       if (!session) {
         renderLogin();
         return;
       }
-      
+
       currentUserEmail = session.user.email;
       currentUserId = session.user.id;
 
@@ -379,7 +379,7 @@
       activePeriod = null;
       await fetchAllStudents();
       const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
-      
+
       let html = `
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">My Caseload</h2>
@@ -413,7 +413,7 @@
       await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
-      
+
       const periodRoster = allStudents.filter(s => {
         const isTeacher = s[colName] === currentUserEmail;
         const parasArr = s[paraColName] || [];
@@ -478,7 +478,7 @@
       let cardsHTML = '';
       activeObjectives.forEach((o, index) => {
         const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
-        
+
         cardsHTML += `
           <div class="objective-card" id="card_${student.id}_${o.key}">
             <div class="obj-breadcrumbs">
@@ -1005,4 +1005,3 @@
   </script>
 </body>
 </html>
-
