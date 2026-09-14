@@ -44,6 +44,7 @@
 
     button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
     button:hover { background: var(--primary-hover); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
     button.secondary { background: #64748b; }
     button.outline { background: white; border: 1px solid var(--border-card); color: var(--text); }
     button.outline:hover { background: #f8fafc; }
@@ -255,12 +256,31 @@
     let activeChartInstance = null;
     let activeChartView = 'line';
 
-    function getTodayString() {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getLocalDayBoundsISO() {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      return { startISO: start.toISOString(), endISO: end.toISOString() };
+    }
+
+    function parseParaUsernames(inputVal) {
+      if (!inputVal) return [];
+      return inputVal.split(',').map(s => formatUserEmailInput(s)).filter(Boolean);
+    }
+
+    function formatParaArrayForDisplay(arr) {
+      if (!Array.isArray(arr)) return '';
+      return arr.map(email => (email || '').replace('@ahschools.us', '')).join(', ');
     }
 
     function getOrdinalSuffix(num) {
@@ -398,8 +418,8 @@
           html += `
             <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: center;">
               <div>
-                <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:700;">${student.first_name} ${student.last_name}</h3>
-                <small style="color:var(--text-muted); font-size:13px;">CM: ${student.case_manager_email}</small>
+                <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:700;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
+                <small style="color:var(--text-muted); font-size:13px;">CM: ${escapeHtml(student.case_manager_email)}</small>
               </div>
               <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
             </div>
@@ -485,11 +505,11 @@
         cardsHTML += `
           <div class="objective-card" id="card_${student.id}_${o.key}">
             <div class="obj-breadcrumbs">
-              ${o.gNum} &bull; ${o.objNum} &bull; ${o.domain}
+              ${o.gNum} &bull; ${o.objNum} &bull; ${escapeHtml(o.domain)}
               <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
             </div>
 
-            <div class="obj-text">${o.text}</div>
+            <div class="obj-text">${escapeHtml(o.text)}</div>
 
             <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
 
@@ -530,8 +550,8 @@
         <div class="card">
           <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
             <div>
-              <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${student.first_name} ${student.last_name}</h3>
-              <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${student.case_manager_email || 'Unassigned'}</div>
+              <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
+              <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${escapeHtml(student.case_manager_email) || 'Unassigned'}</div>
             </div>
             <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>
           </div>
@@ -548,16 +568,14 @@
     }
 
     async function restoreTeacherSavedState(studentId) {
-      const todayStr = getTodayString();
-      const startDate = `${todayStr}T00:00:00.000Z`;
-      const endDate = `${todayStr}T23:59:59.999Z`;
+      const { startISO, endISO } = getLocalDayBoundsISO();
 
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
 
       if (error || !data) return;
 
@@ -587,8 +605,7 @@
 
     async function quickSaveAllData(studentId) {
       const statusInputs = document.querySelectorAll(`[id^="status_input_${studentId}_"]`);
-      const payloads = [];
-      const objKeys = [];
+      const entries = [];
 
       statusInputs.forEach(input => {
         const statusVal = input.value;
@@ -598,38 +615,77 @@
         const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
         const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
 
-        payloads.push({
-          student_id: studentId,
-          objective_key: objKey,
-          status: statusVal,
-          prompts: String(promptsVal),
-          notes: notesVal,
-          logged_by: currentUserEmail
-        });
-        objKeys.push(objKey);
+        entries.push({ objKey, statusVal, promptsVal, notesVal });
       });
 
-      if (payloads.length === 0) {
+      if (entries.length === 0) {
         alert('Please select a status option (Yes, No, No Opportunity, or Absent) for at least one objective before logging.');
         return;
       }
 
-      const { error } = await supabaseClient.from('progress_data').insert(payloads);
+      const logAllBtn = document.getElementById(`logall_${studentId}`);
+      if (logAllBtn) logAllBtn.disabled = true;
 
-      if (!error) {
-        objKeys.forEach(objKey => {
-          const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+      const { startISO, endISO } = getLocalDayBoundsISO();
+
+      const { data: existingRows, error: fetchError } = await supabaseClient
+        .from('progress_data')
+        .select('id, objective_key')
+        .eq('student_id', studentId)
+        .eq('logged_by', currentUserEmail)
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .in('objective_key', entries.map(e => e.objKey));
+
+      if (fetchError) {
+        console.error("Supabase Error Details:", fetchError);
+        alert(`Supabase Error (${fetchError.code || 'UNKNOWN'}):\n${fetchError.message}\n\nCheck RLS policies or column names in Supabase.`);
+        if (logAllBtn) logAllBtn.disabled = false;
+        return;
+      }
+
+      const existingIdByObjKey = {};
+      (existingRows || []).forEach(row => { existingIdByObjKey[row.objective_key] = row.id; });
+
+      const failedObjKeys = [];
+
+      for (const entry of entries) {
+        const payload = {
+          student_id: studentId,
+          objective_key: entry.objKey,
+          status: entry.statusVal,
+          prompts: String(entry.promptsVal),
+          notes: entry.notesVal,
+          logged_by: currentUserEmail
+        };
+
+        const existingId = existingIdByObjKey[entry.objKey];
+        const { error } = existingId
+          ? await supabaseClient.from('progress_data').update(payload).eq('id', existingId)
+          : await supabaseClient.from('progress_data').insert([payload]);
+
+        if (error) {
+          console.error(`Supabase Error Details (${entry.objKey}):`, error);
+          failedObjKeys.push(entry.objKey);
+        } else {
+          const badge = document.getElementById(`badge_${studentId}_${entry.objKey}`);
           if (badge) badge.style.display = 'inline-block';
-        });
+        }
+      }
 
-        const logAllBtn = document.getElementById(`logall_${studentId}`);
+      if (logAllBtn) logAllBtn.disabled = false;
+
+      if (failedObjKeys.length === 0) {
         if (logAllBtn) {
           logAllBtn.innerText = '✓ Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
       } else {
-        console.error("Supabase Error Details:", error);
-        alert(`Supabase Error (${error.code || 'UNKNOWN'}):\n${error.message}\n\nCheck RLS policies or column names in Supabase.`);
+        alert(`${failedObjKeys.length} entr${failedObjKeys.length === 1 ? 'y' : 'ies'} failed to save. The rest were saved successfully. Check RLS policies or column settings in Supabase, or try again.`);
+        if (logAllBtn) {
+          logAllBtn.innerText = 'Retry Log All';
+          logAllBtn.style.backgroundColor = 'var(--danger)';
+        }
       }
     }
 
@@ -643,7 +699,7 @@
         <div class="modal-backdrop">
           <div class="modal-content">
             <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">${student.first_name} ${student.last_name}</h2>
+              <h2 style="margin:0;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h2>
               <button class="danger sm" onclick="closeModal()">✕ Close</button>
             </div>
 
@@ -664,35 +720,35 @@
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
                   <label>Objective 1.1</label>
-                  <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
+                  <input type="text" id="edit_obj_1_1" value="${escapeHtml(student.obj_1_1)}">
                   <label>Objective 1.2</label>
-                  <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
+                  <input type="text" id="edit_obj_1_2" value="${escapeHtml(student.obj_1_2)}">
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
                   <label>Objective 2.1</label>
-                  <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
+                  <input type="text" id="edit_obj_2_1" value="${escapeHtml(student.obj_2_1)}">
                   <label>Objective 2.2</label>
-                  <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
+                  <input type="text" id="edit_obj_2_2" value="${escapeHtml(student.obj_2_2)}">
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
                   <label>Objective 3.1</label>
-                  <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
+                  <input type="text" id="edit_obj_3_1" value="${escapeHtml(student.obj_3_1)}">
                   <label>Objective 3.2</label>
-                  <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
+                  <input type="text" id="edit_obj_3_2" value="${escapeHtml(student.obj_3_2)}">
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
                   <label>Domain Name</label>
-                  <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
+                  <input type="text" id="edit_goal_4_domain" value="${escapeHtml(student.goal_4_domain)}" placeholder="e.g. Recreation / Communication">
                   <label>Objective 4.1</label>
-                  <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
+                  <input type="text" id="edit_obj_4_1" value="${escapeHtml(student.obj_4_1)}">
                   <label>Objective 4.2</label>
-                  <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
+                  <input type="text" id="edit_obj_4_2" value="${escapeHtml(student.obj_4_2)}">
                 </div>
               </div>
 
@@ -704,14 +760,14 @@
                 <div style="margin-bottom:16px;">
                   <label>Select Objective to View:</label>
                   <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
-                    <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
-                    <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
+                    <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? escapeHtml(student.obj_1_1.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? escapeHtml(student.obj_1_2.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? escapeHtml(student.obj_2_1.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? escapeHtml(student.obj_2_2.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? escapeHtml(student.obj_3_1.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? escapeHtml(student.obj_3_2.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? escapeHtml(student.obj_4_1.substring(0, 40)) + '...' : 'Empty'}</option>
+                    <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? escapeHtml(student.obj_4_2.substring(0, 40)) + '...' : 'Empty'}</option>
                   </select>
                 </div>
 
@@ -740,9 +796,11 @@
                     <div>
                       <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
                       <div class="email-input-wrapper">
-                        <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
+                        <input type="text" id="edit_teacher_p${p}" value="${escapeHtml((student[`teacher_p${p}`] || '').replace('@ahschools.us', ''))}">
                         <div class="email-domain-tag">@ahschools.us</div>
                       </div>
+                      <label>${getOrdinalSuffix(p)} Hour Para(s) Username(s)</label>
+                      <input type="text" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="comma-separated, e.g. jane.doe, john.smith">
                     </div>
                   `).join('')}
                 </div>
@@ -756,17 +814,17 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                   <div>
                     <label>First Name</label>
-                    <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
+                    <input type="text" id="edit_first_name" value="${escapeHtml(student.first_name)}" required>
                   </div>
                   <div>
                     <label>Last Name</label>
-                    <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
+                    <input type="text" id="edit_last_name" value="${escapeHtml(student.last_name)}" required>
                   </div>
                 </div>
 
                 <label>Case Manager Email Username</label>
                 <div class="email-input-wrapper">
-                  <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
+                  <input type="text" id="edit_cm_email" value="${escapeHtml((student.case_manager_email || '').replace('@ahschools.us', ''))}">
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
               </div>
@@ -833,7 +891,13 @@
         teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2')?.value),
         teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3')?.value),
         teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4')?.value),
-        teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5')?.value)
+        teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5')?.value),
+
+        paras_p1: parseParaUsernames(document.getElementById('edit_paras_p1')?.value),
+        paras_p2: parseParaUsernames(document.getElementById('edit_paras_p2')?.value),
+        paras_p3: parseParaUsernames(document.getElementById('edit_paras_p3')?.value),
+        paras_p4: parseParaUsernames(document.getElementById('edit_paras_p4')?.value),
+        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value)
       };
 
       const { error } = await supabaseClient
@@ -983,10 +1047,10 @@
         tableHtml += `
           <tr>
             <td>${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-            <td><strong>${row.status}</strong></td>
-            <td>${row.prompts || '0'}</td>
-            <td>${row.notes || ''}</td>
-            <td>${row.logged_by || ''}</td>
+            <td><strong>${escapeHtml(row.status)}</strong></td>
+            <td>${escapeHtml(row.prompts) || '0'}</td>
+            <td>${escapeHtml(row.notes)}</td>
+            <td>${escapeHtml(row.logged_by)}</td>
           </tr>
         `;
       });
