@@ -576,14 +576,15 @@
       });
     }
 
-    /* DIRECT DATA SAVING WITH MANDATORY SCORE NUMERIC CONVERSION */
     async function quickSaveData(studentId, objKey, nextObjKey = null) {
       const statusVal = document.getElementById(`status_${studentId}_${objKey}`)?.value || 'Yes';
       const promptsVal = parseInt(document.getElementById(`prompts_${studentId}_${objKey}`)?.value) || 0;
       const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
 
-      // Set score to 1 for Yes, 0 for No/Absent/No Opportunity to satisfy mandatory numeric score column
-      const numericScore = (statusVal === 'Yes') ? 1 : 0;
+      // Calculate score value for backwards compatibility with any non-null column schema
+      let scoreVal = 0;
+      if (statusVal === 'Yes') scoreVal = 100;
+      else if (statusVal === 'No') scoreVal = 0;
 
       const btn = document.getElementById(`btn_${studentId}_${objKey}`);
       const tile = document.getElementById(`tile_${studentId}_${objKey}`);
@@ -593,7 +594,7 @@
         student_id: studentId,
         objective_key: objKey,
         status: statusVal,
-        score: numericScore,
+        score: scoreVal,
         prompts: promptsVal,
         notes: notesVal,
         logged_by: currentUserEmail
@@ -1073,7 +1074,7 @@
 
       data.forEach(entry => {
         const dateStr = new Date(entry.created_at).toLocaleDateString();
-        const displayStatus = entry.status || (entry.score !== null ? (entry.score === 1 ? 'Yes' : 'No') : '-');
+        const displayStatus = entry.status || (entry.score !== null ? (entry.score === 100 ? 'Yes' : 'No') : '-');
         html += `
           <tr style="border-bottom:1px solid #e2e8f0;">
             <td style="padding:6px;">${dateStr}</td>
@@ -1116,7 +1117,7 @@
 
       if (selectedMetric === 'status') {
         labelName = 'Success Rate (% Yes)';
-        chartData = data.map(d => (d.status === 'Yes' || d.score === 1 ? 100 : 0));
+        chartData = data.map(d => (d.status === 'Yes' || d.score === 100 ? 100 : 0));
       } else {
         labelName = 'Prompts Required';
         chartData = data.map(d => d.prompts || 0);
