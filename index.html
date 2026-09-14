@@ -256,6 +256,16 @@
     let activeChartInstance = null;
     let activeChartView = 'line';
 
+    const ADMIN_EMAILS = [
+      'claire.hanrahan@ahschools.us',
+      'paige.dopp@ahschools.us',
+      'traci.anderson@ahschools.us',
+      'elizabeth.tazelaar@ahschools.us',
+      'susan.kane@ahschools.us',
+      'keri.mikkelson@ahschools.us',
+      'sarah.svedberg@ahschools.us'
+    ];
+
     function escapeHtml(value) {
       if (value === null || value === undefined) return '';
       return String(value)
@@ -330,7 +340,10 @@
           <label>Password</label>
           <input type="password" id="login-pass" placeholder="••••••••">
           <button style="width:100%; margin-top:10px;" onclick="handleLogin()">Sign In</button>
-          <p id="login-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+          <p id="login-error" style="font-size:13px; margin-top:10px;"></p>
+          <p style="text-align:center; margin-top:12px;">
+            <a href="#" onclick="handleForgotPassword(); return false;" style="font-size:13px; color:var(--primary);">Forgot password?</a>
+          </p>
         </div>
       `;
     }
@@ -341,6 +354,60 @@
       const errorEl = document.getElementById('login-error');
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.style.color = 'red';
+        errorEl.innerText = error.message;
+      } else {
+        initApp();
+      }
+    }
+
+    async function handleForgotPassword() {
+      const email = document.getElementById('login-email')?.value.trim();
+      const errorEl = document.getElementById('login-error');
+
+      if (!email) {
+        errorEl.style.color = 'red';
+        errorEl.innerText = 'Enter your email above, then click "Forgot password?" again.';
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+
+      if (error) {
+        errorEl.style.color = 'red';
+        errorEl.innerText = error.message;
+      } else {
+        errorEl.style.color = 'green';
+        errorEl.innerText = 'Check your email for a password reset link.';
+      }
+    }
+
+    function renderSetPasswordScreen() {
+      document.getElementById('app-root').innerHTML = `
+        <div class="login-box">
+          <h2 style="margin-top:0;">Set Your Password</h2>
+          <p style="font-size:13px; color:var(--text-muted);">Choose a password for your account. You'll use this along with your email to sign in from now on.</p>
+          <label>New Password</label>
+          <input type="password" id="new-password" placeholder="At least 6 characters">
+          <button style="width:100%; margin-top:10px;" onclick="handleSetPassword()">Set Password & Continue</button>
+          <p id="set-password-error" style="color:red; font-size:13px; margin-top:10px;"></p>
+        </div>
+      `;
+    }
+
+    async function handleSetPassword() {
+      const password = document.getElementById('new-password')?.value;
+      const errorEl = document.getElementById('set-password-error');
+
+      if (!password || password.length < 6) {
+        errorEl.innerText = 'Password must be at least 6 characters.';
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
       if (error) {
         errorEl.innerText = error.message;
       } else {
@@ -367,6 +434,7 @@
           <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
           <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
           <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
+          ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) ? `<button id="nav-admin" class="nav-btn outline" onclick="loadAdminView()">Admin</button>` : ''}
         </div>
 
         <div id="main-view"></div>
@@ -378,6 +446,8 @@
       document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
       if (selectedNav === 'caseload') {
         document.getElementById('nav-caseload')?.classList.add('active-nav');
+      } else if (selectedNav === 'admin') {
+        document.getElementById('nav-admin')?.classList.add('active-nav');
       } else {
         document.getElementById(`nav-p${selectedNav}`)?.classList.add('active-nav');
       }
@@ -448,7 +518,7 @@
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div>
-            <button onclick="openCreateStudentModal()">+ Add Student</button>
+            <button onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>
           </div>
         </div>
       `;
@@ -457,7 +527,7 @@
         html += `
           <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
             <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
+            <button class="outline" onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>
           </div>
         `;
       } else {
@@ -470,6 +540,192 @@
       document.getElementById('main-view').innerHTML = html;
 
       periodRoster.forEach(student => restoreTeacherSavedState(student.id));
+    }
+
+    async function callAdminFunction(action, payload) {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/admin-manage-staff`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ action, ...payload })
+        });
+        return await resp.json();
+      } catch (e) {
+        return { error: 'Network error: ' + e.message };
+      }
+    }
+
+    async function loadAdminView() {
+      updateNavHighlights('admin');
+      activePeriod = null;
+      await fetchStaffMembers();
+
+      const html = `
+        <div class="flex-between" style="margin-bottom: 20px;">
+          <h2 style="margin:0; font-size:20px;">Staff Admin</h2>
+        </div>
+
+        <div class="card" style="margin-bottom:24px;">
+          <h3 style="margin:0 0 12px 0; font-size:16px;">Invite New Staff Member</h3>
+          <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:12px; align-items:end;">
+            <div>
+              <label>First Name</label>
+              <input type="text" id="invite_first_name" placeholder="Jane">
+            </div>
+            <div>
+              <label>Last Name</label>
+              <input type="text" id="invite_last_name" placeholder="Doe">
+            </div>
+            <div>
+              <button onclick="handleInviteStaff()" style="margin-bottom:12px;">Send Invite</button>
+            </div>
+          </div>
+          <p id="invite-status" style="font-size:13px; margin-top:4px;"></p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin:0 0 12px 0; font-size:16px;">Current Staff</h3>
+          <div id="staff-list"></div>
+        </div>
+      `;
+
+      document.getElementById('main-view').innerHTML = html;
+      renderStaffList();
+    }
+
+    function renderStaffList() {
+      const listEl = document.getElementById('staff-list');
+      if (!listEl) return;
+
+      if (allStaffEmails.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No staff found.</p>';
+        return;
+      }
+
+      listEl.innerHTML = allStaffEmails.map(email => `
+        <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border-light);">
+          <span style="font-size:14px;">${escapeHtml(email)}</span>
+          <button class="danger sm" onclick="handleRemoveStaff('${email.replace(/'/g, "\\'")}')">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    async function handleInviteStaff() {
+      const firstName = document.getElementById('invite_first_name')?.value.trim();
+      const lastName = document.getElementById('invite_last_name')?.value.trim();
+      const statusEl = document.getElementById('invite-status');
+
+      if (!firstName || !lastName) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = 'Enter both a first and last name.';
+        return;
+      }
+
+      statusEl.style.color = 'var(--text-muted)';
+      statusEl.innerText = 'Sending invite...';
+
+      const result = await callAdminFunction('invite', { firstName, lastName });
+
+      if (result.error) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = result.error;
+      } else {
+        statusEl.style.color = 'green';
+        statusEl.innerText = `Invite sent to ${result.email}`;
+        document.getElementById('invite_first_name').value = '';
+        document.getElementById('invite_last_name').value = '';
+        await fetchStaffMembers();
+        renderStaffList();
+      }
+    }
+
+    async function handleRemoveStaff(email) {
+      if (!confirm(`Remove ${email}? They will no longer be able to log in.`)) return;
+
+      const result = await callAdminFunction('remove', { email });
+
+      if (result.error) {
+        alert('Error removing staff: ' + result.error);
+      } else {
+        await fetchStaffMembers();
+        renderStaffList();
+      }
+    }
+
+    let addExistingModalState = { periodNum: null, students: [] };
+
+    async function openAddExistingStudentModal(periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      addExistingModalState = {
+        periodNum,
+        students: allStudents.filter(s => s[colName] !== currentUserEmail)
+      };
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:500px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Add Student to ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
+            <div id="add-existing-list" style="max-height:400px; overflow-y:auto;"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      renderAddExistingList(addExistingModalState.students, periodNum);
+    }
+
+    function renderAddExistingList(students, periodNum) {
+      const listEl = document.getElementById('add-existing-list');
+      if (!listEl) return;
+
+      if (students.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No students found.</p>';
+        return;
+      }
+
+      listEl.innerHTML = students.map(s => `
+        <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border-light);">
+          <div>
+            <div style="font-weight:600; font-size:14px;">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
+            <div style="font-size:12px; color:var(--text-muted);">CM: ${escapeHtml(s.case_manager_email) || 'Unassigned'}</div>
+          </div>
+          <button class="sm" onclick="handleAddStudentToPeriod('${s.id}', ${periodNum})">Add</button>
+        </div>
+      `).join('');
+    }
+
+    function filterAddExistingList() {
+      const query = document.getElementById('add-existing-search')?.value.trim().toLowerCase() || '';
+      const filtered = addExistingModalState.students.filter(s => {
+        const fullName = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase();
+        return fullName.includes(query);
+      });
+      renderAddExistingList(filtered, addExistingModalState.periodNum);
+    }
+
+    async function handleAddStudentToPeriod(studentId, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const { error } = await supabaseClient
+        .from('students')
+        .update({ [colName]: currentUserEmail })
+        .eq('id', studentId);
+
+      if (error) {
+        alert('Error adding student to class: ' + error.message);
+      } else {
+        closeModal();
+        await fetchAllStudents();
+        switchView(periodNum);
+      }
     }
 
     function selectStatusOption(studentId, objKey, selectedVal) {
@@ -1127,6 +1383,12 @@
         });
       }
     }
+
+    supabaseClient.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        renderSetPasswordScreen();
+      }
+    });
 
     window.addEventListener('DOMContentLoaded', initApp);
   </script>
