@@ -250,7 +250,8 @@
     let currentUserEmail = '';
     let currentUserId = '';
     let allStudents = [];
-    let allStaffEmails = [];
+    let allStaffMembers = [];
+    let currentUserRole = 'teacher';
     let activeNav = 'caseload';
     let activePeriod = null;
     let activeChartInstance = null;
@@ -328,10 +329,17 @@
         await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
       } catch (e) {}
 
-      renderDashboard();
       await fetchStaffMembers();
+      currentUserRole = (allStaffMembers.find(s => s.email === currentUserEmail) || {}).role || 'teacher';
+
+      renderDashboard();
       await fetchAllStudents();
-      loadCaseload();
+
+      if (currentUserRole === 'para') {
+        switchView(1);
+      } else {
+        loadCaseload();
+      }
     }
 
     function renderLogin() {
@@ -438,7 +446,7 @@
           <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
           <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
           <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
-          <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
+          ${currentUserRole !== 'para' ? `<button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>` : ''}
           ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) ? `<button id="nav-admin" class="nav-btn outline" onclick="loadAdminView()">Admin</button>` : ''}
         </div>
 
@@ -459,11 +467,11 @@
     }
 
     async function fetchStaffMembers() {
-      const { data } = await supabaseClient.from('staff_members').select('email');
+      const { data } = await supabaseClient.from('staff_members').select('email, role');
       if (data && data.length > 0) {
-        allStaffEmails = data.map(s => s.email);
+        allStaffMembers = data;
       } else {
-        allStaffEmails = [currentUserEmail];
+        allStaffMembers = [{ email: currentUserEmail, role: 'teacher' }];
       }
     }
 
@@ -522,8 +530,9 @@
       let html = `
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
-          <div>
-            <button onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>
+          <div style="display:flex; gap:8px;">
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAssignParaModal(${periodNum})">+ Assign Paraprofessional</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>` : ''}
           </div>
         </div>
       `;
@@ -532,7 +541,7 @@
         html += `
           <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
             <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            <button class="outline" onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAddExistingStudentModal(${periodNum})">+ Add Student to Class</button>` : ''}
           </div>
         `;
       } else {
@@ -577,7 +586,7 @@
 
         <div class="card" style="margin-bottom:24px;">
           <h3 style="margin:0 0 12px 0; font-size:16px;">Invite New Staff Member</h3>
-          <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:12px; align-items:end;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:12px; align-items:end;">
             <div>
               <label>First Name</label>
               <input type="text" id="invite_first_name" placeholder="Jane">
@@ -585,6 +594,13 @@
             <div>
               <label>Last Name</label>
               <input type="text" id="invite_last_name" placeholder="Doe">
+            </div>
+            <div>
+              <label>Role</label>
+              <select id="invite_role">
+                <option value="teacher">Teacher</option>
+                <option value="para">Paraprofessional</option>
+              </select>
             </div>
             <div>
               <button onclick="handleInviteStaff()" style="margin-bottom:12px;">Send Invite</button>
@@ -607,22 +623,39 @@
       const listEl = document.getElementById('staff-list');
       if (!listEl) return;
 
-      if (allStaffEmails.length === 0) {
+      if (allStaffMembers.length === 0) {
         listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No staff found.</p>';
         return;
       }
 
-      listEl.innerHTML = allStaffEmails.map(email => `
+      listEl.innerHTML = allStaffMembers.map(s => `
         <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border-light);">
-          <span style="font-size:14px;">${escapeHtml(email)}</span>
-          <button class="danger sm" onclick="handleRemoveStaff('${email.replace(/'/g, "\\'")}')">Remove</button>
+          <span style="font-size:14px;">${escapeHtml(s.email)}</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <select style="width:auto; margin:0;" onchange="handleChangeStaffRole('${s.email.replace(/'/g, "\\'")}', this.value)">
+              <option value="teacher" ${s.role === 'teacher' ? 'selected' : ''}>Teacher</option>
+              <option value="para" ${s.role === 'para' ? 'selected' : ''}>Paraprofessional</option>
+            </select>
+            <button class="danger sm" onclick="handleRemoveStaff('${s.email.replace(/'/g, "\\'")}')">Remove</button>
+          </div>
         </div>
       `).join('');
+    }
+
+    async function handleChangeStaffRole(email, newRole) {
+      const { error } = await supabaseClient.from('staff_members').update({ role: newRole }).eq('email', email);
+      if (error) {
+        alert('Error updating role: ' + error.message);
+      } else {
+        await fetchStaffMembers();
+        renderStaffList();
+      }
     }
 
     async function handleInviteStaff() {
       const firstName = document.getElementById('invite_first_name')?.value.trim();
       const lastName = document.getElementById('invite_last_name')?.value.trim();
+      const role = document.getElementById('invite_role')?.value || 'teacher';
       const statusEl = document.getElementById('invite-status');
 
       if (!firstName || !lastName) {
@@ -634,7 +667,7 @@
       statusEl.style.color = 'var(--text-muted)';
       statusEl.innerText = 'Sending invite...';
 
-      const result = await callAdminFunction('invite', { firstName, lastName });
+      const result = await callAdminFunction('invite', { firstName, lastName, role });
 
       if (result.error) {
         statusEl.style.color = 'red';
@@ -733,6 +766,101 @@
       }
     }
 
+    let assignParaModalState = { periodNum: null, paras: [] };
+
+    function emailToDisplayName(email) {
+      const localPart = (email || '').split('@')[0];
+      return localPart.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+    }
+
+    async function openAssignParaModal(periodNum) {
+      await fetchStaffMembers();
+      const paraStaff = allStaffMembers.filter(s => s.role === 'para');
+
+      assignParaModalState = { periodNum, paras: paraStaff };
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:500px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Assign Paraprofessional to ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+              This gives the selected paraprofessional access to every student currently in your ${getOrdinalSuffix(periodNum)} hour class.
+            </p>
+            <input type="text" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
+            <div id="assign-para-list" style="max-height:400px; overflow-y:auto;"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      renderAssignParaList(assignParaModalState.paras, periodNum);
+    }
+
+    function renderAssignParaList(paras, periodNum) {
+      const listEl = document.getElementById('assign-para-list');
+      if (!listEl) return;
+
+      if (paras.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No paraprofessional accounts found.</p>';
+        return;
+      }
+
+      listEl.innerHTML = paras.map(p => `
+        <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border-light);">
+          <div>
+            <div style="font-weight:600; font-size:14px;">${escapeHtml(emailToDisplayName(p.email))}</div>
+            <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(p.email)}</div>
+          </div>
+          <button class="sm" onclick="handleAssignParaToPeriod('${p.email}', ${periodNum})">Assign</button>
+        </div>
+      `).join('');
+    }
+
+    function filterAssignParaList() {
+      const query = document.getElementById('assign-para-search')?.value.trim().toLowerCase() || '';
+      const filtered = assignParaModalState.paras.filter(p =>
+        emailToDisplayName(p.email).toLowerCase().includes(query) || p.email.toLowerCase().includes(query)
+      );
+      renderAssignParaList(filtered, assignParaModalState.periodNum);
+    }
+
+    async function handleAssignParaToPeriod(paraEmail, periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const paraColName = `paras_p${periodNum}`;
+
+      const myStudents = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      if (myStudents.length === 0) {
+        alert('You have no students in this class yet.');
+        return;
+      }
+
+      let failCount = 0;
+      for (const s of myStudents) {
+        const currentParas = Array.isArray(s[paraColName]) ? s[paraColName] : [];
+        if (currentParas.includes(paraEmail)) continue;
+
+        const newParas = [...currentParas, paraEmail];
+        const { error } = await supabaseClient
+          .from('students')
+          .update({ [paraColName]: newParas })
+          .eq('id', s.id);
+
+        if (error) failCount++;
+      }
+
+      closeModal();
+      await fetchAllStudents();
+      switchView(periodNum);
+
+      if (failCount > 0) {
+        alert(`Assigned, but ${failCount} student(s) failed to update. Check RLS policies in Supabase.`);
+      }
+    }
+
     function selectStatusOption(studentId, objKey, selectedVal) {
       document.getElementById(`status_input_${studentId}_${objKey}`).value = selectedVal;
       const pills = document.querySelectorAll(`.pill-${studentId}-${objKey}`);
@@ -814,7 +942,7 @@
               <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
               <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${escapeHtml(student.case_manager_email) || 'Unassigned'}</div>
             </div>
-            <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>
+            ${currentUserRole !== 'para' ? `<button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>` : ''}
           </div>
           <div>
             ${cardsHTML}
