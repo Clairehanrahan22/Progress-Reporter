@@ -255,6 +255,7 @@
     let activeNav = 'caseload';
     let activePeriod = null;
     let activeChartInstance = null;
+    let activeChartView = 'line';
 
     function getTodayString() {
       const today = new Date();
@@ -622,6 +623,8 @@
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
 
+      activeChartView = 'line';
+
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
@@ -698,6 +701,12 @@
                   </select>
                 </div>
 
+                <div style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:13px; font-weight:600; color:var(--text-muted);">View:</span>
+                  <button type="button" class="status-pill selected" id="chartview-line-btn" onclick="setChartView('line', '${student.id}')">Line (Progress Over Time)</button>
+                  <button type="button" class="status-pill" id="chartview-pie-btn" onclick="setChartView('pie', '${student.id}')">Pie (Overall Summary)</button>
+                </div>
+
                 <div style="height:260px; position:relative; margin-bottom:24px;">
                   <canvas id="progress-chart-canvas"></canvas>
                 </div>
@@ -771,6 +780,13 @@
       if (tabName === 'data' && studentId) {
         renderObjectiveChart(studentId);
       }
+    }
+
+    function setChartView(view, studentId) {
+      activeChartView = view;
+      document.getElementById('chartview-line-btn')?.classList.toggle('selected', view === 'line');
+      document.getElementById('chartview-pie-btn')?.classList.toggle('selected', view === 'pie');
+      renderObjectiveChart(studentId);
     }
 
     function closeModal() {
@@ -964,9 +980,6 @@
       tableHtml += `</tbody></table>`;
       if (historyTableEl) historyTableEl.innerHTML = tableHtml;
 
-      const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-      const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
-
       const ctx = document.getElementById('progress-chart-canvas')?.getContext('2d');
       if (!ctx) return;
 
@@ -974,35 +987,67 @@
         activeChartInstance.destroy();
       }
 
-      activeChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Success (1 = Yes, 0 = No / Other)',
-            data: chartValues,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            fill: true,
-            tension: 0.2,
-            stepped: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              min: 0,
-              max: 1,
-              ticks: {
-                stepSize: 1,
-                callback: value => (value === 1 ? 'Yes' : 'No')
+      if (activeChartView === 'pie') {
+        const statusOrder = ['Yes', 'No', 'No Opportunity', 'Absent'];
+        const statusColors = {
+          'Yes': '#16a34a',
+          'No': '#dc2626',
+          'No Opportunity': '#f59e0b',
+          'Absent': '#64748b'
+        };
+        const counts = statusOrder.map(s => data.filter(d => d.status === s).length);
+
+        activeChartInstance = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: statusOrder,
+            datasets: [{
+              data: counts,
+              backgroundColor: statusOrder.map(s => statusColors[s])
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom' }
+            }
+          }
+        });
+      } else {
+        const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+        const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
+
+        activeChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Success (1 = Yes, 0 = No / Other)',
+              data: chartValues,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              fill: true,
+              tension: 0.2,
+              stepped: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                min: 0,
+                max: 1,
+                ticks: {
+                  stepSize: 1,
+                  callback: value => (value === 1 ? 'Yes' : 'No')
+                }
               }
             }
           }
-        }
-      });
+        });
+      }
     }
 
     window.addEventListener('DOMContentLoaded', initApp);
