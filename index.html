@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Progress Reporter - IEP Management</title>
+<title>Progress Reporter - IEP Management System</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -17,30 +17,66 @@
   --border-light: #e2e8f0;
   --border-card: #cbd5e1;
   --danger: #dc2626;
+  --danger-hover: #b91c1c;
   --active-btn: #0f172a;
   --success: #16a34a;
+  --success-hover: #15803d;
+  --warning: #d97706;
 }
-body { 
-  font-family: system-ui, -apple-system, sans-serif; 
-  background: var(--bg); 
-  color: var(--text); 
-  margin: 0; 
-  padding: 24px; 
+
+* {
+  box-sizing: border-box;
 }
-.container { max-width: 1280px; margin: 0 auto; }
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); 
-  gap: 10px; 
-  margin-bottom: 24px; 
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 24px;
+  line-height: 1.5;
 }
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header-title small {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
 .student-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
   gap: 24px;
   margin-bottom: 24px;
 }
+
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-card);
@@ -48,66 +84,148 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
-button { 
-  background: var(--primary); 
-  color: white; 
-  border: none; 
-  padding: 8px 16px; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  font-weight: 600; 
-  font-size: 13px; 
-  transition: all 0.2s; 
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
 }
-button:hover { background: var(--primary-hover); }
-button.secondary { background: #64748b; }
-button.outline { background: white; border: 1px solid var(--border-card); color: var(--text); }
-button.outline:hover { background: #f8fafc; }
-button.danger { background: #fee2e2; color: var(--danger); }
-button.danger:hover { background: #fca5a5; }
-button.success { background: var(--success); }
-button.sm { padding: 6px 14px; font-size: 13px; }
-.nav-btn.active-nav { 
-  background: var(--active-btn) !important; 
-  color: white !important; 
-  font-weight: bold; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15); 
+
+button:hover {
+  background: var(--primary-hover);
 }
-.login-box { 
-  max-width: 400px; 
-  margin: 80px auto; 
-  padding: 28px; 
-  background: white; 
-  border-radius: 12px; 
-  border: 1px solid var(--border-light); 
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+
+button.secondary {
+  background: #64748b;
 }
+
+button.secondary:hover {
+  background: #475569;
+}
+
+button.outline {
+  background: white;
+  border: 1px solid var(--border-card);
+  color: var(--text);
+}
+
+button.outline:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+button.danger {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+button.danger:hover {
+  background: #fca5a5;
+  color: var(--danger-hover);
+}
+
+button.success {
+  background: var(--success);
+}
+
+button.success:hover {
+  background: var(--success-hover);
+}
+
+button.sm {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.nav-btn.active-nav {
+  background: var(--active-btn) !important;
+  color: white !important;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.login-box {
+  max-width: 400px;
+  margin: 80px auto;
+  padding: 28px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
 .modal-backdrop {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(2px); 
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
+
 .modal-content {
-  background: #fff; padding: 24px; border-radius: 12px; max-width: 800px; width: 92%;
-  max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 25px 5px rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 850px;
+  width: 92%;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px 5px rgba(0,0,0,0.1);
 }
-.tab-buttons { 
-  display: flex; gap: 8px; border-bottom: 2px solid var(--border-light); 
-  margin-bottom: 16px; padding-bottom: 8px; flex-wrap: wrap; 
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
 }
-.tab-btn { 
-  background: transparent; color: var(--text-muted); border: none; padding: 8px 12px; 
-  font-size: 14px; font-weight: 500; cursor: pointer; 
+
+.tab-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
-.tab-btn.active { 
-  border-bottom: 3px solid var(--primary); font-weight: bold; color: var(--primary); 
+
+.tab-btn.active {
+  border-bottom: 3px solid var(--primary);
+  font-weight: bold;
+  color: var(--primary);
 }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-.goal-box { 
-  background: #f8fafc; border-left: 4px solid var(--primary); padding: 14px; 
-  margin-bottom: 16px; border-radius: 6px; 
+
+.tab-content {
+  display: none;
 }
+
+.tab-content.active {
+  display: block;
+}
+
+.goal-box {
+  background: #f8fafc;
+  border-left: 4px solid var(--primary);
+  padding: 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+}
+
 .objective-card {
   border: 1px solid var(--border-light);
   border-radius: 12px;
@@ -115,73 +233,256 @@ button.sm { padding: 6px 14px; font-size: 13px; }
   margin-bottom: 16px;
   background: #fff;
 }
-.objective-card:last-child { margin-bottom: 0; }
-.obj-breadcrumbs { font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500; }
-.obj-text { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px; line-height: 1.35; }
-.status-prompt-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.status-pill-group { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
-.status-pill {
-  background: white; border: 1px solid var(--border-card); border-radius: 8px;
-  padding: 8px 14px; font-size: 13px; font-weight: 500; color: #1e293b; cursor: pointer; transition: all 0.15s ease;
-}
-.status-pill:hover { background: #f8fafc; border-color: #94a3b8; }
-.status-pill.selected { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
-.prompts-container { display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--border-light); padding-left: 12px; }
-.prompts-label { font-size: 14px; color: #475569; font-weight: 500; }
-.prompts-select {
-  border: 1px solid var(--border-card); border-radius: 8px; padding: 6px 12px; font-size: 14px;
-  background: white; cursor: pointer; margin: 0 !important; width: auto !important;
-}
-.notes-log-row { display: flex; gap: 10px; align-items: center; }
-.notes-input {
-  flex: 1; border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 14px;
-  font-size: 14px; outline: none; margin: 0 !important;
-}
-.notes-input:focus { border-color: var(--primary); }
-.log-btn { background: var(--primary); color: white; border-radius: 8px; padding: 10px 22px; font-weight: 600; font-size: 14px; height: 100%; }
-.saved-badge { display: none; background: #bbf7d0; color: #166534; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.email-input-wrapper { display: flex; align-items: center; border: 1px solid var(--border-light); border-radius: 6px; background: #fff; overflow: hidden; margin-bottom: 10px; }
-.email-input-wrapper input { border: none !important; margin: 0 !important; outline: none; }
-.email-domain-tag { background: #f1f5f9; padding: 6px 10px; font-size: 13px; color: var(--text-muted); font-weight: 600; border-left: 1px solid var(--border-light); }
-input[type="text"], input[type="email"], input[type="password"], input[type="date"], select, textarea {
-  width: 100%; padding: 8px 10px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border-light); border-radius: 6px; box-sizing: border-box; font-size: 13px;
-}
-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-th, td { border: 1px solid var(--border-light); padding: 8px; text-align: left; }
-th { background-color: #f1f5f9; font-weight: 600; }
 
-/* Visual Chart Toggle Controls */
-.chart-toggle-group {
-  display: inline-flex;
-  background-color: #f1f5f9;
+.objective-card:last-child {
+  margin-bottom: 0;
+}
+
+.obj-breadcrumbs {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.obj-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 16px;
+  line-height: 1.35;
+}
+
+.status-prompt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.status-pill-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.status-pill {
+  background: white;
   border: 1px solid var(--border-card);
   border-radius: 8px;
-  padding: 3px;
-  margin-bottom: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
+
+.status-pill:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.status-pill.selected {
+  background: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
+}
+
+.prompts-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--border-light);
+  padding-left: 12px;
+}
+
+.prompts-label {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.prompts-select {
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  margin: 0 !important;
+  width: auto !important;
+}
+
+.notes-log-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.notes-input {
+  flex: 1;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  margin: 0 !important;
+}
+
+.notes-input:focus {
+  border-color: var(--primary);
+}
+
+.log-btn {
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  height: 100%;
+}
+
+.saved-badge {
+  display: none;
+  background: #bbf7d0;
+  color: #166534;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.email-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.email-input-wrapper input {
+  border: none !important;
+  margin: 0 !important;
+  outline: none;
+}
+
+.email-domain-tag {
+  background: #f1f5f9;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-left: 1px solid var(--border-light);
+}
+
+input[type="text"], input[type="email"], input[type="password"], input[type="date"], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+th, td {
+  border: 1px solid var(--border-light);
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+}
+
+.chart-toggle-group {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 12px;
+  width: fit-content;
+}
+
 .chart-toggle-btn {
   background: transparent;
-  color: var(--text-muted);
   border: none;
-  padding: 6px 14px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
+  color: var(--text-muted);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .chart-toggle-btn.active {
-  background: white;
+  background: #ffffff;
   color: var(--primary);
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.para-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.para-list-box {
+  background: #f1f5f9;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.para-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.para-item:last-child {
+  margin-bottom: 0;
 }
 </style>
 </head>
 <body>
-
 <div class="container" id="app-root">
-  <div style="text-align:center; margin-top:50px; color: var(--text-muted);">Loading application...</div>
+  <div style="text-align:center; margin-top:50px; color: var(--text-muted);">Loading IEP Progress Reporter...</div>
 </div>
 <div id="modal-root"></div>
 
@@ -191,16 +492,13 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQIrI8IQ_VSXKIBA4';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUserEmail = '';
-let currentUserId = '';
+let currentUserld = '';
 let allStudents = [];
 let allStaffEmails = [];
 let activeNav = 'caseload';
 let activePeriod = null;
-
-// Graph state globals
 let activeChartInstance = null;
-let currentChartMode = 'line'; // 'line' or 'pie'
-let currentRawChartData = [];
+let currentGraphView = 'line'; // Default view type: 'line' or 'pie'
 
 function getTodayString() {
   const today = new Date();
@@ -221,7 +519,9 @@ function formatUserEmailInput(inputVal) {
   if (!inputVal) return '';
   let cleaned = inputVal.trim().toLowerCase();
   if (!cleaned) return '';
-  if (cleaned.endsWith('@ahschools.us')) return cleaned;
+  if (cleaned.endsWith('@ahschools.us')) {
+    return cleaned;
+  }
   return `${cleaned}@ahschools.us`;
 }
 
@@ -232,10 +532,12 @@ async function initApp() {
     return;
   }
   currentUserEmail = session.user.email;
-  currentUserId = session.user.id;
+  currentUserld = session.user.id;
   try {
     await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
-  } catch (e) {}
+  } catch (e) {
+    console.log("Staff member log notice:", e);
+  }
   renderDashboard();
   await fetchStaffMembers();
   await fetchAllStudents();
@@ -245,20 +547,23 @@ async function initApp() {
 function renderLogin() {
   document.getElementById('app-root').innerHTML = `
     <div class="login-box">
-      <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
-      <label>Email Address</label>
-      <input type="email" id="login-email" placeholder="teacher@school.org">
-      <label>Password</label>
-      <input type="password" id="login-pass" placeholder="........">
-      <button style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Sign In</button>
+      <h2 style="margin-top:0; font-size: 20px;">Sign In to IEP Reporter</h2>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Enter your school credentials to access student plans.</p>
+      <label style="font-size:12px; font-weight:600;">Email Address</label>
+      <input type="email" id="login-email" placeholder="teacher@ahschools.us">
+      <label style="font-size:12px; font-weight:600;">Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+      <button style="width: 100%; margin-top: 10px; padding:10px;" onclick="handleLogin()">Sign In</button>
       <p id="login-error" style="color:red; font-size: 13px; margin-top:10px;"></p>
-    </div>`;
+    </div>
+  `;
 }
 
 async function handleLogin() {
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-pass').value;
   const errorEl = document.getElementById('login-error');
+  errorEl.innerText = '';
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) {
     errorEl.innerText = error.message;
@@ -270,9 +575,9 @@ async function handleLogin() {
 function renderDashboard() {
   document.getElementById('app-root').innerHTML = `
     <header>
-      <div>
-        <h1 style="margin:0; font-size:24px; font-weight:700;">IEP Progress Reporter</h1>
-        <small style="color:var(--text-muted);">${currentUserEmail} (Staff)</small>
+      <div class="header-title">
+        <h1>IEP Progress Reporter</h1>
+        <small>${currentUserEmail} (Staff)</small>
       </div>
       <div>
         <button class="danger sm" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
@@ -286,7 +591,8 @@ function renderDashboard() {
       <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
       <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
     </div>
-    <div id="main-view"></div>`;
+    <div id="main-view"></div>
+  `;
 }
 
 function updateNavHighlights(selectedNav) {
@@ -300,8 +606,8 @@ function updateNavHighlights(selectedNav) {
 }
 
 async function fetchStaffMembers() {
-  const { data } = await supabaseClient.from('staff_members').select('email');
-  if (data && data.length > 0) {
+  const { data, error } = await supabaseClient.from('staff_members').select('email');
+  if (!error && data && data.length > 0) {
     allStaffEmails = data.map(s => s.email);
   } else {
     allStaffEmails = [currentUserEmail];
@@ -320,11 +626,17 @@ async function loadCaseload() {
   const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
   let html = `
     <div class="flex-between" style="margin-bottom: 20px;">
-      <h2 style="margin:0; font-size:20px;">My Caseload</h2>
+      <h2 style="margin:0; font-size:20px;">My Caseload Management</h2>
       <button onclick="openCreateStudentModal()">+ Add New Student</button>
-    </div>`;
+    </div>
+  `;
   if (myCaseload.length === 0) {
-    html += '<p style="color:var(--text-muted); font-size:14px;">No students on your caseload yet.</p>';
+    html += `
+      <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
+        <p style="margin:0 0 12px 0;">No students assigned to your caseload yet.</p>
+        <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
+      </div>
+    `;
   } else {
     html += '<div class="student-grid">';
     myCaseload.forEach(student => {
@@ -334,8 +646,9 @@ async function loadCaseload() {
             <h3 style="margin:0 0 4px 0; font-size: 18px; font-weight:700;">${student.first_name} ${student.last_name}</h3>
             <small style="color:var(--text-muted); font-size:13px;">CM: ${student.case_manager_email}</small>
           </div>
-          <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
-        </div>`;
+          <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Manage IEP</button>
+        </div>
+      `;
     });
     html += '</div>';
   }
@@ -360,13 +673,15 @@ async function switchView(periodNum) {
       <div>
         <button onclick="openCreateStudentModal()">+ Add Student</button>
       </div>
-    </div>`;
+    </div>
+  `;
   if (periodRoster.length === 0) {
     html += `
       <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
         <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
         <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
-      </div>`;
+      </div>
+    `;
   } else {
     html += '<div class="student-grid">';
     periodRoster.forEach(student => {
@@ -435,13 +750,12 @@ function renderStudentDashboardCard(student, periodNum) {
           <input type="text" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
           <button class="log-btn" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
         </div>
-      </div>`;
+      </div>
+    `;
   });
-
   if (cardsHTML === '') {
     cardsHTML = '<p style="color:var(--text-muted); font-size: 13px; font-style: italic;">No active objectives set for this student.</p>';
   }
-
   return `
     <div class="card">
       <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
@@ -449,10 +763,13 @@ function renderStudentDashboardCard(student, periodNum) {
           <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${student.first_name} ${student.last_name}</h3>
           <div style="color:var(--text-muted); font-size: 14px; font-weight:500;">CM: ${student.case_manager_email || 'Unassigned'}</div>
         </div>
-        <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>
+        <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit Student</button>
       </div>
-      <div>${cardsHTML}</div>
-    </div>`;
+      <div>
+        ${cardsHTML}
+      </div>
+    </div>
+  `;
 }
 
 async function restoreTeacherSavedState(studentId) {
@@ -465,23 +782,22 @@ async function restoreTeacherSavedState(studentId) {
     .eq('student_id', studentId)
     .gte('created_at', startDate)
     .lte('created_at', endDate);
-
   if (error || !data) return;
-
   data.forEach(entry => {
     const objKey = entry.objective_key;
     const btn = document.getElementById(`btn_${studentId}_${objKey}`);
     const badge = document.getElementById(`badge_${studentId}_${objKey}`);
     const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
     const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
-
-    if (entry.status) selectStatusOption(studentId, objKey, entry.status);
-    if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
-    if (notesEl && entry.notes) notesEl.value = entry.notes;
-    if (badge) badge.style.display = 'inline-block';
-    if (btn) {
-      btn.style.backgroundColor = 'var(--success)';
-      btn.innerText = 'Logged';
+    if (entry.status) {
+      selectStatusOption(studentId, objKey, entry.status);
+      if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
+      if (notesEl && entry.notes) notesEl.value = entry.notes;
+      if (badge) badge.style.display = 'inline-block';
+      if (btn) {
+        btn.style.backgroundColor = 'var(--success)';
+        btn.innerText = 'Logged';
+      }
     }
   });
 }
@@ -490,12 +806,10 @@ async function quickSaveData(studentId, objKey, nextObjKey = null) {
   const statusVal = document.getElementById(`status_input_${studentId}_${objKey}`)?.value;
   const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
   const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
-
   if (!statusVal) {
     alert('Please select a status option (Yes, No, No Opportunity, or Absent) before logging.');
     return;
   }
-
   const btn = document.getElementById(`btn_${studentId}_${objKey}`);
   const badge = document.getElementById(`badge_${studentId}_${objKey}`);
   const payload = {
@@ -506,9 +820,7 @@ async function quickSaveData(studentId, objKey, nextObjKey = null) {
     notes: notesVal,
     logged_by: currentUserEmail
   };
-
   const { error } = await supabaseClient.from('progress_data').insert([payload]);
-
   if (!error) {
     if (badge) badge.style.display = 'inline-block';
     if (btn) {
@@ -524,10 +836,55 @@ async function quickSaveData(studentId, objKey, nextObjKey = null) {
   }
 }
 
-async function openStudentModal(studentId) {
+async function addParaToPeriod(studentId, periodNum) {
+  const inputEl = document.getElementById(`new_para_p${periodNum}_${studentId}`);
+  if (!inputEl) return;
+  const username = inputEl.value;
+  if (!username) return;
+  const fullEmail = formatUserEmailInput(username);
   const student = allStudents.find(s => s.id === studentId);
   if (!student) return;
 
+  const colName = `paras_p${periodNum}`;
+  let currentParas = student[colName] || [];
+  if (!Array.isArray(currentParas)) currentParas = [];
+  if (!currentParas.includes(fullEmail)) {
+    currentParas.push(fullEmail);
+    const updateObj = {};
+    updateObj[colName] = currentParas;
+    const { error } = await supabaseClient.from('students').update(updateObj).eq('id', studentId);
+    if (!error) {
+      await fetchAllStudents();
+      openStudentModal(studentId);
+    } else {
+      alert('Error adding staff member: ' + error.message);
+    }
+  }
+}
+
+async function removeParaFromPeriod(studentId, periodNum, emailToRemove) {
+  const student = allStudents.find(s => s.id === studentId);
+  if (!student) return;
+
+  const colName = `paras_p${periodNum}`;
+  let currentParas = student[colName] || [];
+  if (!Array.isArray(currentParas)) return;
+  currentParas = currentParas.filter(e => e !== emailToRemove);
+
+  const updateObj = {};
+  updateObj[colName] = currentParas;
+  const { error } = await supabaseClient.from('students').update(updateObj).eq('id', studentId);
+  if (!error) {
+    await fetchAllStudents();
+    openStudentModal(studentId);
+  } else {
+    alert('Error removing staff member: ' + error.message);
+  }
+}
+
+async function openStudentModal(studentId) {
+  const student = allStudents.find(s => s.id === studentId);
+  if (!student) return;
   const modalHTML = `
     <div class="modal-backdrop">
       <div class="modal-content">
@@ -538,7 +895,7 @@ async function openStudentModal(studentId) {
         <div class="tab-buttons">
           <button class="tab-btn active" id="tab-btn-goals" onclick="switchModalTab('goals')">IEP Goals & Objectives</button>
           <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
-          <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
+          <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Staff & Paras</button>
           <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
         </div>
         <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
@@ -581,32 +938,26 @@ async function openStudentModal(studentId) {
             <p style="font-size:12px; color:var(--text-muted); margin-bottom: 16px;">
               View raw progress tracking data logs, visual line graphs/charts, filter by date ranges, and export reports.
             </p>
-            <div class="flex-between" style="margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-              <div>
-                <label style="display:block; margin-bottom:4px; font-weight:600;">Select Objective to View:</label>
-                <select id="chart-obj-select" style="margin-bottom:0;" onchange="renderObjectiveChart('${student.id}')">
-                  <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
-                  <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
-                </select>
-              </div>
-
-              <!-- VIEW TOGGLE CONTROLS -->
-              <div>
-                <label style="display:block; margin-bottom:4px; font-weight:600;">Chart Display View:</label>
-                <div class="chart-toggle-group">
-                  <button type="button" class="chart-toggle-btn active" id="btn-view-line" onclick="setChartMode('line')">📈 Dual-Axis Trend</button>
-                  <button type="button" class="chart-toggle-btn" id="btn-view-pie" onclick="setChartMode('pie')">🥧 Summary Pie</button>
-                </div>
-              </div>
+            <div style="margin-bottom:16px;">
+              <label>Select Objective to View:</label>
+              <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
+                <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? student.obj_1_2.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? student.obj_2_1.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? student.obj_2_2.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? student.obj_3_1.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? student.obj_3_2.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? student.obj_4_1.substring(0, 40) + '...' : 'Empty'}</option>
+                <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
+              </select>
+            </div>
+            
+            <div class="chart-toggle-group">
+              <button type="button" class="chart-toggle-btn ${currentGraphView === 'line' ? 'active' : ''}" id="toggle-view-line" onclick="switchGraphType('line', '${student.id}')">📈 Line Trend</button>
+              <button type="button" class="chart-toggle-btn ${currentGraphView === 'pie' ? 'active' : ''}" id="toggle-view-pie" onclick="switchGraphType('pie', '${student.id}')">🥧 Pie Summary</button>
             </div>
 
-            <div style="height:300px; position:relative; margin-bottom:24px;">
+            <div style="height:260px; position:relative; margin-bottom:24px;">
               <canvas id="progress-chart-canvas"></canvas>
             </div>
             <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
@@ -614,31 +965,48 @@ async function openStudentModal(studentId) {
           </div>
           <div id="tab-content-teachers" class="tab-content">
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
+              Manage lead teachers and educational assistants (paras) assigned per period.
             </p>
-            <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-              ${[1, 2, 3, 4, 5].map(p => `
-                <div>
-                  <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
+            ${[1, 2, 3, 4, 5].map(p => {
+              const paraList = student[`paras_p${p}`] || [];
+              return `
+                <div style="border:1px solid var(--border-light); border-radius:8px; padding:12px; margin-bottom:12px; background:#fafafa;">
+                  <h4 style="margin:0 0 8px 0;">${getOrdinalSuffix(p)} Hour Staff Assignment</h4>
+                  <label>Lead Teacher Username</label>
                   <div class="email-input-wrapper">
                     <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
                     <div class="email-domain-tag">@ahschools.us</div>
                   </div>
-                </div>`).join('')}
-            </div>
+                  <label>Assigned Paras & Staff Support</label>
+                  <div class="para-list-box">
+                    ${paraList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted);">No paras assigned for this hour.</div>' : ''}
+                    ${paraList.map(para => `
+                      <div class="para-item">
+                        <span>${para}</span>
+                        <button type="button" class="danger sm" style="padding:2px 6px; font-size:10px;" onclick="removeParaFromPeriod('${student.id}', ${p}, '${para}')">Remove</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <div class="email-input-wrapper" style="margin-bottom:0;">
+                    <input type="text" id="new_para_p${p}_${student.id}" placeholder="Add para username...">
+                    <div class="email-domain-tag">@ahschools.us</div>
+                    <button type="button" class="outline sm" style="border-radius:0; border-left:1px solid var(--border-light);" onclick="addParaToPeriod('${student.id}', ${p})">+ Add</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
           <div id="tab-content-setup" class="tab-content">
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Edit basic profile information and case manager details.
+              Edit basic student details and primary Case Manager contact information.
             </p>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
               <div>
-                <label>First Name</label>
+                <label>First Name *</label>
                 <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
               </div>
               <div>
-                <label>Last Name</label>
+                <label>Last Name *</label>
                 <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
               </div>
             </div>
@@ -654,8 +1022,8 @@ async function openStudentModal(studentId) {
           </div>
         </form>
       </div>
-    </div>`;
-
+    </div>
+  `;
   document.getElementById('modal-root').innerHTML = modalHTML;
 }
 
@@ -667,6 +1035,13 @@ function switchModalTab(tabName, studentId = null) {
   if (tabName === 'data' && studentId) {
     renderObjectiveChart(studentId);
   }
+}
+
+function switchGraphType(type, studentId) {
+  currentGraphView = type;
+  document.getElementById('toggle-view-line')?.classList.toggle('active', type === 'line');
+  document.getElementById('toggle-view-pie')?.classList.toggle('active', type === 'pie');
+  renderObjectiveChart(studentId);
 }
 
 function closeModal() {
@@ -724,7 +1099,7 @@ async function openCreateStudentModal() {
     <div class="modal-backdrop">
       <div class="modal-content">
         <div class="flex-between" style="margin-bottom:12px;">
-          <h2 style="margin:0;">Add New Student</h2>
+          <h2 style="margin:0;">Add New Student Profile</h2>
           <button class="danger sm" onclick="closeModal()">Close</button>
         </div>
         <form onsubmit="handleCreateStudent(event)">
@@ -745,11 +1120,12 @@ async function openCreateStudentModal() {
           </div>
           <div class="flex-between" style="margin-top:20px;">
             <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-            <button type="submit" class="success">Create Student</button>
+            <button type="submit" class="success">Create Student Profile</button>
           </div>
         </form>
       </div>
-    </div>`;
+    </div>
+  `;
   document.getElementById('modal-root').innerHTML = modalHTML;
 }
 
@@ -782,12 +1158,12 @@ async function handleCreateStudent(e) {
 }
 
 async function deleteStudent(studentId) {
-  if (!confirm('Are you sure you want to delete this student and all associated logs? This cannot be undone.')) {
+  if (!confirm('Are you sure you want to delete this student and all associated progress logs? This action cannot be undone.')) {
     return;
   }
   const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
   if (error) {
-    alert('Error deleting student: ' + error.message);
+    alert('Error deleting student record: ' + error.message);
   } else {
     closeModal();
     await fetchAllStudents();
@@ -799,18 +1175,10 @@ async function deleteStudent(studentId) {
   }
 }
 
-// TOGGLE VIEW CONTROLLER
-function setChartMode(mode) {
-  currentChartMode = mode;
-  document.getElementById('btn-view-line')?.classList.toggle('active', mode === 'line');
-  document.getElementById('btn-view-pie')?.classList.toggle('active', mode === 'pie');
-  drawChartFromStoredData();
-}
-
 async function renderObjectiveChart(studentId) {
   const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
   const historyTableEl = document.getElementById('data-history-table');
-  
+
   const { data, error } = await supabaseClient
     .from('progress_data')
     .select('*')
@@ -822,19 +1190,12 @@ async function renderObjectiveChart(studentId) {
     if (historyTableEl) historyTableEl.innerHTML = '<p style="color:red;">Failed to load history data.</p>';
     return;
   }
-
-  currentRawChartData = data || [];
-
-  if (currentRawChartData.length === 0) {
+  if (!data || data.length === 0) {
     if (historyTableEl) historyTableEl.innerHTML = '<p style="color:var(--text-muted);">No logs found for this objective.</p>';
-    if (activeChartInstance) {
-      activeChartInstance.destroy();
-      activeChartInstance = null;
-    }
+    if (activeChartInstance) activeChartInstance.destroy();
     return;
   }
 
-  // Render Table History
   let tableHtml = `
     <table>
       <thead>
@@ -846,9 +1207,9 @@ async function renderObjectiveChart(studentId) {
           <th>Logged By</th>
         </tr>
       </thead>
-      <tbody>`;
-  
-  currentRawChartData.slice().reverse().forEach(row => {
+      <tbody>
+  `;
+  data.slice().reverse().forEach(row => {
     const d = new Date(row.created_at);
     tableHtml += `
       <tr>
@@ -857,152 +1218,69 @@ async function renderObjectiveChart(studentId) {
         <td>${row.prompts || '0'}</td>
         <td>${row.notes || ''}</td>
         <td>${row.logged_by || ''}</td>
-      </tr>`;
+      </tr>
+    `;
   });
   tableHtml += '</tbody></table>';
   if (historyTableEl) historyTableEl.innerHTML = tableHtml;
 
-  drawChartFromStoredData();
-}
-
-function drawChartFromStoredData() {
   const ctx = document.getElementById('progress-chart-canvas')?.getContext('2d');
-  if (!ctx || currentRawChartData.length === 0) return;
+  if (!ctx) return;
+  if (activeChartInstance) {
+    activeChartInstance.destroy();
+  }
 
-  if (activeChartInstance) activeChartInstance.destroy();
-
-  if (currentChartMode === 'line') {
-    // ------------------------------------------------------------------------
-    // VIEW 1: DUAL-AXIS LINE CHART (Accuracy % Trend + Prompt Independence Level)
-    // ------------------------------------------------------------------------
-    let cumulativeTotal = 0;
-    let cumulativeSuccesses = 0;
-    
-    const labels = [];
-    const accuracyValues = [];
-    const promptValues = [];
-    const targetValues = [];
-
-    currentRawChartData.forEach(entry => {
-      const d = new Date(entry.created_at);
-      labels.push(d.toLocaleDateString([], { month: 'numeric', day: 'numeric' }));
-
-      // Accuracy Tracking
-      if (entry.status === 'Yes' || entry.status === 'No') {
-        cumulativeTotal++;
-        if (entry.status === 'Yes') cumulativeSuccesses++;
-      }
-      const accPct = cumulativeTotal > 0 ? Math.round((cumulativeSuccesses / cumulativeTotal) * 100) : 0;
-      accuracyValues.push(accPct);
-
-      // Prompt Level Numeric Parsing ("3+" parsed as 4)
-      let pNum = 0;
-      if (entry.prompts === '3+') pNum = 4;
-      else if (entry.prompts !== null && !isNaN(entry.prompts)) pNum = parseFloat(entry.prompts);
-      promptValues.push(pNum);
-
-      // 80% Benchmark Target
-      targetValues.push(80);
-    });
-
-    activeChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Accuracy Rate (%)',
-            data: accuracyValues,
-            borderColor: '#2563eb',
-            backgroundColor: '#2563eb',
-            borderWidth: 3,
-            tension: 0.2,
-            yAxisID: 'y'
-          },
-          {
-            label: 'IEP Target (80%)',
-            data: targetValues,
-            borderColor: '#16a34a',
-            borderDash: [6, 6],
-            borderWidth: 2,
-            pointRadius: 0,
-            fill: false,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Avg Prompts Needed',
-            data: promptValues,
-            borderColor: '#d97706',
-            backgroundColor: '#d97706',
-            borderWidth: 2,
-            borderDash: [2, 2],
-            tension: 0.2,
-            yAxisID: 'yPrompts'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          y: {
-            type: 'linear',
-            position: 'left',
-            min: 0,
-            max: 100,
-            title: { display: true, text: 'Accuracy Rate (%)', color: '#2563eb', font: { weight: 'bold' } },
-            ticks: { stepSize: 20 }
-          },
-          yPrompts: {
-            type: 'linear',
-            position: 'right',
-            min: 0,
-            max: 4,
-            reverse: true, // Inverted scale so 0 Prompts (Independent) stays at top
-            title: { display: true, text: 'Prompts (0 = Independent)', color: '#d97706', font: { weight: 'bold' } },
-            grid: { drawOnChartArea: false },
-            ticks: {
-              stepSize: 1,
-              callback: val => (val === 4 ? '3+' : val)
-            }
-          }
-        }
-      }
-    });
-
-  } else {
-    // ------------------------------------------------------------------------
-    // VIEW 2: CUMULATIVE SUMMARY PIE CHART
-    // ------------------------------------------------------------------------
-    let yesCount = 0;
-    let noCount = 0;
-    let noOppCount = 0;
-    let absentCount = 0;
-
-    currentRawChartData.forEach(entry => {
-      if (entry.status === 'Yes') yesCount++;
-      else if (entry.status === 'No') noCount++;
-      else if (entry.status === 'No Opportunity') noOppCount++;
-      else if (entry.status === 'Absent') absentCount++;
+  if (currentGraphView === 'pie') {
+    const statusCounts = {};
+    data.forEach(d => {
+      const s = d.status || 'Other';
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
     });
 
     activeChartInstance = new Chart(ctx, {
       type: 'pie',
       data: {
-        labels: ['Yes / Success', 'No / Refused', 'No Opportunity', 'Absent'],
+        labels: Object.keys(statusCounts),
         datasets: [{
-          data: [yesCount, noCount, noOppCount, absentCount],
-          backgroundColor: ['#16a34a', '#dc2626', '#94a3b8', '#cbd5e1'],
-          borderWidth: 2
+          data: Object.values(statusCounts),
+          backgroundColor: ['#16a34a', '#dc2626', '#d97706', '#64748b']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  } else {
+    const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+    const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
+
+    activeChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Success (1 = Yes, 0 = No / Other)',
+          data: chartValues,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: true,
+          tension: 0.2,
+          stepped: true
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' },
-          title: { display: true, text: 'Total Log Breakdown Across Selected Objective', font: { size: 14, weight: 'bold' } }
+        scales: {
+          y: {
+            min: 0,
+            max: 1,
+            ticks: {
+              stepSize: 1,
+              callback: value => (value === 1 ? 'Yes' : 'No')
+            }
+          }
         }
       }
     });
