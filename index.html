@@ -313,7 +313,7 @@ let allStaffEmails = [];
 let activeNav = 'caseload';
 let activePeriod = null;
 let activeChartInstance = null;
-let currentChartView = 'line'; // tracks toggle view ('line' or 'pie')
+let currentChartView = 'line';
 
 function getTodayString() {
   const today = new Date();
@@ -352,7 +352,7 @@ async function initApp() {
   renderDashboard();
   await fetchStaffMembers();
   await fetchAllStudents();
-  loadCaseload();
+  await loadCaseload();
 }
 
 function renderLogin() {
@@ -816,9 +816,9 @@ async function saveStudentChanges(e, studentId) {
     closeModal();
     await fetchAllStudents();
     if (activeNav === 'caseload') {
-      loadCaseload();
+      await loadCaseload();
     } else {
-      switchView(activePeriod);
+      await switchView(activePeriod);
     }
   }
 }
@@ -875,9 +875,9 @@ async function handleCreateStudent(e) {
     closeModal();
     await fetchAllStudents();
     if (activeNav === 'caseload') {
-      loadCaseload();
+      await loadCaseload();
     } else if (activePeriod) {
-      switchView(activePeriod);
+      await switchView(activePeriod);
     }
   }
 }
@@ -893,9 +893,9 @@ async function deleteStudent(studentId) {
     closeModal();
     await fetchAllStudents();
     if (activeNav === 'caseload') {
-      loadCaseload();
+      await loadCaseload();
     } else if (activePeriod) {
-      switchView(activePeriod);
+      await switchView(activePeriod);
     }
   }
 }
