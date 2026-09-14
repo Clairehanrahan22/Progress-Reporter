@@ -578,6 +578,7 @@
       updateNavHighlights('admin');
       activePeriod = null;
       await fetchStaffMembers();
+      await fetchAllStudents();
 
       const html = `
         <div class="flex-between" style="margin-bottom: 20px;">
@@ -609,14 +610,63 @@
           <p id="invite-status" style="font-size:13px; margin-top:4px;"></p>
         </div>
 
-        <div class="card">
+        <div class="card" style="margin-bottom:24px;">
           <h3 style="margin:0 0 12px 0; font-size:16px;">Current Staff</h3>
           <div id="staff-list"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin:0 0 12px 0; font-size:16px;">All Students</h3>
+          <input type="text" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
+          <div id="admin-student-list"></div>
         </div>
       `;
 
       document.getElementById('main-view').innerHTML = html;
       renderStaffList();
+      renderAdminStudentList();
+    }
+
+    function renderAdminStudentList() {
+      const listEl = document.getElementById('admin-student-list');
+      if (!listEl) return;
+
+      const query = document.getElementById('admin-student-search')?.value.trim().toLowerCase() || '';
+
+      const filtered = allStudents
+        .filter(s => {
+          const name = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase();
+          const cm = (s.case_manager_email || '').toLowerCase();
+          return name.includes(query) || cm.includes(query);
+        })
+        .sort((a, b) =>
+          (a.case_manager_email || '').localeCompare(b.case_manager_email || '') ||
+          (a.last_name || '').localeCompare(b.last_name || '')
+        );
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No students found.</p>';
+        return;
+      }
+
+      listEl.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Case Manager</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(s => `
+              <tr style="cursor:pointer;" onclick="openStudentModal('${s.id}')">
+                <td>${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</td>
+                <td>${escapeHtml(s.case_manager_email) || 'Unassigned'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
     }
 
     function renderStaffList() {
@@ -1303,6 +1353,8 @@
         await fetchAllStudents();
         if (activeNav === 'caseload') {
           loadCaseload();
+        } else if (activeNav === 'admin') {
+          loadAdminView();
         } else {
           switchView(activePeriod);
         }
@@ -1389,6 +1441,8 @@
         await fetchAllStudents();
         if (activeNav === 'caseload') {
           loadCaseload();
+        } else if (activeNav === 'admin') {
+          loadAdminView();
         } else if (activePeriod) {
           switchView(activePeriod);
         }
