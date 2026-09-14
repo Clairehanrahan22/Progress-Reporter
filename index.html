@@ -20,28 +20,28 @@
   --active-btn: #0f172a;
   --success: #16a34a;
 }
-body { 
-  font-family: system-ui, -apple-system, sans-serif; 
-  background: var(--bg); 
-  color: var(--text); 
-  margin: 0; 
-  padding: 24px; 
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 24px;
 }
-.container { 
-  max-width: 1600px; 
-  margin: 0 auto; 
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
 }
-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-bottom: 24px; 
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
-.grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); 
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 10px;
-  margin-bottom: 24px; 
+  margin-bottom: 24px;
 }
 .student-grid {
   display: grid;
@@ -50,14 +50,10 @@ header {
   margin-bottom: 24px;
 }
 @media (max-width: 1200px) {
-  .student-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .student-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
-  .student-grid {
-    grid-template-columns: 1fr;
-  }
+  .student-grid { grid-template-columns: 1fr; }
 }
 .card {
   background: var(--card-bg);
@@ -66,16 +62,16 @@ header {
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
-button { 
-  background: var(--primary); 
-  color: white; 
-  border: none; 
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
   padding: 8px 16px;
-  border-radius: 8px; 
-  cursor: pointer; 
-  font-weight: 600; 
-  font-size: 13px; 
-  transition: all 0.2s; 
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s;
 }
 button:hover { background: var(--primary-hover); }
 button.secondary { background: #64748b; }
@@ -85,76 +81,74 @@ button.danger { background: #fee2e2; color: var(--danger); }
 button.danger:hover { background: #fca5a5; }
 button.success { background: var(--success); }
 button.sm { padding: 6px 14px; font-size: 13px; }
-
-.nav-btn.active-nav { 
-  background: var(--active-btn) !important; 
+.nav-btn.active-nav {
+  background: var(--active-btn) !important;
   color: white !important;
-  font-weight: bold; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15); 
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
-.login-box { 
-  max-width: 400px; 
-  margin: 80px auto; 
-  padding: 28px; 
+.login-box {
+  max-width: 400px;
+  margin: 80px auto;
+  padding: 28px;
   background: white;
-  border-radius: 12px; 
-  border: 1px solid var(--border-light); 
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 .modal-backdrop {
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  width: 100%; 
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  background: rgba(15, 23, 42, 0.4); 
-  backdrop-filter: blur(2px); 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 .modal-content {
-  background: #fff; 
-  padding: 24px; 
-  border-radius: 12px; 
-  max-width: 800px; 
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 800px;
   width: 92%;
-  max-height: 88vh; 
-  overflow-y: auto; 
+  max-height: 88vh;
+  overflow-y: auto;
   box-shadow: 0 20px 25px 5px rgba(0,0,0,0.1);
 }
-.tab-buttons { 
-  display: flex; 
-  gap: 8px; 
+.tab-buttons {
+  display: flex;
+  gap: 8px;
   border-bottom: 2px solid var(--border-light);
-  margin-bottom: 16px; 
-  padding-bottom: 8px; 
-  flex-wrap: wrap; 
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
 }
-.tab-btn { 
-  background: transparent; 
-  color: var(--text-muted); 
-  border: none; 
+.tab-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
   padding: 8px 12px;
-  font-size: 14px; 
-  font-weight: 500; 
-  cursor: pointer; 
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
-.tab-btn.active { 
-  border-bottom: 3px solid var(--primary); 
-  font-weight: bold; 
-  color: var(--primary); 
+.tab-btn.active {
+  border-bottom: 3px solid var(--primary);
+  font-weight: bold;
+  color: var(--primary);
 }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
-
-.goal-box { 
-  background: #f8fafc; 
-  border-left: 4px solid var(--primary); 
+.goal-box {
+  background: #f8fafc;
+  border-left: 4px solid var(--primary);
   padding: 14px;
-  margin-bottom: 16px; 
-  border-radius: 6px; 
+  margin-bottom: 16px;
+  border-radius: 6px;
 }
 .objective-card {
   border: 1px solid var(--border-light);
@@ -163,9 +157,7 @@ button.sm { padding: 6px 14px; font-size: 13px; }
   margin-bottom: 16px;
   background: #fff;
 }
-.objective-card:last-child {
-  margin-bottom: 0;
-}
+.objective-card:last-child { margin-bottom: 0; }
 .obj-breadcrumbs {
   font-size: 13px;
   color: #64748b;
@@ -249,9 +241,7 @@ button.sm { padding: 6px 14px; font-size: 13px; }
   outline: none;
   margin: 0 !important;
 }
-.notes-input:focus {
-  border-color: var(--primary);
-}
+.notes-input:focus { border-color: var(--primary); }
 .log-btn {
   background: var(--primary);
   color: white;
@@ -307,22 +297,23 @@ th { background-color: #f1f5f9; font-weight: 600; }
 </head>
 <body>
 <div class="container" id="app-root">
-  <div style="text-align:center; margin-top:50px; color: var(--text-muted);">Loading application...</div>
+<div style="text-align:center; margin-top:50px; color: var(--text-muted);">Loading application...</div>
 </div>
 <div id="modal-root"></div>
 
 <script>
 const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQlrI8lQ_vSXKIBA4';
+const SUPABASE_ANON_KEY = 'sb_publishable_KmbjXRJ8dWiQVfqQIrI8IQ_vSXKIBA4';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUserEmail = '';
 let currentUserId = '';
-let allStudents = []; 
+let allStudents = [];
 let allStaffEmails = [];
 let activeNav = 'caseload';
 let activePeriod = null;
 let activeChartInstance = null;
+let currentChartView = 'line'; // tracks toggle view ('line' or 'pie')
 
 function getTodayString() {
   const today = new Date();
@@ -343,9 +334,7 @@ function formatUserEmailInput(inputVal) {
   if (!inputVal) return '';
   let cleaned = inputVal.trim().toLowerCase();
   if (!cleaned) return '';
-  if (cleaned.endsWith('@ahschools.us')) {
-    return cleaned;
-  }
+  if (cleaned.endsWith('@ahschools.us')) return cleaned;
   return `${cleaned}@ahschools.us`;
 }
 
@@ -360,7 +349,6 @@ async function initApp() {
   try {
     await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
   } catch (e) {}
-
   renderDashboard();
   await fetchStaffMembers();
   await fetchAllStudents();
@@ -369,16 +357,15 @@ async function initApp() {
 
 function renderLogin() {
   document.getElementById('app-root').innerHTML = `
-    <div class="login-box">
-      <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
-      <label>Email Address</label>
-      <input type="email" id="login-email" placeholder="teacher@school.org">
-      <label>Password</label>
-      <input type="password" id="login-pass" placeholder="••••••••">
-      <button style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Sign In</button>
-      <p id="login-error" style="color:red; font-size: 13px; margin-top:10px;"></p>
-    </div>
-  `;
+  <div class="login-box">
+    <h2 style="margin-top:0;">Sign In to IEP Reporter</h2>
+    <label>Email Address</label>
+    <input type="email" id="login-email" placeholder="teacher@school.org">
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="........">
+    <button style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Sign In</button>
+    <p id="login-error" style="color:red; font-size: 13px; margin-top:10px;"></p>
+  </div>`;
 }
 
 async function handleLogin() {
@@ -395,25 +382,24 @@ async function handleLogin() {
 
 function renderDashboard() {
   document.getElementById('app-root').innerHTML = `
-    <header>
-      <div>
-        <h1 style="margin:0; font-size:24px; font-weight:700;">IEP Progress Reporter</h1>
-        <small style="color:var(--text-muted);">${currentUserEmail} (Staff)</small>
-      </div>
-      <div>
-        <button class="danger sm" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
-      </div>
-    </header>
-    <div class="grid">
-      <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
-      <button id="nav-p2" class="nav-btn outline" onclick="switchView(2)">2nd Hour</button>
-      <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
-      <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
-      <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
-      <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
+  <header>
+    <div>
+      <h1 style="margin:0; font-size:24px; font-weight:700;">IEP Progress Reporter</h1>
+      <small style="color:var(--text-muted);">${currentUserEmail} (Staff)</small>
     </div>
-    <div id="main-view"></div>
-  `;
+    <div>
+      <button class="danger sm" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
+    </div>
+  </header>
+  <div class="grid">
+    <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
+    <button id="nav-p2" class="nav-btn outline" onclick="switchView(2)">2nd Hour</button>
+    <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
+    <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
+    <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
+    <button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>
+  </div>
+  <div id="main-view"></div>`;
 }
 
 function updateNavHighlights(selectedNav) {
@@ -446,25 +432,23 @@ async function loadCaseload() {
   await fetchAllStudents();
   const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
   let html = `
-    <div class="flex-between" style="margin-bottom: 20px;">
-      <h2 style="margin:0; font-size:20px;">My Caseload</h2>
-      <button onclick="openCreateStudentModal()">+ Add New Student</button>
-    </div>
-  `;
+  <div class="flex-between" style="margin-bottom: 20px;">
+    <h2 style="margin:0; font-size:20px;">My Caseload</h2>
+    <button onclick="openCreateStudentModal()">+ Add New Student</button>
+  </div>`;
   if (myCaseload.length === 0) {
     html += '<p style="color:var(--text-muted); font-size:14px;">No students on your caseload yet.</p>';
   } else {
     html += '<div class="student-grid">';
     myCaseload.forEach(student => {
       html += `
-        <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: center;">
-          <div>
-            <h3 style="margin:0 0 4px 0; font-size: 18px; font-weight:700;">${student.first_name} ${student.last_name}</h3>
-            <small style="color:var(--text-muted); font-size:13px;">CM: ${student.case_manager_email}</small>
-          </div>
-          <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
+      <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: center;">
+        <div>
+          <h3 style="margin:0 0 4px 0; font-size: 18px; font-weight:700;">${student.first_name} ${student.last_name}</h3>
+          <small style="color:var(--text-muted); font-size:13px;">CM: ${student.case_manager_email}</small>
         </div>
-      `;
+        <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
+      </div>`;
     });
     html += '</div>';
   }
@@ -483,32 +467,27 @@ async function switchView(periodNum) {
     const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
     return isTeacher || isPara;
   });
-
   let html = `
-    <div class="flex-between" style="margin-bottom: 20px;">
-      <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
-      <div>
-        <button onclick="openCreateStudentModal()">+ Add Student</button>
-      </div>
+  <div class="flex-between" style="margin-bottom: 20px;">
+    <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
+    <div>
+      <button onclick="openCreateStudentModal()">+ Add Student</button>
     </div>
-  `;
-
+  </div>`;
   if (periodRoster.length === 0) {
     html += `
-      <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
-        <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-        <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
-      </div>
-    `;
+    <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
+      <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
+      <button class="outline" onclick="openCreateStudentModal()">+ Add New Student</button>
+    </div>`;
   } else {
-    html += `<div class="student-grid">`;
+    html += '<div class="student-grid">';
     periodRoster.forEach(student => {
       html += renderStudentDashboardCard(student, periodNum);
     });
-    html += `</div>`;
+    html += '</div>';
   }
   document.getElementById('main-view').innerHTML = html;
-
   periodRoster.forEach(student => restoreTeacherSavedState(student.id));
 }
 
@@ -535,71 +514,62 @@ function renderStudentDashboardCard(student, periodNum) {
     {key: 'obj_4_1', gNum: 'Goal 4', objNum: 'Objective 1', domain: student.goal_4_domain || 'Extra', text: student.obj_4_1},
     {key: 'obj_4_2', gNum: 'Goal 4', objNum: 'Objective 2', domain: student.goal_4_domain || 'Extra', text: student.obj_4_2}
   ];
-
   const activeObjectives = rawObjectives.filter(o => o.text && o.text.trim() !== '');
-
   let cardsHTML = '';
   activeObjectives.forEach((o, index) => {
     const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
     cardsHTML += `
-      <div class="objective-card" id="card_${student.id}_${o.key}">
-        <div class="obj-breadcrumbs">
-          ${o.gNum} &bull; ${o.objNum} &bull; ${o.domain}
-          <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
+    <div class="objective-card" id="card_${student.id}_${o.key}">
+      <div class="obj-breadcrumbs">
+        ${o.gNum} &bull; ${o.objNum} &bull; ${o.domain}
+        <span class="saved-badge" id="badge_${student.id}_${o.key}">Logged</span>
+      </div>
+      <div class="obj-text">${o.text}</div>
+      <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
+      <div class="status-prompt-row">
+        <div class="status-pill-group">
+          <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">Yes</button>
+          <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">No</button>
+          <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">No Opp</button>
+          <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">Absent</button>
         </div>
-        <div class="obj-text">${o.text}</div>
-        <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
-        <div class="status-prompt-row">
-          <div class="status-pill-group">
-            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">Yes</button>
-            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">No</button>
-            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">No Opp</button>
-            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">Absent</button>
-          </div>
-          <div class="prompts-container">
-            <span class="prompts-label">Prompts:</span>
-            <select class="prompts-select" id="prompts_${student.id}_${o.key}">
-              <option value="0">0</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="3+">3+</option>
-            </select>
-          </div>
-        </div>
-        <div class="notes-log-row">
-          <input type="text" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
-          <button class="log-btn" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
+        <div class="prompts-container">
+          <span class="prompts-label">Prompts:</span>
+          <select class="prompts-select" id="prompts_${student.id}_${o.key}">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="3+">3+</option>
+          </select>
         </div>
       </div>
-    `;
+      <div class="notes-log-row">
+        <input type="text" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
+        <button class="log-btn" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
+      </div>
+    </div>`;
   });
-
   if (cardsHTML === '') {
     cardsHTML = '<p style="color:var(--text-muted); font-size: 13px; font-style: italic;">No active objectives set for this student.</p>';
   }
-
   return `
-    <div class="card">
-      <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
-        <div>
-          <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${student.first_name} ${student.last_name}</h3>
-          <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${student.case_manager_email || 'Unassigned'}</div>
-        </div>
-        <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>
-      </div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
       <div>
-        ${cardsHTML}
+        <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${student.first_name} ${student.last_name}</h3>
+        <div style="color:var(--text-muted); font-size: 14px; font-weight:500;">CM: ${student.case_manager_email || 'Unassigned'}</div>
       </div>
+      <button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>
     </div>
-  `;
+    <div>${cardsHTML}</div>
+  </div>`;
 }
 
 async function restoreTeacherSavedState(studentId) {
   const todayStr = getTodayString();
   const startDate = `${todayStr}T00:00:00.000Z`;
   const endDate = `${todayStr}T23:59:59.999Z`;
-
   const { data, error } = await supabaseClient
     .from('progress_data')
     .select('*')
@@ -608,23 +578,19 @@ async function restoreTeacherSavedState(studentId) {
     .lte('created_at', endDate);
 
   if (error || !data) return;
-
   data.forEach(entry => {
     const objKey = entry.objective_key;
     const btn = document.getElementById(`btn_${studentId}_${objKey}`);
     const badge = document.getElementById(`badge_${studentId}_${objKey}`);
     const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
     const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
-
-    if (entry.status) {
-      selectStatusOption(studentId, objKey, entry.status);
-    }
+    if (entry.status) selectStatusOption(studentId, objKey, entry.status);
     if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
     if (notesEl && entry.notes) notesEl.value = entry.notes;
     if (badge) badge.style.display = 'inline-block';
     if (btn) {
       btn.style.backgroundColor = 'var(--success)';
-      btn.innerText = '✓ Logged';
+      btn.innerText = 'Logged';
     }
   });
 }
@@ -641,7 +607,6 @@ async function quickSaveData(studentId, objKey, nextObjKey = null) {
 
   const btn = document.getElementById(`btn_${studentId}_${objKey}`);
   const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-
   const payload = {
     student_id: studentId,
     objective_key: objKey,
@@ -652,11 +617,10 @@ async function quickSaveData(studentId, objKey, nextObjKey = null) {
   };
 
   const { error } = await supabaseClient.from('progress_data').insert([payload]);
-
   if (!error) {
     if (badge) badge.style.display = 'inline-block';
     if (btn) {
-      btn.innerText = '✓ Logged';
+      btn.innerText = 'Logged';
       btn.style.backgroundColor = 'var(--success)';
     }
     if (nextObjKey) {
@@ -673,65 +637,61 @@ async function openStudentModal(studentId) {
   if (!student) return;
 
   const modalHTML = `
-    <div class="modal-backdrop">
-      <div class="modal-content">
-        <div class="flex-between" style="margin-bottom:12px;">
-          <h2 style="margin:0;">${student.first_name} ${student.last_name}</h2>
-          <button class="danger sm" onclick="closeModal()">✕ Close</button>
-        </div>
-        <div class="tab-buttons">
-          <button class="tab-btn active" id="tab-btn-goals" onclick="switchModalTab('goals')">IEP Goals & Objectives</button>
-          <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
-          <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
-          <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
-        </div>
-
-        <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
-          <div id="tab-content-goals" class="tab-content active">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Add, edit, reorder, or archive IEP goals and specific objectives for the student.
-            </p>
-
-            <div class="goal-box">
-              <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
-              <label>Objective 1.1</label>
-              <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
-              <label>Objective 1.2</label>
-              <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
-            </div>
-
-            <div class="goal-box">
-              <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
-              <label>Objective 2.1</label>
-              <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
-              <label>Objective 2.2</label>
-              <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
-            </div>
-
-            <div class="goal-box">
-              <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
-              <label>Objective 3.1</label>
-              <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
-              <label>Objective 3.2</label>
-              <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
-            </div>
-
-            <div class="goal-box">
-              <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
-              <label>Domain Name</label>
-              <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
-              <label>Objective 4.1</label>
-              <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
-              <label>Objective 4.2</label>
-              <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
-            </div>
+  <div class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex-between" style="margin-bottom: 12px;">
+        <h2 style="margin:0;">${student.first_name} ${student.last_name}</h2>
+        <button class="danger sm" onclick="closeModal()">X Close</button>
+      </div>
+      <div class="tab-buttons">
+        <button class="tab-btn active" id="tab-btn-goals" onclick="switchModalTab('goals')">IEP Goals & Objectives</button>
+        <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
+        <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
+        <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
+      </div>
+      <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
+        <div id="tab-content-goals" class="tab-content active">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+            Add, edit, reorder, or archive IEP goals and specific objectives for the student.
+          </p>
+          <div class="goal-box">
+            <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
+            <label>Objective 1.1</label>
+            <input type="text" id="edit_obj_1_1" value="${student.obj_1_1 || ''}">
+            <label>Objective 1.2</label>
+            <input type="text" id="edit_obj_1_2" value="${student.obj_1_2 || ''}">
           </div>
+          <div class="goal-box">
+            <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
+            <label>Objective 2.1</label>
+            <input type="text" id="edit_obj_2_1" value="${student.obj_2_1 || ''}">
+            <label>Objective 2.2</label>
+            <input type="text" id="edit_obj_2_2" value="${student.obj_2_2 || ''}">
+          </div>
+          <div class="goal-box">
+            <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
+            <label>Objective 3.1</label>
+            <input type="text" id="edit_obj_3_1" value="${student.obj_3_1 || ''}">
+            <label>Objective 3.2</label>
+            <input type="text" id="edit_obj_3_2" value="${student.obj_3_2 || ''}">
+          </div>
+          <div class="goal-box">
+            <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
+            <label>Domain Name</label>
+            <input type="text" id="edit_goal_4_domain" value="${student.goal_4_domain || ''}" placeholder="e.g. Recreation / Communication">
+            <label>Objective 4.1</label>
+            <input type="text" id="edit_obj_4_1" value="${student.obj_4_1 || ''}">
+            <label>Objective 4.2</label>
+            <input type="text" id="edit_obj_4_2" value="${student.obj_4_2 || ''}">
+          </div>
+        </div>
 
-          <div id="tab-content-data" class="tab-content">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              View raw progress tracking data logs, visual line graphs/charts, filter by date ranges, and export reports.
-            </p>
-            <div style="margin-bottom:16px;">
+        <div id="tab-content-data" class="tab-content">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+            View raw progress tracking data logs, visual charts, filter by date ranges, and export reports.
+          </p>
+          <div class="flex-between" style="margin-bottom: 16px; align-items: flex-end;">
+            <div style="flex:1; margin-right: 12px;">
               <label>Select Objective to View:</label>
               <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
                 <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? student.obj_1_1.substring(0, 40) + '...' : 'Empty'}</option>
@@ -744,60 +704,66 @@ async function openStudentModal(studentId) {
                 <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? student.obj_4_2.substring(0, 40) + '...' : 'Empty'}</option>
               </select>
             </div>
-            <div style="height:260px; position:relative; margin-bottom:24px;">
-              <canvas id="progress-chart-canvas"></canvas>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">View Mode:</label>
+              <button type="button" id="btn-view-line" class="sm" onclick="toggleChartView('line', '${student.id}')">Line Graph</button>
+              <button type="button" id="btn-view-pie" class="outline sm" onclick="toggleChartView('pie', '${student.id}')">Pie Snapshot</button>
             </div>
-            <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
-            <div id="data-history-table">Loading logs...</div>
           </div>
+          <div style="height:260px; position:relative; margin-bottom:24px;">
+            <canvas id="progress-chart-canvas"></canvas>
+          </div>
+          <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
+          <div id="data-history-table">Loading logs...</div>
+        </div>
 
-          <div id="tab-content-teachers" class="tab-content">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
-            </p>
-            <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-              ${[1, 2, 3, 4, 5].map(p => `
-                <div>
-                  <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
-                  <div class="email-input-wrapper">
-                    <input type="text" id="edit_teacher_p${p}" value="${(student[`teacher_p${p}`] || '').replace('@ahschools.us', '')}">
-                    <div class="email-domain-tag">@ahschools.us</div>
-                  </div>
+        <div id="tab-content-teachers" class="tab-content">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+            Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
+          </p>
+          <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            ${[1, 2, 3, 4, 5].map(p => `
+              <div>
+                <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
+                <div class="email-input-wrapper">
+                  <input type="text" id="edit_teacher_p${p}" value="${(student['teacher_p' + p] || '').replace('@ahschools.us', '')}">
+                  <div class="email-domain-tag">@ahschools.us</div>
                 </div>
-              `).join('')}
-            </div>
-          </div>
-
-          <div id="tab-content-setup" class="tab-content">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Edit basic profile information and case manager details.
-            </p>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-              <div>
-                <label>First Name *</label>
-                <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
               </div>
-              <div>
-                <label>Last Name *</label>
-                <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
-              </div>
-            </div>
-            <label>Case Manager Email Username</label>
-            <div class="email-input-wrapper">
-              <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
-              <div class="email-domain-tag">@ahschools.us</div>
-            </div>
+            `).join('')}
           </div>
+        </div>
 
-          <div class="flex-between" style="margin-top:24px; padding-top: 16px; border-top:1px solid var(--border-light);">
-            <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
-            <button type="submit" class="success">Save Changes</button>
+        <div id="tab-content-setup" class="tab-content">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+            Edit basic profile information and case manager details.
+          </p>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div>
+              <label>First Name *</label>
+              <input type="text" id="edit_first_name" value="${student.first_name || ''}" required>
+            </div>
+            <div>
+              <label>Last Name *</label>
+              <input type="text" id="edit_last_name" value="${student.last_name || ''}" required>
+            </div>
           </div>
-        </form>
-      </div>
+          <label>Case Manager Email Username</label>
+          <div class="email-input-wrapper">
+            <input type="text" id="edit_cm_email" value="${(student.case_manager_email || '').replace('@ahschools.us', '')}">
+            <div class="email-domain-tag">@ahschools.us</div>
+          </div>
+        </div>
+
+        <div class="flex-between" style="margin-top:24px; padding-top: 16px; border-top:1px solid var(--border-light);">
+          <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
+          <button type="submit" class="success">Save Changes</button>
+        </div>
+      </form>
     </div>
-  `;
+  </div>`;
+
   document.getElementById('modal-root').innerHTML = modalHTML;
 }
 
@@ -841,11 +807,7 @@ async function saveStudentChanges(e, studentId) {
     teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5')?.value)
   };
 
-  const { error } = await supabaseClient
-    .from('students')
-    .update(updatedStudent)
-    .eq('id', studentId);
-
+  const { error } = await supabaseClient.from('students').update(updatedStudent).eq('id', studentId);
   if (error) {
     console.error('Error updating student:', error);
     alert('Error saving student details: ' + error.message);
@@ -863,36 +825,35 @@ async function saveStudentChanges(e, studentId) {
 
 async function openCreateStudentModal() {
   const modalHTML = `
-    <div class="modal-backdrop">
-      <div class="modal-content">
-        <div class="flex-between" style="margin-bottom:12px;">
-          <h2 style="margin:0;">Add New Student</h2>
-          <button class="danger sm" onclick="closeModal()">✕ Close</button>
-        </div>
-        <form onsubmit="handleCreateStudent(event)">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-            <div>
-              <label>First Name *</label>
-              <input type="text" id="new_first_name" required>
-            </div>
-            <div>
-              <label>Last Name *</label>
-              <input type="text" id="new_last_name" required>
-            </div>
-          </div>
-          <label>Case Manager Email Username</label>
-          <div class="email-input-wrapper">
-            <input type="text" id="new_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
-            <div class="email-domain-tag">@ahschools.us</div>
-          </div>
-          <div class="flex-between" style="margin-top:20px;">
-            <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-            <button type="submit" class="success">Create Student</button>
-          </div>
-        </form>
+  <div class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex-between" style="margin-bottom:12px;">
+        <h2 style="margin:0;">Add New Student</h2>
+        <button class="danger sm" onclick="closeModal()">X Close</button>
       </div>
+      <form onsubmit="handleCreateStudent(event)">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div>
+            <label>First Name *</label>
+            <input type="text" id="new_first_name" required>
+          </div>
+          <div>
+            <label>Last Name *</label>
+            <input type="text" id="new_last_name" required>
+          </div>
+        </div>
+        <label>Case Manager Email Username</label>
+        <div class="email-input-wrapper">
+          <input type="text" id="new_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
+          <div class="email-domain-tag">@ahschools.us</div>
+        </div>
+        <div class="flex-between" style="margin-top:20px;">
+          <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="success">Create Student</button>
+        </div>
+      </form>
     </div>
-  `;
+  </div>`;
   document.getElementById('modal-root').innerHTML = modalHTML;
 }
 
@@ -904,11 +865,7 @@ async function handleCreateStudent(e) {
 
   const { data, error } = await supabaseClient
     .from('students')
-    .insert([{
-      first_name: firstName,
-      last_name: lastName,
-      case_manager_email: cmEmail
-    }])
+    .insert([{ first_name: firstName, last_name: lastName, case_manager_email: cmEmail }])
     .select();
 
   if (error) {
@@ -943,6 +900,22 @@ async function deleteStudent(studentId) {
   }
 }
 
+function toggleChartView(type, studentId) {
+  currentChartView = type;
+  const btnLine = document.getElementById('btn-view-line');
+  const btnPie = document.getElementById('btn-view-pie');
+  
+  if (type === 'line') {
+    btnLine?.classList.remove('outline');
+    btnPie?.classList.add('outline');
+  } else {
+    btnPie?.classList.remove('outline');
+    btnLine?.classList.add('outline');
+  }
+  
+  renderObjectiveChart(studentId);
+}
+
 async function renderObjectiveChart(studentId) {
   const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
   const historyTableEl = document.getElementById('data-history-table');
@@ -961,23 +934,25 @@ async function renderObjectiveChart(studentId) {
 
   if (!data || data.length === 0) {
     if (historyTableEl) historyTableEl.innerHTML = '<p style="color:var(--text-muted);">No logs found for this objective.</p>';
-    if (activeChartInstance) activeChartInstance.destroy();
+    if (activeChartInstance) {
+      activeChartInstance.destroy();
+      activeChartInstance = null;
+    }
     return;
   }
 
   let tableHtml = `
-    <table>
-      <thead>
-        <tr>
-          <th>Date/Time</th>
-          <th>Status</th>
-          <th>Prompts</th>
-          <th>Notes</th>
-          <th>Logged By</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
+  <table>
+    <thead>
+      <tr>
+        <th>Date/Time</th>
+        <th>Status</th>
+        <th>Prompts</th>
+        <th>Notes</th>
+        <th>Logged By</th>
+      </tr>
+    </thead>
+    <tbody>`;
   data.slice().reverse().forEach(row => {
     const d = new Date(row.created_at);
     tableHtml += `
@@ -987,14 +962,10 @@ async function renderObjectiveChart(studentId) {
         <td>${row.prompts || '0'}</td>
         <td>${row.notes || ''}</td>
         <td>${row.logged_by || ''}</td>
-      </tr>
-    `;
+      </tr>`;
   });
   tableHtml += '</tbody></table>';
   if (historyTableEl) historyTableEl.innerHTML = tableHtml;
-
-  const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-  const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
 
   const ctx = document.getElementById('progress-chart-canvas')?.getContext('2d');
   if (!ctx) return;
@@ -1003,39 +974,76 @@ async function renderObjectiveChart(studentId) {
     activeChartInstance.destroy();
   }
 
-  activeChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Success (1 = Yes, 0 = No / Other)',
-        data: chartValues,
-        borderColor: '#2563eb',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        fill: true,
-        tension: 0.2,
-        stepped: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          min: 0,
-          max: 1,
-          ticks: {
-            stepSize: 1,
-            callback: value => (value === 1 ? 'Yes' : 'No')
+  if (currentChartView === 'pie') {
+    const statusCounts = { 'Yes': 0, 'No': 0, 'No Opportunity': 0, 'Absent': 0 };
+    data.forEach(d => {
+      if (statusCounts[d.status] !== undefined) {
+        statusCounts[d.status]++;
+      }
+    });
+
+    activeChartInstance = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['Yes', 'No', 'No Opportunity', 'Absent'],
+        datasets: [{
+          data: [
+            statusCounts['Yes'],
+            statusCounts['No'],
+            statusCounts['No Opportunity'],
+            statusCounts['Absent']
+          ],
+          backgroundColor: ['#16a34a', '#dc2626', '#94a3b8', '#e2e8f0']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Overall Cumulative Performance Snapshot'
           }
         }
       }
-    }
-  });
+    });
+  } else {
+    const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
+    const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
+
+    activeChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Success (1 = Yes, 0 = No / Other)',
+          data: chartValues,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: true,
+          tension: 0.2,
+          stepped: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            min: 0,
+            max: 1,
+            ticks: {
+              stepSize: 1,
+              callback: value => (value === 1 ? 'Yes' : 'No')
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 window.addEventListener('DOMContentLoaded', initApp);
 </script>
 </body>
 </html>
-
