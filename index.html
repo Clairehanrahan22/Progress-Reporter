@@ -140,8 +140,6 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      border-left: 1px solid var(--border-light);
-      padding-left: 8px;
       flex-shrink: 0;
     }
     .prompts-label {
@@ -502,7 +500,9 @@
                 <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">No Opportunity</button>
                 <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">Absent</button>
               </div>
+            </div>
 
+            <div class="notes-log-row">
               <div class="prompts-container">
                 <span class="prompts-label">Prompts:</span>
                 <select class="prompts-select" id="prompts_${student.id}_${o.key}">
@@ -513,18 +513,16 @@
                   <option value="3+">3+</option>
                 </select>
               </div>
-            </div>
-
-            <div class="notes-log-row">
               <input type="text" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..."
-                onkeydown="if(event.key==='Enter'){ event.preventDefault(); quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'}); }">
-              <button class="log-btn" id="btn_${student.id}_${o.key}" onclick="quickSaveData('${student.id}', '${o.key}', ${nextObjKey ? `'${nextObjKey}'` : 'null'})">Log</button>
+                onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('${nextObjKey ? `notes_${student.id}_${nextObjKey}` : `logall_${student.id}`}')?.focus(); }">
             </div>
           </div>
         `;
       });
 
-      if (cardsHTML === '') {
+      const hasActiveObjectives = cardsHTML !== '';
+
+      if (!hasActiveObjectives) {
         cardsHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No active objectives set for this student.</p>`;
       }
 
@@ -540,6 +538,11 @@
           <div>
             ${cardsHTML}
           </div>
+          ${hasActiveObjectives ? `
+            <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+              <button class="log-btn" id="logall_${student.id}" onclick="quickSaveAllData('${student.id}')">Log All Entries</button>
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -560,7 +563,6 @@
 
       data.forEach(entry => {
         const objKey = entry.objective_key;
-        const btn = document.getElementById(`btn_${studentId}_${objKey}`);
         const badge = document.getElementById(`badge_${studentId}_${objKey}`);
         const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
         const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
@@ -572,46 +574,58 @@
         if (notesEl && entry.notes) notesEl.value = entry.notes;
 
         if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
       });
+
+      if (data.length > 0) {
+        const logAllBtn = document.getElementById(`logall_${studentId}`);
+        if (logAllBtn) {
+          logAllBtn.innerText = '✓ Logged All';
+          logAllBtn.style.backgroundColor = 'var(--success)';
+        }
+      }
     }
 
-    async function quickSaveData(studentId, objKey, nextObjKey = null) {
-      const statusVal = document.getElementById(`status_input_${studentId}_${objKey}`)?.value;
-      const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
-      const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+    async function quickSaveAllData(studentId) {
+      const statusInputs = document.querySelectorAll(`[id^="status_input_${studentId}_"]`);
+      const payloads = [];
+      const objKeys = [];
 
-      if (!statusVal) {
-        alert('Please select a status option (Yes, No, No Opportunity, or Absent) before logging.');
+      statusInputs.forEach(input => {
+        const statusVal = input.value;
+        if (!statusVal) return;
+
+        const objKey = input.id.slice(`status_input_${studentId}_`.length);
+        const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
+        const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+
+        payloads.push({
+          student_id: studentId,
+          objective_key: objKey,
+          status: statusVal,
+          prompts: String(promptsVal),
+          notes: notesVal,
+          logged_by: currentUserEmail
+        });
+        objKeys.push(objKey);
+      });
+
+      if (payloads.length === 0) {
+        alert('Please select a status option (Yes, No, No Opportunity, or Absent) for at least one objective before logging.');
         return;
       }
 
-      const btn = document.getElementById(`btn_${studentId}_${objKey}`);
-      const badge = document.getElementById(`badge_${studentId}_${objKey}`);
-
-      const payload = {
-        student_id: studentId,
-        objective_key: objKey,
-        status: statusVal,
-        prompts: String(promptsVal),
-        notes: notesVal,
-        logged_by: currentUserEmail
-      };
-
-      const { error } = await supabaseClient.from('progress_data').insert([payload]);
+      const { error } = await supabaseClient.from('progress_data').insert(payloads);
 
       if (!error) {
-        if (badge) badge.style.display = 'inline-block';
-        if (btn) {
-          btn.innerText = '✓ Logged';
-          btn.style.backgroundColor = 'var(--success)';
-        }
+        objKeys.forEach(objKey => {
+          const badge = document.getElementById(`badge_${studentId}_${objKey}`);
+          if (badge) badge.style.display = 'inline-block';
+        });
 
-        if (nextObjKey) {
-          document.getElementById(`notes_${studentId}_${nextObjKey}`)?.focus();
+        const logAllBtn = document.getElementById(`logall_${studentId}`);
+        if (logAllBtn) {
+          logAllBtn.innerText = '✓ Logged All';
+          logAllBtn.style.backgroundColor = 'var(--success)';
         }
       } else {
         console.error("Supabase Error Details:", error);
