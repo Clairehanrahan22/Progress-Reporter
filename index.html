@@ -791,7 +791,8 @@
       statusEl.style.color = 'var(--text-muted)';
       statusEl.innerText = 'Sending invite...';
 
-      const result = await callAdminFunction('invite', { firstName, lastName, role });
+      const redirectTo = window.location.origin + window.location.pathname;
+      const result = await callAdminFunction('invite', { firstName, lastName, role, redirectTo });
 
       if (result.error) {
         statusEl.style.color = 'red';
