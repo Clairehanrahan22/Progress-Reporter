@@ -554,24 +554,13 @@
       } else {
         html += `<div class="student-grid">`;
         myCaseload.forEach(student => {
-          html += `
-            <div class="card" onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
-              <div class="flex-between" style="align-items:center;">
-                <div>
-                  <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:700;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
-                  <small style="color:var(--text-muted); font-size:13px;">CM: ${escapeHtml(student.case_manager_email)}</small>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-                <button class="outline sm" onclick="event.stopPropagation(); openGenerateReportModal('${student.id}')">Generate Progress Report</button>
-                <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
-              </div>
-            </div>
-          `;
+          html += renderStudentDashboardCard(student, { showGenerateReport: true });
         });
         html += `</div>`;
       }
       document.getElementById('main-view').innerHTML = html;
+
+      myCaseload.forEach(student => restoreTeacherSavedState(student.id));
     }
 
     async function switchView(periodNum) {
@@ -608,7 +597,7 @@
       } else {
         html += `<div class="student-grid">`;
         periodRoster.forEach(student => {
-          html += renderStudentDashboardCard(student, periodNum);
+          html += renderStudentDashboardCard(student);
         });
         html += `</div>`;
       }
@@ -677,9 +666,12 @@
         </div>
 
         <div class="card">
-          <h3 style="margin:0 0 12px 0; font-size:16px;">All Students</h3>
+          <div class="flex-between" style="margin-bottom:12px;">
+            <h3 style="margin:0; font-size:16px;">All Students</h3>
+            <button onclick="openCreateStudentModal(true)">+ Add Student</button>
+          </div>
           <input type="text" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
-          <div id="admin-student-list"></div>
+          <div id="admin-student-list" style="margin-top:12px;"></div>
         </div>
       `;
 
@@ -694,40 +686,43 @@
 
       const query = document.getElementById('admin-student-search')?.value.trim().toLowerCase() || '';
 
-      const filtered = allStudents
-        .filter(s => {
-          const name = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase();
-          const cm = (s.case_manager_email || '').toLowerCase();
-          return name.includes(query) || cm.includes(query);
-        })
-        .sort((a, b) =>
-          (a.case_manager_email || '').localeCompare(b.case_manager_email || '') ||
-          (a.last_name || '').localeCompare(b.last_name || '')
-        );
+      const filtered = allStudents.filter(s => {
+        const name = `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase();
+        const cm = (s.case_manager_email || '').toLowerCase();
+        return name.includes(query) || cm.includes(query);
+      });
 
       if (filtered.length === 0) {
         listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No students found.</p>';
         return;
       }
 
-      listEl.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Case Manager</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map(s => `
-              <tr style="cursor:pointer;" onclick="openStudentModal('${s.id}')">
-                <td>${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</td>
-                <td>${escapeHtml(s.case_manager_email) || 'Unassigned'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+      const groups = {};
+      filtered.forEach(s => {
+        const cmKey = s.case_manager_email || 'Unassigned';
+        if (!groups[cmKey]) groups[cmKey] = [];
+        groups[cmKey].push(s);
+      });
+
+      const sortedCMKeys = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+
+      listEl.innerHTML = `<div class="student-grid">` + sortedCMKeys.map(cmKey => {
+        const students = groups[cmKey].sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''));
+        const cmLabel = cmKey === 'Unassigned' ? 'Unassigned' : emailToDisplayName(cmKey);
+        const cmSub = cmKey === 'Unassigned' ? '' : `<div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">${escapeHtml(cmKey)}</div>`;
+
+        return `
+          <div class="card">
+            <h3 style="margin:0 0 4px 0; font-size:16px; font-weight:700;">${escapeHtml(cmLabel)}</h3>
+            ${cmSub}
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              ${students.map(s => `
+                <button class="outline sm" style="width:100%; text-align:left;" onclick="openStudentModal('${s.id}')">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
     }
 
     function renderStaffList() {
@@ -1097,7 +1092,8 @@
       });
     }
 
-    function renderStudentDashboardCard(student, periodNum) {
+    function renderStudentDashboardCard(student, options = {}) {
+      const showGenerateReport = !!options.showGenerateReport;
       const rawObjectives = [
         { key: 'obj_1_1', gNum: 'Goal 1', objNum: 'Objective 1', domain: 'Ind. Living', text: student.obj_1_1 },
         { key: 'obj_1_2', gNum: 'Goal 1', objNum: 'Objective 2', domain: 'Ind. Living', text: student.obj_1_2 },
@@ -1166,7 +1162,10 @@
               <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
               <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${escapeHtml(student.case_manager_email) || 'Unassigned'}</div>
             </div>
-            ${currentUserRole !== 'para' ? `<button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>` : ''}
+            <div style="display:flex; gap:8px;">
+              ${showGenerateReport ? `<button class="outline sm" onclick="openGenerateReportModal('${student.id}')">Generate Progress Report</button>` : ''}
+              ${currentUserRole !== 'para' ? `<button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>` : ''}
+            </div>
           </div>
           <div>
             ${cardsHTML}
@@ -1535,7 +1534,9 @@
       }
     }
 
-    async function openCreateStudentModal() {
+    async function openCreateStudentModal(fromAdmin = false) {
+      const defaultCmUsername = fromAdmin ? '' : currentUserEmail.replace('@ahschools.us', '');
+
       const modalHTML = `
         <div class="modal-backdrop">
           <div class="modal-content">
@@ -1558,7 +1559,7 @@
 
               <label>Case Manager Email Username</label>
               <div class="email-input-wrapper">
-                <input type="text" id="new_cm_email" value="${currentUserEmail.replace('@ahschools.us', '')}">
+                <input type="text" id="new_cm_email" value="${escapeHtml(defaultCmUsername)}">
                 <div class="email-domain-tag">@ahschools.us</div>
               </div>
 
@@ -1596,6 +1597,8 @@
         await fetchAllStudents();
         if (activeNav === 'caseload') {
           loadCaseload();
+        } else if (activeNav === 'admin') {
+          loadAdminView();
         } else if (activePeriod) {
           switchView(activePeriod);
         }
