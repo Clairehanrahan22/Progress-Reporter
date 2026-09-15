@@ -278,6 +278,62 @@
         .replace(/'/g, '&#39;');
     }
 
+    // Update these each year once the district publishes the new school calendar.
+    const TRIMESTER_RANGES = {
+      1: { start: '2026-09-08', end: '2026-12-03' },
+      2: { start: '2026-12-04', end: '2027-03-12' },
+      3: { start: '2027-03-13', end: '2027-06-10' }
+    };
+
+    function getTrimesterBoundsISO(trimesterNum) {
+      const range = TRIMESTER_RANGES[trimesterNum];
+      const [sy, sm, sd] = range.start.split('-').map(Number);
+      const [ey, em, ed] = range.end.split('-').map(Number);
+      const start = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+      const end = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+      return { startISO: start.toISOString(), endISO: end.toISOString() };
+    }
+
+    function getDefaultTrimester() {
+      const nowISO = new Date().toISOString();
+      for (const num of [1, 2, 3]) {
+        const { startISO, endISO } = getTrimesterBoundsISO(num);
+        if (nowISO >= startISO && nowISO <= endISO) return num;
+      }
+      return 1;
+    }
+
+    function toGerund(verb) {
+      const lower = (verb || '').toLowerCase();
+      if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying';
+      if (lower.endsWith('e') && !lower.endsWith('ee') && !lower.endsWith('oe')) return lower.slice(0, -1) + 'ing';
+      return lower + 'ing';
+    }
+
+    function generateProgressSentence(objectiveText, firstName, percent) {
+      let text = (objectiveText || '').trim();
+
+      if (!/^did\s+/i.test(text)) {
+        return `[Could not auto-generate from this wording — write this one manually] ${percent}% of observed occasions.`;
+      }
+
+      text = text.replace(/^did\s+/i, '').trim();
+
+      const namePattern = new RegExp(`^${firstName}\\s+`, 'i');
+      if (namePattern.test(text)) {
+        text = text.replace(namePattern, '').trim();
+      }
+
+      text = text.replace(/\?\s*$/, '').trim();
+
+      const words = text.split(' ');
+      const verb = words.shift();
+      const rest = words.join(' ');
+      const gerund = toGerund(verb);
+
+      return `${firstName} is ${gerund}${rest ? ' ' + rest : ''} in ${percent}% of observed occasions.`;
+    }
+
     function getLocalDayBoundsISO() {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -499,12 +555,17 @@
         html += `<div class="student-grid">`;
         myCaseload.forEach(student => {
           html += `
-            <div class="card flex-between" onclick="openStudentModal('${student.id}')" style="cursor:pointer; align-items: center;">
-              <div>
-                <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:700;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
-                <small style="color:var(--text-muted); font-size:13px;">CM: ${escapeHtml(student.case_manager_email)}</small>
+            <div class="card" onclick="openStudentModal('${student.id}')" style="cursor:pointer;">
+              <div class="flex-between" style="align-items:center;">
+                <div>
+                  <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:700;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
+                  <small style="color:var(--text-muted); font-size:13px;">CM: ${escapeHtml(student.case_manager_email)}</small>
+                </div>
               </div>
-              <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
+              <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                <button class="outline sm" onclick="event.stopPropagation(); openGenerateReportModal('${student.id}')">Generate Progress Report</button>
+                <button class="outline sm" onclick="event.stopPropagation(); openStudentModal('${student.id}')">Edit</button>
+              </div>
             </div>
           `;
         });
@@ -909,6 +970,105 @@
       if (failCount > 0) {
         alert(`Assigned, but ${failCount} student(s) failed to update. Check RLS policies in Supabase.`);
       }
+    }
+
+    async function openGenerateReportModal(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      const defaultTri = getDefaultTrimester();
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:700px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Generate Progress Report — ${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <label>Trimester</label>
+            <select id="report-trimester-select" onchange="renderProgressReportContent('${studentId}')">
+              <option value="1" ${defaultTri === 1 ? 'selected' : ''}>Trimester 1</option>
+              <option value="2" ${defaultTri === 2 ? 'selected' : ''}>Trimester 2</option>
+              <option value="3" ${defaultTri === 3 ? 'selected' : ''}>Trimester 3</option>
+            </select>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:-8px;">
+              These are draft sentences based on your logged data — review and tweak the wording before pasting into the official report. The goal-level summary line and progress checkbox still need to be filled in by hand.
+            </p>
+            <div id="report-content" style="margin-top:16px;">Loading...</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      renderProgressReportContent(studentId);
+    }
+
+    async function renderProgressReportContent(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      const contentEl = document.getElementById('report-content');
+      if (!contentEl) return;
+      contentEl.innerHTML = 'Loading...';
+
+      const trimesterNum = Number(document.getElementById('report-trimester-select')?.value || 1);
+      const { startISO, endISO } = getTrimesterBoundsISO(trimesterNum);
+
+      const rawObjectives = [
+        { key: 'obj_1_1', text: student.obj_1_1 },
+        { key: 'obj_1_2', text: student.obj_1_2 },
+        { key: 'obj_2_1', text: student.obj_2_1 },
+        { key: 'obj_2_2', text: student.obj_2_2 },
+        { key: 'obj_3_1', text: student.obj_3_1 },
+        { key: 'obj_3_2', text: student.obj_3_2 },
+        { key: 'obj_4_1', text: student.obj_4_1 },
+        { key: 'obj_4_2', text: student.obj_4_2 }
+      ].filter(o => o.text && o.text.trim() !== '');
+
+      if (rawObjectives.length === 0) {
+        contentEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No active objectives set for this student.</p>';
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('objective_key, status')
+        .eq('student_id', studentId)
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .in('objective_key', rawObjectives.map(o => o.key));
+
+      if (error) {
+        contentEl.innerHTML = '<p style="color:red;">Failed to load progress data.</p>';
+        return;
+      }
+
+      contentEl.innerHTML = rawObjectives.map(o => {
+        const entries = (data || []).filter(d => d.objective_key === o.key);
+        const yesCount = entries.filter(d => d.status === 'Yes').length;
+        const noCount = entries.filter(d => d.status === 'No').length;
+        const total = yesCount + noCount;
+
+        if (total === 0) {
+          return `
+            <div class="objective-card">
+              <div class="obj-text">${escapeHtml(o.text)}</div>
+              <p style="color:var(--text-muted); font-size:13px; font-style:italic;">No data logged for this trimester.</p>
+            </div>
+          `;
+        }
+
+        const percent = Math.round((yesCount / total) * 100);
+        const sentence = generateProgressSentence(o.text, student.first_name, percent);
+
+        return `
+          <div class="objective-card">
+            <div class="obj-text">${escapeHtml(o.text)}</div>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">${percent}% (${yesCount} of ${total} observed occasions)</p>
+            <textarea readonly style="width:100%; min-height:60px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
+          </div>
+        `;
+      }).join('');
     }
 
     function selectStatusOption(studentId, objKey, selectedVal) {
