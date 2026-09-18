@@ -278,6 +278,20 @@
         .replace(/'/g, '&#39;');
     }
 
+    // Safe to drop into onclick="fn('${...}')" — escapes JS string delimiters first,
+    // then HTML-escapes for the surrounding attribute. Use this (not escapeHtml) for
+    // any value passed as a quoted argument inside an inline event handler.
+    function escapeForInlineHandler(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     // Update these each year once the district publishes the new school calendar.
     const TRIMESTER_RANGES = {
       1: { start: '2026-09-08', end: '2026-12-03' },
@@ -300,7 +314,31 @@
         const { startISO, endISO } = getTrimesterBoundsISO(num);
         if (nowISO >= startISO && nowISO <= endISO) return num;
       }
-      return 1;
+
+      // Today doesn't fall inside any configured range — TRIMESTER_RANGES is
+      // out of date for the current school year. Fall back to whichever
+      // trimester is chronologically closest rather than always picking 1st.
+      let closestNum = 1;
+      let closestDistance = Infinity;
+      [1, 2, 3].forEach(num => {
+        const { startISO, endISO } = getTrimesterBoundsISO(num);
+        const distance = nowISO < startISO
+          ? new Date(startISO) - new Date(nowISO)
+          : new Date(nowISO) - new Date(endISO);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestNum = num;
+        }
+      });
+      return closestNum;
+    }
+
+    function isTrimesterCalendarStale() {
+      const nowISO = new Date().toISOString();
+      return ![1, 2, 3].some(num => {
+        const { startISO, endISO } = getTrimesterBoundsISO(num);
+        return nowISO >= startISO && nowISO <= endISO;
+      });
     }
 
     function toGerund(verb) {
@@ -311,27 +349,48 @@
     }
 
     function generateProgressSentence(objectiveText, firstName, percent) {
-      let text = (objectiveText || '').trim();
-
-      if (!/^did\s+/i.test(text)) {
-        return `[Could not auto-generate from this wording — write this one manually] ${percent}% of observed occasions.`;
+      const rawText = (objectiveText || '').trim();
+      if (!rawText) {
+        return `${firstName} met this objective in ${percent}% of observed occasions.`;
       }
 
-      text = text.replace(/^did\s+/i, '').trim();
+      const nameWillPattern = new RegExp(`^${firstName}\\s+will\\s+`, 'i');
+      let text = null;
 
-      const namePattern = new RegExp(`^${firstName}\\s+`, 'i');
-      if (namePattern.test(text)) {
-        text = text.replace(namePattern, '').trim();
+      if (/^did\s+/i.test(rawText)) {
+        text = rawText.replace(/^did\s+/i, '');
+      } else if (nameWillPattern.test(rawText)) {
+        // e.g. "Sam will independently raise his hand..."
+        text = rawText.replace(nameWillPattern, '');
+      } else if (/^will\s+/i.test(rawText)) {
+        // e.g. "Will independently raise his hand..."
+        text = rawText.replace(/^will\s+/i, '');
       }
 
-      text = text.replace(/\?\s*$/, '').trim();
+      // A recognized pattern lets us weave the objective into a natural sentence.
+      if (text !== null) {
+        text = text.trim();
 
-      const words = text.split(' ');
-      const verb = words.shift();
-      const rest = words.join(' ');
-      const gerund = toGerund(verb);
+        const namePattern = new RegExp(`^${firstName}\\s+`, 'i');
+        if (namePattern.test(text)) {
+          text = text.replace(namePattern, '').trim();
+        }
 
-      return `${firstName} is ${gerund}${rest ? ' ' + rest : ''} in ${percent}% of observed occasions.`;
+        text = text.replace(/\?\s*$/, '').trim();
+
+        const words = text.split(' ');
+        const verb = words.shift();
+        const rest = words.join(' ');
+        const gerund = toGerund(verb);
+
+        return `${firstName} is ${gerund}${rest ? ' ' + rest : ''} in ${percent}% of observed occasions.`;
+      }
+
+      // Any other wording: don't guess at grammar — just quote the objective
+      // as written alongside the percentage, so every objective produces a
+      // usable draft sentence regardless of how it's phrased.
+      const cleanText = rawText.replace(/\?\s*$/, '').trim();
+      return `${firstName} met the objective "${cleanText}" in ${percent}% of observed occasions.`;
     }
 
     function getLocalDayBoundsISO() {
@@ -495,6 +554,13 @@
             <button class="danger sm" onclick="supabaseClient.auth.signOut().then(() => initApp())">Sign Out</button>
           </div>
         </header>
+
+        ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) && isTrimesterCalendarStale() ? `
+          <div class="card" style="background:#fef3c7; border-color:#fcd34d; margin-bottom:16px; padding:14px 20px;">
+            <strong>⚠️ Trimester calendar needs updating.</strong>
+            <span style="color:var(--text-muted); font-size:13px;">Today's date doesn't fall within any configured trimester range. Update <code>TRIMESTER_RANGES</code> in the code with this year's school calendar dates so reports use the correct trimester.</span>
+          </div>
+        ` : ''}
 
         <div class="grid">
           <button id="nav-p1" class="nav-btn outline" onclick="switchView(1)">1st Hour</button>
@@ -738,12 +804,12 @@
         <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border-light);">
           <span style="font-size:14px;">${escapeHtml(s.email)}</span>
           <div style="display:flex; align-items:center; gap:8px;">
-            <select style="width:auto; margin:0;" onchange="handleChangeStaffRole('${s.email.replace(/'/g, "\\'")}', this.value)">
+            <select style="width:auto; margin:0;" onchange="handleChangeStaffRole('${escapeForInlineHandler(s.email)}', this.value)">
               <option value="teacher" ${s.role === 'teacher' ? 'selected' : ''}>Teacher</option>
               <option value="para" ${s.role === 'para' ? 'selected' : ''}>Paraprofessional</option>
             </select>
-            <button class="outline sm" onclick="handleSendPasswordReset('${s.email.replace(/'/g, "\\'")}')">Send Login Email</button>
-            <button class="danger sm" onclick="handleRemoveStaff('${s.email.replace(/'/g, "\\'")}')">Remove</button>
+            <button class="outline sm" onclick="handleSendPasswordReset('${escapeForInlineHandler(s.email)}')">Send Login Email</button>
+            <button class="danger sm" onclick="handleRemoveStaff('${escapeForInlineHandler(s.email)}')">Remove</button>
           </div>
         </div>
       `).join('');
@@ -934,7 +1000,7 @@
             <div style="font-weight:600; font-size:14px;">${escapeHtml(emailToDisplayName(p.email))}</div>
             <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(p.email)}</div>
           </div>
-          <button class="sm" onclick="handleAssignParaToPeriod('${p.email}', ${periodNum})">Assign</button>
+          <button class="sm" onclick="handleAssignParaToPeriod('${escapeForInlineHandler(p.email)}', ${periodNum})">Assign</button>
         </div>
       `).join('');
     }
