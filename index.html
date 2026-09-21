@@ -340,6 +340,56 @@
       });
     }
 
+    const WEEKDAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    function getTodayWeekdayAbbr() {
+      return WEEKDAY_ABBRS[new Date().getDay()];
+    }
+
+    // A student only appears in a given period's roster on the days they're
+    // actually scheduled into that class. No days saved yet (null/empty)
+    // means "every day", so existing students keep showing up as before
+    // until someone deliberately narrows their schedule.
+    function isStudentScheduledTodayForPeriod(student, periodNum) {
+      const days = student[`teacher_p${periodNum}_days`];
+      if (!days || !Array.isArray(days) || days.length === 0) return true;
+      return days.includes(getTodayWeekdayAbbr());
+    }
+
+    // The data-collection rotation alternates which group (A or B) is
+    // expected to be tracked on Monday/Wednesday vs Tuesday/Thursday each
+    // week, flipping automatically every week from this anchor date (any
+    // Monday works as the anchor — it never goes stale the way a school
+    // calendar does, since it's just used to compute week parity).
+    const ROTATION_ANCHOR_DATE = '2026-09-08';
+
+    function isStudentActiveInRotationToday(student) {
+      const group = student.data_rotation_group;
+      if (!group) return true; // not part of the rotation — always active
+
+      const todayAbbr = getTodayWeekdayAbbr();
+      if (todayAbbr !== 'Mon' && todayAbbr !== 'Tue' && todayAbbr !== 'Wed' && todayAbbr !== 'Thu') {
+        return true; // rotation only alternates Mon-Thu; Fri/weekend aren't restricted
+      }
+
+      const [ay, am, ad] = ROTATION_ANCHOR_DATE.split('-').map(Number);
+      const anchor = new Date(ay, am - 1, ad, 0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysSinceAnchor = Math.round((today - anchor) / msPerDay);
+      const weeksSinceAnchor = Math.floor(daysSinceAnchor / 7);
+      const isMonWedActiveWeek = ((weeksSinceAnchor % 2) + 2) % 2 === 0;
+
+      const isMonOrWedToday = (todayAbbr === 'Mon' || todayAbbr === 'Wed');
+      const activeGroupToday = isMonOrWedToday
+        ? (isMonWedActiveWeek ? 'A' : 'B')
+        : (isMonWedActiveWeek ? 'B' : 'A');
+
+      return group === activeGroupToday;
+    }
+
     function toGerund(verb) {
       const lower = (verb || '').toLowerCase();
       if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying';
@@ -722,7 +772,7 @@
         const isTeacher = s[colName] === currentUserEmail;
         const parasArr = s[paraColName] || [];
         const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
-        return isTeacher || isPara;
+        return (isTeacher || isPara) && isStudentScheduledTodayForPeriod(s, periodNum);
       });
 
       let html = `
@@ -1413,13 +1463,19 @@
         cardsHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No active objectives set for this student.</p>`;
       }
 
+      // Students outside today's active data-collection rotation group start
+      // collapsed to just their name (no badge yet — nothing's been logged),
+      // so the roster only draws attention to who you're actually expected
+      // to track today. Still clickable to expand and log anyway.
+      const startsCollapsed = !isStudentActiveInRotationToday(student);
+
       return `
         <div class="card">
-          <div id="collapsed_${student.id}" onclick="expandStudentCard('${student.id}')" style="display:none; align-items:center; justify-content:space-between; cursor:pointer;">
+          <div id="collapsed_${student.id}" onclick="expandStudentCard('${student.id}')" style="display:${startsCollapsed ? 'flex' : 'none'}; align-items:center; justify-content:space-between; cursor:pointer;">
             <h3 style="margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
-            <span style="color:var(--success); font-weight:700; font-size:14px; white-space:nowrap;">✓ Logged</span>
+            <span id="collapsed_badge_${student.id}" style="color:var(--success); font-weight:700; font-size:14px; white-space:nowrap;"></span>
           </div>
-          <div id="expanded_${student.id}">
+          <div id="expanded_${student.id}" style="display:${startsCollapsed ? 'none' : 'block'};">
             <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
               <div>
                 <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
@@ -1445,12 +1501,18 @@
     // Once a student's objectives are fully logged for the day, their card
     // collapses to just a name + checkmark to keep the roster clean — click
     // it to expand back and review/edit. Resets naturally each day since
-    // restoreTeacherSavedState only looks at today's entries.
-    function collapseStudentCard(studentId) {
+    // restoreTeacherSavedState only looks at today's entries. Cards can also
+    // start collapsed because a student is outside today's rotation group
+    // (see renderStudentDashboardCard) — pass logged:true only when there's
+    // actually something logged, so an untouched off-rotation card stays a
+    // plain name with no checkmark until real data exists.
+    function collapseStudentCard(studentId, logged) {
       const collapsedEl = document.getElementById(`collapsed_${studentId}`);
       const expandedEl = document.getElementById(`expanded_${studentId}`);
+      const badgeEl = document.getElementById(`collapsed_badge_${studentId}`);
       if (collapsedEl) collapsedEl.style.display = 'flex';
       if (expandedEl) expandedEl.style.display = 'none';
+      if (badgeEl && logged) badgeEl.textContent = '✓ Logged';
     }
 
     function expandStudentCard(studentId) {
@@ -1497,7 +1559,7 @@
 
       const totalObjectives = document.querySelectorAll(`[id^="status_input_${studentId}_"]`).length;
       if (totalObjectives > 0 && data.length >= totalObjectives) {
-        collapseStudentCard(studentId);
+        collapseStudentCard(studentId, true);
       }
     }
 
@@ -1578,7 +1640,7 @@
           logAllBtn.innerText = '✓ Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
-        collapseStudentCard(studentId);
+        collapseStudentCard(studentId, true);
       } else {
         alert(`${failedObjKeys.length} entr${failedObjKeys.length === 1 ? 'y' : 'ies'} failed to save. The rest were saved successfully. Check RLS policies or column settings in Supabase, or try again.`);
         if (logAllBtn) {
@@ -1693,7 +1755,14 @@
 
                 <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  ${[1, 2, 3, 4, 5].map(p => `
+                  ${[1, 2, 3, 4, 5].map(p => {
+                    const savedDays = student[`teacher_p${p}_days`];
+                    const dayPillsHTML = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => {
+                      const isSelected = !savedDays || !Array.isArray(savedDays) || savedDays.length === 0 || savedDays.includes(day);
+                      return `<button type="button" class="status-pill day-pill-p${p} ${isSelected ? 'selected' : ''}" data-day="${day}" onclick="this.classList.toggle('selected')">${day}</button>`;
+                    }).join('');
+
+                    return `
                     <div>
                       <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
                       <div class="email-input-wrapper">
@@ -1702,8 +1771,13 @@
                       </div>
                       <label>${getOrdinalSuffix(p)} Hour Para(s) Username(s)</label>
                       <input type="text" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="comma-separated, e.g. jane.doe, john.smith">
+                      <label>${getOrdinalSuffix(p)} Hour Days in Class</label>
+                      <div style="display:flex; gap:5px; margin-bottom:12px; flex-wrap:wrap;">
+                        ${dayPillsHTML}
+                      </div>
                     </div>
-                  `).join('')}
+                  `;
+                  }).join('')}
                 </div>
               </div>
 
@@ -1728,6 +1802,16 @@
                   <input type="text" id="edit_cm_email" value="${escapeHtml((student.case_manager_email || '').replace('@ahschools.us', ''))}">
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
+
+                <label>Data Collection Rotation Group</label>
+                <select id="edit_rotation_group">
+                  <option value="" ${!student.data_rotation_group ? 'selected' : ''}>Not in rotation (track every day)</option>
+                  <option value="A" ${student.data_rotation_group === 'A' ? 'selected' : ''}>Group A</option>
+                  <option value="B" ${student.data_rotation_group === 'B' ? 'selected' : ''}>Group B</option>
+                </select>
+                <p style="font-size:12px; color:var(--text-muted); margin-top:-8px;">
+                  Groups A and B automatically alternate which days (Mon/Wed vs. Tue/Thu) they're expected to be tracked, flipping every week. On off days their card still shows, just collapsed to their name until you log data for them.
+                </p>
 
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
@@ -1795,6 +1879,10 @@
       document.getElementById('modal-root').innerHTML = '';
     }
 
+    function getSelectedDayPills(periodNum) {
+      return Array.from(document.querySelectorAll(`.day-pill-p${periodNum}.selected`)).map(btn => btn.dataset.day);
+    }
+
     async function saveStudentChanges(e, studentId) {
       e.preventDefault();
 
@@ -1823,7 +1911,15 @@
         paras_p2: parseParaUsernames(document.getElementById('edit_paras_p2')?.value),
         paras_p3: parseParaUsernames(document.getElementById('edit_paras_p3')?.value),
         paras_p4: parseParaUsernames(document.getElementById('edit_paras_p4')?.value),
-        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value)
+        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value),
+
+        teacher_p1_days: getSelectedDayPills(1),
+        teacher_p2_days: getSelectedDayPills(2),
+        teacher_p3_days: getSelectedDayPills(3),
+        teacher_p4_days: getSelectedDayPills(4),
+        teacher_p5_days: getSelectedDayPills(5),
+
+        data_rotation_group: document.getElementById('edit_rotation_group')?.value || null
       };
 
       const { error } = await supabaseClient
