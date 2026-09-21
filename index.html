@@ -28,16 +28,7 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 24px; }
 
     .student-grid {
-      columns: 380px;
-      column-gap: 24px;
-      margin-bottom: 24px;
-    }
-
-    .student-grid > .card {
-      display: inline-block;
-      width: 100%;
-      vertical-align: top;
-      break-inside: avoid;
+      position: relative;
       margin-bottom: 24px;
     }
 
@@ -424,6 +415,58 @@
       return `${num}th`;
     }
 
+    // CSS-only masonry (column-based) causes cards to visually overlap once
+    // content height varies a lot, since the browser balances columns before
+    // it knows every card's true rendered height. This lays cards out with
+    // real measured heights instead, so nothing overlaps.
+    let currentMasonryGrid = null;
+
+    function layoutMasonryGrid(containerEl) {
+      if (!containerEl) return;
+      const cards = Array.from(containerEl.children);
+      if (cards.length === 0) {
+        containerEl.style.height = '';
+        return;
+      }
+
+      const gap = 24;
+      const minColWidth = 380;
+      const containerWidth = containerEl.clientWidth;
+      const columnCount = Math.max(1, Math.floor((containerWidth + gap) / (minColWidth + gap)));
+      const columnWidth = (containerWidth - gap * (columnCount - 1)) / columnCount;
+      const columnHeights = new Array(columnCount).fill(0);
+
+      cards.forEach(card => {
+        card.style.position = 'absolute';
+        card.style.margin = '0';
+        card.style.width = columnWidth + 'px';
+
+        let shortestCol = 0;
+        for (let i = 1; i < columnCount; i++) {
+          if (columnHeights[i] < columnHeights[shortestCol]) shortestCol = i;
+        }
+
+        card.style.left = (shortestCol * (columnWidth + gap)) + 'px';
+        card.style.top = columnHeights[shortestCol] + 'px';
+
+        columnHeights[shortestCol] += card.offsetHeight + gap;
+      });
+
+      containerEl.style.height = (Math.max(...columnHeights) - gap) + 'px';
+    }
+
+    function relayoutCurrentMasonryGrid() {
+      if (currentMasonryGrid && document.body.contains(currentMasonryGrid)) {
+        layoutMasonryGrid(currentMasonryGrid);
+      }
+    }
+
+    let masonryResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(masonryResizeTimer);
+      masonryResizeTimer = setTimeout(relayoutCurrentMasonryGrid, 150);
+    });
+
     function formatUserEmailInput(inputVal) {
       if (!inputVal) return '';
       let cleaned = inputVal.trim().toLowerCase();
@@ -579,7 +622,7 @@
           <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
           <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
           <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
-          ${currentUserRole !== 'para' ? `<button id="nav-caseload" class="nav-btn active-nav" onclick="loadCaseload()">My Caseload</button>` : ''}
+          ${currentUserRole !== 'para' ? `<button id="nav-caseload" class="nav-btn outline active-nav" onclick="loadCaseload()">My Caseload</button>` : ''}
           ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) ? `<button id="nav-admin" class="nav-btn outline" onclick="loadAdminView()">Admin</button>` : ''}
         </div>
 
@@ -637,7 +680,11 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      myCaseload.forEach(student => restoreTeacherSavedState(student.id));
+      currentMasonryGrid = document.querySelector('#main-view .student-grid');
+      layoutMasonryGrid(currentMasonryGrid);
+
+      await Promise.all(myCaseload.map(student => restoreTeacherSavedState(student.id)));
+      layoutMasonryGrid(currentMasonryGrid);
     }
 
     async function switchView(periodNum) {
@@ -680,7 +727,11 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      periodRoster.forEach(student => restoreTeacherSavedState(student.id));
+      currentMasonryGrid = document.querySelector('#main-view .student-grid');
+      layoutMasonryGrid(currentMasonryGrid);
+
+      await Promise.all(periodRoster.map(student => restoreTeacherSavedState(student.id)));
+      layoutMasonryGrid(currentMasonryGrid);
     }
 
     async function callAdminFunction(action, payload) {
@@ -804,6 +855,9 @@
           </div>
         `;
       }).join('') + `</div>`;
+
+      currentMasonryGrid = listEl.querySelector('.student-grid');
+      layoutMasonryGrid(currentMasonryGrid);
     }
 
     function renderStaffList() {
