@@ -418,8 +418,18 @@
     // CSS-only masonry (column-based) causes cards to visually overlap once
     // content height varies a lot, since the browser balances columns before
     // it knows every card's true rendered height. This lays cards out with
-    // real measured heights instead, so nothing overlaps.
+    // real measured heights instead.
+    //
+    // Positions alone aren't enough, though: cards keep changing height after
+    // the initial layout (a "✓ Logged" badge appearing can wrap a line, a
+    // card collapses after logging, etc.), and any of those changes can leave
+    // stale positions behind if nothing re-triggers a relayout. Rather than
+    // guessing every moment a card might resize, a ResizeObserver watches
+    // every card directly and relayouts whenever any of them actually change
+    // size — so this never goes stale, no matter what causes the resize.
     let currentMasonryGrid = null;
+    let masonryResizeObserver = null;
+    let masonryRelayoutTimer = null;
 
     function layoutMasonryGrid(containerEl) {
       if (!containerEl) return;
@@ -455,17 +465,32 @@
       containerEl.style.height = (Math.max(...columnHeights) - gap) + 'px';
     }
 
-    function relayoutCurrentMasonryGrid() {
-      if (currentMasonryGrid && document.body.contains(currentMasonryGrid)) {
-        layoutMasonryGrid(currentMasonryGrid);
-      }
+    function scheduleMasonryRelayout() {
+      clearTimeout(masonryRelayoutTimer);
+      masonryRelayoutTimer = setTimeout(() => {
+        if (currentMasonryGrid && document.body.contains(currentMasonryGrid)) {
+          layoutMasonryGrid(currentMasonryGrid);
+        }
+      }, 30);
     }
 
-    let masonryResizeTimer = null;
-    window.addEventListener('resize', () => {
-      clearTimeout(masonryResizeTimer);
-      masonryResizeTimer = setTimeout(relayoutCurrentMasonryGrid, 150);
-    });
+    // Call this once right after a .student-grid's HTML is in the DOM. It
+    // does the first layout pass and starts watching every card for future
+    // size changes so the layout keeps itself correct automatically.
+    function activateMasonryGrid(containerEl) {
+      if (masonryResizeObserver) {
+        masonryResizeObserver.disconnect();
+      }
+      currentMasonryGrid = containerEl;
+      if (!containerEl) return;
+
+      layoutMasonryGrid(containerEl);
+
+      masonryResizeObserver = new ResizeObserver(() => scheduleMasonryRelayout());
+      Array.from(containerEl.children).forEach(card => masonryResizeObserver.observe(card));
+    }
+
+    window.addEventListener('resize', scheduleMasonryRelayout);
 
     function formatUserEmailInput(inputVal) {
       if (!inputVal) return '';
@@ -680,11 +705,9 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      currentMasonryGrid = document.querySelector('#main-view .student-grid');
-      layoutMasonryGrid(currentMasonryGrid);
+      activateMasonryGrid(document.querySelector('#main-view .student-grid'));
 
       await Promise.all(myCaseload.map(student => restoreTeacherSavedState(student.id)));
-      layoutMasonryGrid(currentMasonryGrid);
     }
 
     async function switchView(periodNum) {
@@ -727,11 +750,9 @@
       }
       document.getElementById('main-view').innerHTML = html;
 
-      currentMasonryGrid = document.querySelector('#main-view .student-grid');
-      layoutMasonryGrid(currentMasonryGrid);
+      activateMasonryGrid(document.querySelector('#main-view .student-grid'));
 
       await Promise.all(periodRoster.map(student => restoreTeacherSavedState(student.id)));
-      layoutMasonryGrid(currentMasonryGrid);
     }
 
     async function callAdminFunction(action, payload) {
@@ -856,8 +877,7 @@
         `;
       }).join('') + `</div>`;
 
-      currentMasonryGrid = listEl.querySelector('.student-grid');
-      layoutMasonryGrid(currentMasonryGrid);
+      activateMasonryGrid(listEl.querySelector('.student-grid'));
     }
 
     function renderStaffList() {
@@ -1394,25 +1414,49 @@
 
       return `
         <div class="card">
-          <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
+          <div id="collapsed_${student.id}" onclick="expandStudentCard('${student.id}')" style="display:none; align-items:center; justify-content:space-between; cursor:pointer;">
+            <h3 style="margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
+            <span style="color:var(--success); font-weight:700; font-size:14px; white-space:nowrap;">✓ Logged</span>
+          </div>
+          <div id="expanded_${student.id}">
+            <div class="flex-between" style="margin-bottom:20px; align-items: flex-start;">
+              <div>
+                <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
+                <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${escapeHtml(student.case_manager_email) || 'Unassigned'}</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                ${currentUserRole !== 'para' ? `<button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>` : ''}
+              </div>
+            </div>
             <div>
-              <h3 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing:-0.01em;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h3>
-              <div style="color:var(--text-muted); font-size:14px; font-weight:500;">CM: ${escapeHtml(student.case_manager_email) || 'Unassigned'}</div>
+              ${cardsHTML}
             </div>
-            <div style="display:flex; gap:8px;">
-              ${currentUserRole !== 'para' ? `<button class="outline sm" onclick="openStudentModal('${student.id}')">Edit</button>` : ''}
-            </div>
+            ${hasActiveObjectives ? `
+              <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+                <button class="log-btn" id="logall_${student.id}" onclick="quickSaveAllData('${student.id}')">Log All Entries</button>
+              </div>
+            ` : ''}
           </div>
-          <div>
-            ${cardsHTML}
-          </div>
-          ${hasActiveObjectives ? `
-            <div style="margin-top:16px; display:flex; justify-content:flex-end;">
-              <button class="log-btn" id="logall_${student.id}" onclick="quickSaveAllData('${student.id}')">Log All Entries</button>
-            </div>
-          ` : ''}
         </div>
       `;
+    }
+
+    // Once a student's objectives are fully logged for the day, their card
+    // collapses to just a name + checkmark to keep the roster clean — click
+    // it to expand back and review/edit. Resets naturally each day since
+    // restoreTeacherSavedState only looks at today's entries.
+    function collapseStudentCard(studentId) {
+      const collapsedEl = document.getElementById(`collapsed_${studentId}`);
+      const expandedEl = document.getElementById(`expanded_${studentId}`);
+      if (collapsedEl) collapsedEl.style.display = 'flex';
+      if (expandedEl) expandedEl.style.display = 'none';
+    }
+
+    function expandStudentCard(studentId) {
+      const collapsedEl = document.getElementById(`collapsed_${studentId}`);
+      const expandedEl = document.getElementById(`expanded_${studentId}`);
+      if (collapsedEl) collapsedEl.style.display = 'none';
+      if (expandedEl) expandedEl.style.display = 'block';
     }
 
     async function restoreTeacherSavedState(studentId) {
@@ -1448,6 +1492,11 @@
           logAllBtn.innerText = '✓ Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
+      }
+
+      const totalObjectives = document.querySelectorAll(`[id^="status_input_${studentId}_"]`).length;
+      if (totalObjectives > 0 && data.length >= totalObjectives) {
+        collapseStudentCard(studentId);
       }
     }
 
@@ -1528,6 +1577,7 @@
           logAllBtn.innerText = '✓ Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
+        collapseStudentCard(studentId);
       } else {
         alert(`${failedObjKeys.length} entr${failedObjKeys.length === 1 ? 'y' : 'ies'} failed to save. The rest were saved successfully. Check RLS policies or column settings in Supabase, or try again.`);
         if (logAllBtn) {
