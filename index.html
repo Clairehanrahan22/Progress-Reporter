@@ -28,11 +28,17 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 24px; }
 
     .student-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-      gap: 24px;
+      columns: 380px;
+      column-gap: 24px;
       margin-bottom: 24px;
-      align-items: start;
+    }
+
+    .student-grid > .card {
+      display: inline-block;
+      width: 100%;
+      vertical-align: top;
+      break-inside: avoid;
+      margin-bottom: 24px;
     }
 
     .card {
@@ -442,7 +448,7 @@
       currentUserId = session.user.id;
 
       try {
-        await supabaseClient.from('staff_members').upsert({ email: currentUserEmail }, { onConflict: 'email' });
+        await supabaseClient.from('staff_members').upsert({ email: currentUserEmail, has_login: true }, { onConflict: 'email' });
       } catch (e) {}
 
       await fetchStaffMembers();
@@ -594,11 +600,11 @@
     }
 
     async function fetchStaffMembers() {
-      const { data } = await supabaseClient.from('staff_members').select('email, role');
+      const { data } = await supabaseClient.from('staff_members').select('email, role, has_login');
       if (data && data.length > 0) {
         allStaffMembers = data;
       } else {
-        allStaffMembers = [{ email: currentUserEmail, role: 'teacher' }];
+        allStaffMembers = [{ email: currentUserEmail, role: 'teacher', has_login: true }];
       }
     }
 
@@ -707,8 +713,8 @@
         </div>
 
         <div class="card" style="margin-bottom:24px;">
-          <h3 style="margin:0 0 12px 0; font-size:16px;">Invite New Staff Member</h3>
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:12px; align-items:end;">
+          <h3 style="margin:0 0 12px 0; font-size:16px;">Add New Staff Member</h3>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; align-items:end;">
             <div>
               <label>First Name</label>
               <input type="text" id="invite_first_name" placeholder="Jane">
@@ -724,11 +730,15 @@
                 <option value="para">Paraprofessional</option>
               </select>
             </div>
-            <div>
-              <button onclick="handleInviteStaff()" style="margin-bottom:12px;">Send Invite</button>
-            </div>
           </div>
-          <p id="invite-status" style="font-size:13px; margin-top:4px;"></p>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button onclick="handleInviteStaff()">Send Email Invite</button>
+            <button class="outline" onclick="handleAddPlaceholderStaff()">Add Without Login Email</button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">
+            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns — use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
+          </p>
+          <p id="invite-status" style="font-size:13px; margin-top:8px;"></p>
         </div>
 
         <div class="card" style="margin-bottom:24px;">
@@ -807,7 +817,10 @@
 
       listEl.innerHTML = allStaffMembers.map(s => `
         <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border-light);">
-          <span style="font-size:14px;">${escapeHtml(s.email)}</span>
+          <span style="font-size:14px;">
+            ${escapeHtml(s.email)}
+            ${!s.has_login ? '<span style="color:var(--text-muted); font-size:12px; font-style:italic;"> (no login yet)</span>' : ''}
+          </span>
           <div style="display:flex; align-items:center; gap:8px;">
             <select style="width:auto; margin:0;" onchange="handleChangeStaffRole('${escapeForInlineHandler(s.email)}', this.value)">
               <option value="teacher" ${s.role === 'teacher' ? 'selected' : ''}>Teacher</option>
@@ -821,6 +834,25 @@
     }
 
     async function handleSendPasswordReset(email) {
+      const staffRow = allStaffMembers.find(s => s.email === email);
+
+      // Placeholder staff (added without an email invite) have no real Auth
+      // account yet, so a password-reset link would have nothing to reset.
+      // Send them a first-time invite instead — same button, right behavior.
+      if (staffRow && !staffRow.has_login) {
+        const redirectTo = window.location.origin + window.location.pathname;
+        const result = await callAdminFunction('activate', { email, role: staffRow.role, redirectTo });
+
+        if (result.error) {
+          alert('Error sending login email: ' + result.error);
+        } else {
+          alert(`A first-time login email was sent to ${email}.`);
+          await fetchStaffMembers();
+          renderStaffList();
+        }
+        return;
+      }
+
       const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname
       });
@@ -866,6 +898,49 @@
       } else {
         statusEl.style.color = 'green';
         statusEl.innerText = `Invite sent to ${result.email}`;
+        document.getElementById('invite_first_name').value = '';
+        document.getElementById('invite_last_name').value = '';
+        await fetchStaffMembers();
+        renderStaffList();
+      }
+    }
+
+    async function handleAddPlaceholderStaff() {
+      const firstName = document.getElementById('invite_first_name')?.value.trim().toLowerCase();
+      const lastName = document.getElementById('invite_last_name')?.value.trim().toLowerCase();
+      const role = document.getElementById('invite_role')?.value || 'teacher';
+      const statusEl = document.getElementById('invite-status');
+
+      if (!firstName || !lastName) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = 'Enter both a first and last name.';
+        return;
+      }
+
+      const email = `${firstName}.${lastName}@ahschools.us`;
+
+      const { data: existing } = await supabaseClient
+        .from('staff_members')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existing) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = `${email} is already in the staff list.`;
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('staff_members')
+        .insert([{ email, role, has_login: false }]);
+
+      if (error) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = error.message;
+      } else {
+        statusEl.style.color = 'green';
+        statusEl.innerText = `Added ${email} — they can't log in yet. Use "Send Login Email" below whenever you're ready.`;
         document.getElementById('invite_first_name').value = '';
         document.getElementById('invite_last_name').value = '';
         await fetchStaffMembers();
