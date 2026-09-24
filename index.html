@@ -363,8 +363,12 @@
     // calendar does, since it's just used to compute week parity).
     const ROTATION_ANCHOR_DATE = '2026-09-08';
 
-    function isStudentActiveInRotationToday(student) {
-      const group = student.data_rotation_group;
+    // Rotation group is per class period — the same student can be Group A
+    // for one teacher's period and Group B (or not in the rotation at all)
+    // for another's, so this always needs the period it's being checked for.
+    function isStudentActiveInRotationToday(student, periodNum) {
+      if (!periodNum) return true; // no period context (e.g. caseload view) — rotation doesn't apply there
+      const group = student[`teacher_p${periodNum}_rotation_group`];
       if (!group) return true; // not part of the rotation — always active
 
       const todayAbbr = getTodayWeekdayAbbr();
@@ -780,6 +784,7 @@
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div style="display:flex; gap:8px;">
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAssignParaModal(${periodNum})">+ Assign Paraprofessional</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openDataScheduleModal(${periodNum})">Data Schedule</button>` : ''}
             ${currentUserRole !== 'para' ? `<button onclick="openAddExistingStudentModal(${periodNum})">Manage Students in Class</button>` : ''}
           </div>
         </div>
@@ -795,7 +800,7 @@
       } else {
         html += `<div class="student-grid">`;
         periodRoster.forEach(student => {
-          html += renderStudentDashboardCard(student);
+          html += renderStudentDashboardCard(student, periodNum);
         });
         html += `</div>`;
       }
@@ -1203,6 +1208,99 @@
       }
     }
 
+    // Data Schedule: per period, per student — which days they're actually
+    // in this class, and whether they're part of the alternating Group A/B
+    // data-collection rotation. Both settings only make sense in the context
+    // of one specific period, so they live here rather than on the student's
+    // general Edit modal.
+    async function openDataScheduleModal(periodNum) {
+      const colName = `teacher_p${periodNum}`;
+      const roster = allStudents.filter(s => s[colName] === currentUserEmail);
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:600px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Data Schedule — ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+              Set which days each student is actually in this class, and whether they're part of the alternating Group A / Group B data-collection rotation. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+            </p>
+            <div id="data-schedule-list"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      renderDataScheduleList(roster, periodNum);
+    }
+
+    function renderDataScheduleList(students, periodNum) {
+      const listEl = document.getElementById('data-schedule-list');
+      if (!listEl) return;
+
+      if (students.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No students in this class yet.</p>';
+        return;
+      }
+
+      listEl.innerHTML = students.map(s => {
+        const savedDays = s[`teacher_p${periodNum}_days`];
+        const dayPillsHTML = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => {
+          const isSelected = !savedDays || !Array.isArray(savedDays) || savedDays.length === 0 || savedDays.includes(day);
+          return `<button type="button" class="status-pill schedule-day-pill-${s.id} ${isSelected ? 'selected' : ''}" data-day="${day}" onclick="this.classList.toggle('selected')">${day}</button>`;
+        }).join('');
+
+        const groupVal = s[`teacher_p${periodNum}_rotation_group`] || '';
+
+        return `
+          <div style="border-bottom:1px solid var(--border-light); padding:14px 0;">
+            <div style="font-weight:600; font-size:14px; margin-bottom:10px;">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <div style="display:flex; gap:5px;">
+                ${dayPillsHTML}
+              </div>
+              <select id="schedule-group-${s.id}" style="width:auto; margin:0;">
+                <option value="" ${!groupVal ? 'selected' : ''}>No rotation (every day)</option>
+                <option value="A" ${groupVal === 'A' ? 'selected' : ''}>Group A</option>
+                <option value="B" ${groupVal === 'B' ? 'selected' : ''}>Group B</option>
+              </select>
+              <button type="button" class="sm" id="schedule-save-${s.id}" onclick="saveDataSchedule('${s.id}', ${periodNum})">Save</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveDataSchedule(studentId, periodNum) {
+      const days = Array.from(document.querySelectorAll(`.schedule-day-pill-${studentId}.selected`)).map(btn => btn.dataset.day);
+      const group = document.getElementById(`schedule-group-${studentId}`)?.value || null;
+      const saveBtn = document.getElementById(`schedule-save-${studentId}`);
+
+      if (saveBtn) saveBtn.disabled = true;
+
+      const { error } = await supabaseClient
+        .from('students')
+        .update({
+          [`teacher_p${periodNum}_days`]: days,
+          [`teacher_p${periodNum}_rotation_group`]: group
+        })
+        .eq('id', studentId);
+
+      if (error) {
+        alert('Error saving schedule: ' + error.message);
+        if (saveBtn) saveBtn.disabled = false;
+      } else {
+        await fetchAllStudents();
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerText = '✓ Saved';
+          setTimeout(() => { saveBtn.innerText = 'Save'; }, 1500);
+        }
+      }
+    }
+
     let assignParaModalState = { periodNum: null, paras: [] };
 
     function emailToDisplayName(email) {
@@ -1401,7 +1499,7 @@
       }
     }
 
-    function renderStudentDashboardCard(student) {
+    function renderStudentDashboardCard(student, periodNum) {
       const rawObjectives = [
         { key: 'obj_1_1', gNum: 'Goal 1', objNum: 'Objective 1', domain: 'Ind. Living', text: student.obj_1_1 },
         { key: 'obj_1_2', gNum: 'Goal 1', objNum: 'Objective 2', domain: 'Ind. Living', text: student.obj_1_2 },
@@ -1467,7 +1565,7 @@
       // collapsed to just their name (no badge yet — nothing's been logged),
       // so the roster only draws attention to who you're actually expected
       // to track today. Still clickable to expand and log anyway.
-      const startsCollapsed = !isStudentActiveInRotationToday(student);
+      const startsCollapsed = !isStudentActiveInRotationToday(student, periodNum);
 
       return `
         <div class="card">
@@ -1525,10 +1623,15 @@
     async function restoreTeacherSavedState(studentId) {
       const { startISO, endISO } = getLocalDayBoundsISO();
 
+      // Scoped to the current viewer only — a student can be logged
+      // independently by multiple staff (e.g. different periods), and each
+      // person should only see their own entries reflected back, not a
+      // coworker's.
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
+        .eq('logged_by', currentUserEmail)
         .gte('created_at', startISO)
         .lte('created_at', endISO);
 
@@ -1754,15 +1857,11 @@
                 </p>
 
                 <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
+                <p style="font-size:12px; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">
+                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard — click "Data Schedule" on the ${getOrdinalSuffix(1)}–${getOrdinalSuffix(5)} Hour dashboards, not here.
+                </p>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  ${[1, 2, 3, 4, 5].map(p => {
-                    const savedDays = student[`teacher_p${p}_days`];
-                    const dayPillsHTML = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => {
-                      const isSelected = !savedDays || !Array.isArray(savedDays) || savedDays.length === 0 || savedDays.includes(day);
-                      return `<button type="button" class="status-pill day-pill-p${p} ${isSelected ? 'selected' : ''}" data-day="${day}" onclick="this.classList.toggle('selected')">${day}</button>`;
-                    }).join('');
-
-                    return `
+                  ${[1, 2, 3, 4, 5].map(p => `
                     <div>
                       <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
                       <div class="email-input-wrapper">
@@ -1771,13 +1870,8 @@
                       </div>
                       <label>${getOrdinalSuffix(p)} Hour Para(s) Username(s)</label>
                       <input type="text" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="comma-separated, e.g. jane.doe, john.smith">
-                      <label>${getOrdinalSuffix(p)} Hour Days in Class</label>
-                      <div style="display:flex; gap:5px; margin-bottom:12px; flex-wrap:wrap;">
-                        ${dayPillsHTML}
-                      </div>
                     </div>
-                  `;
-                  }).join('')}
+                  `).join('')}
                 </div>
               </div>
 
@@ -1803,15 +1897,6 @@
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
 
-                <label>Data Collection Rotation Group</label>
-                <select id="edit_rotation_group">
-                  <option value="" ${!student.data_rotation_group ? 'selected' : ''}>Not in rotation (track every day)</option>
-                  <option value="A" ${student.data_rotation_group === 'A' ? 'selected' : ''}>Group A</option>
-                  <option value="B" ${student.data_rotation_group === 'B' ? 'selected' : ''}>Group B</option>
-                </select>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:-8px;">
-                  Groups A and B automatically alternate which days (Mon/Wed vs. Tue/Thu) they're expected to be tracked, flipping every week. On off days their card still shows, just collapsed to their name until you log data for them.
-                </p>
 
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
@@ -1879,10 +1964,6 @@
       document.getElementById('modal-root').innerHTML = '';
     }
 
-    function getSelectedDayPills(periodNum) {
-      return Array.from(document.querySelectorAll(`.day-pill-p${periodNum}.selected`)).map(btn => btn.dataset.day);
-    }
-
     async function saveStudentChanges(e, studentId) {
       e.preventDefault();
 
@@ -1911,15 +1992,7 @@
         paras_p2: parseParaUsernames(document.getElementById('edit_paras_p2')?.value),
         paras_p3: parseParaUsernames(document.getElementById('edit_paras_p3')?.value),
         paras_p4: parseParaUsernames(document.getElementById('edit_paras_p4')?.value),
-        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value),
-
-        teacher_p1_days: getSelectedDayPills(1),
-        teacher_p2_days: getSelectedDayPills(2),
-        teacher_p3_days: getSelectedDayPills(3),
-        teacher_p4_days: getSelectedDayPills(4),
-        teacher_p5_days: getSelectedDayPills(5),
-
-        data_rotation_group: document.getElementById('edit_rotation_group')?.value || null
+        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value)
       };
 
       const { error } = await supabaseClient
