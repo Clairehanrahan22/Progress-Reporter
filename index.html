@@ -291,6 +291,18 @@
         .replace(/"/g, '&quot;');
     }
 
+    // Once a student has any goal text set, goals render read-only (locked)
+    // instead of editable inputs — see startNewIepGoals for how they get
+    // unlocked again. Keeps historical progress data from ever silently
+    // ending up tied to goal text that's since been overwritten.
+    function renderGoalFieldDisplay(id, value, locked) {
+      if (locked) {
+        const display = value ? escapeHtml(value) : '<span style="color:var(--text-muted); font-style:italic;">Empty</span>';
+        return `<div style="padding:8px 10px; margin-top:4px; margin-bottom:12px; background:#f8fafc; border:1px solid var(--border-light); border-radius:6px; font-size:13px; min-height:18px;">${display}</div>`;
+      }
+      return `<input type="text" id="${id}" value="${escapeHtml(value)}">`;
+    }
+
     // Update these each year once the district publishes the new school calendar.
     const TRIMESTER_RANGES = {
       1: { start: '2026-09-08', end: '2026-12-03' },
@@ -1427,6 +1439,7 @@
         .from('progress_data')
         .select('objective_key, status')
         .eq('student_id', studentId)
+        .eq('iep_version', student.iep_version || 1)
         .gte('created_at', startISO)
         .lte('created_at', endISO)
         .in('objective_key', rawObjectives.map(o => o.key));
@@ -1462,6 +1475,126 @@
           </div>
         `;
       }).join('');
+    }
+
+    async function renderPastIepGoals(studentId) {
+      const contentEl = document.getElementById('past-goals-content');
+      if (!contentEl) return;
+      contentEl.innerHTML = 'Loading...';
+
+      const { data: archives, error } = await supabaseClient
+        .from('iep_goal_archive')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('iep_version', { ascending: false });
+
+      if (error) {
+        contentEl.innerHTML = '<p style="color:red;">Failed to load past goals.</p>';
+        return;
+      }
+
+      if (!archives || archives.length === 0) {
+        contentEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No past IEP goals archived for this student yet.</p>';
+        return;
+      }
+
+      const sections = await Promise.all(archives.map(async archive => {
+        const objectives = [
+          { key: 'obj_1_1', label: 'Goal 1 · Objective 1', text: archive.obj_1_1 },
+          { key: 'obj_1_2', label: 'Goal 1 · Objective 2', text: archive.obj_1_2 },
+          { key: 'obj_2_1', label: 'Goal 2 · Objective 1', text: archive.obj_2_1 },
+          { key: 'obj_2_2', label: 'Goal 2 · Objective 2', text: archive.obj_2_2 },
+          { key: 'obj_3_1', label: 'Goal 3 · Objective 1', text: archive.obj_3_1 },
+          { key: 'obj_3_2', label: 'Goal 3 · Objective 2', text: archive.obj_3_2 },
+          { key: 'obj_4_1', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) · Objective 1`, text: archive.obj_4_1 },
+          { key: 'obj_4_2', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) · Objective 2`, text: archive.obj_4_2 }
+        ].filter(o => o.text && o.text.trim() !== '');
+
+        const { data: progressRows } = await supabaseClient
+          .from('progress_data')
+          .select('objective_key, status')
+          .eq('student_id', studentId)
+          .eq('iep_version', archive.iep_version)
+          .in('objective_key', objectives.map(o => o.key));
+
+        const objectivesHtml = objectives.map(o => {
+          const entries = (progressRows || []).filter(d => d.objective_key === o.key);
+          const yesCount = entries.filter(d => d.status === 'Yes').length;
+          const noCount = entries.filter(d => d.status === 'No').length;
+          const total = yesCount + noCount;
+          const summary = total > 0
+            ? `${Math.round((yesCount / total) * 100)}% (${yesCount} of ${total} observed occasions, lifetime)`
+            : 'No data logged.';
+
+          return `
+            <div class="objective-card">
+              <div class="obj-breadcrumbs">${escapeHtml(o.label)}</div>
+              <div class="obj-text">${escapeHtml(o.text)}</div>
+              <p style="font-size:13px; color:var(--text-muted); margin:0;">${summary}</p>
+            </div>
+          `;
+        }).join('');
+
+        const archivedDate = new Date(archive.archived_at).toLocaleDateString();
+
+        return `
+          <div class="goal-box" style="margin-bottom:20px;">
+            <h4 style="margin:0 0 12px 0;">IEP Version ${archive.iep_version} — archived ${archivedDate}</h4>
+            ${objectivesHtml || '<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No objectives were set for this version.</p>'}
+          </div>
+        `;
+      }));
+
+      contentEl.innerHTML = sections.join('');
+    }
+
+    async function startNewIepGoals(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals — you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
+        return;
+      }
+
+      const { error: archiveError } = await supabaseClient
+        .from('iep_goal_archive')
+        .insert([{
+          student_id: studentId,
+          iep_version: student.iep_version || 1,
+          obj_1_1: student.obj_1_1,
+          obj_1_2: student.obj_1_2,
+          obj_2_1: student.obj_2_1,
+          obj_2_2: student.obj_2_2,
+          obj_3_1: student.obj_3_1,
+          obj_3_2: student.obj_3_2,
+          goal_4_domain: student.goal_4_domain,
+          obj_4_1: student.obj_4_1,
+          obj_4_2: student.obj_4_2
+        }]);
+
+      if (archiveError) {
+        alert('Error archiving current goals: ' + archiveError.message);
+        return;
+      }
+
+      const { error: updateError } = await supabaseClient
+        .from('students')
+        .update({
+          obj_1_1: null, obj_1_2: null,
+          obj_2_1: null, obj_2_2: null,
+          obj_3_1: null, obj_3_2: null,
+          goal_4_domain: null, obj_4_1: null, obj_4_2: null,
+          iep_version: (student.iep_version || 1) + 1
+        })
+        .eq('id', studentId);
+
+      if (updateError) {
+        alert('Error clearing goals for the new IEP: ' + updateError.message);
+        return;
+      }
+
+      await fetchAllStudents();
+      openStudentModal(studentId);
     }
 
     // Sets one objective's status pill/hidden input without triggering the
@@ -1622,16 +1755,20 @@
 
     async function restoreTeacherSavedState(studentId) {
       const { startISO, endISO } = getLocalDayBoundsISO();
+      const student = allStudents.find(s => s.id === studentId);
 
       // Scoped to the current viewer only — a student can be logged
       // independently by multiple staff (e.g. different periods), and each
       // person should only see their own entries reflected back, not a
-      // coworker's.
+      // coworker's. Also scoped to the student's current IEP version, so a
+      // freshly-reset goal never appears pre-filled with data from before
+      // the goals changed.
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
         .eq('logged_by', currentUserEmail)
+        .eq('iep_version', student?.iep_version || 1)
         .gte('created_at', startISO)
         .lte('created_at', endISO);
 
@@ -1690,12 +1827,15 @@
       if (logAllBtn) logAllBtn.disabled = true;
 
       const { startISO, endISO } = getLocalDayBoundsISO();
+      const student = allStudents.find(s => s.id === studentId);
+      const iepVersion = student?.iep_version || 1;
 
       const { data: existingRows, error: fetchError } = await supabaseClient
         .from('progress_data')
         .select('id, objective_key')
         .eq('student_id', studentId)
         .eq('logged_by', currentUserEmail)
+        .eq('iep_version', iepVersion)
         .gte('created_at', startISO)
         .lte('created_at', endISO)
         .in('objective_key', entries.map(e => e.objKey));
@@ -1719,7 +1859,8 @@
           status: entry.statusVal,
           prompts: String(entry.promptsVal),
           notes: entry.notesVal,
-          logged_by: currentUserEmail
+          logged_by: currentUserEmail,
+          iep_version: iepVersion
         };
 
         const existingId = existingIdByObjKey[entry.objKey];
@@ -1759,6 +1900,10 @@
 
       activeChartView = 'line';
       const defaultTri = getDefaultTrimester();
+      const hasExistingGoals = [
+        student.obj_1_1, student.obj_1_2, student.obj_2_1, student.obj_2_2,
+        student.obj_3_1, student.obj_3_2, student.obj_4_1, student.obj_4_2
+      ].some(text => text && text.trim() !== '');
 
       const modalHTML = `
         <div class="modal-backdrop">
@@ -1774,47 +1919,57 @@
               <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
               <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
               <button class="tab-btn" id="tab-btn-report" onclick="switchModalTab('report', '${student.id}')">Generate Progress Report</button>
+              <button class="tab-btn" id="tab-btn-pastgoals" onclick="switchModalTab('pastgoals', '${student.id}')">Past IEP Goals</button>
             </div>
 
             <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
 
               <div id="tab-content-goals" class="tab-content active">
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  Add, edit, reorder, or archive IEP goals and specific objectives for the student.
-                </p>
+                ${hasExistingGoals ? `
+                  <div class="flex-between" style="margin-bottom:16px; align-items:flex-start; gap:16px;">
+                    <p style="font-size:12px; color:var(--text-muted); margin:0;">
+                      Goals are locked once set, so historical data always stays tied to the goal it was actually logged against. To revise goals after an IEP meeting, use "Add New IEP Goals" — this archives the current goals and their data (viewable under "Past IEP Goals"), then clears the fields so you can paste in the new IEP.
+                    </p>
+                    <button type="button" class="danger sm" style="white-space:nowrap;" onclick="startNewIepGoals('${student.id}')">Add New IEP Goals</button>
+                  </div>
+                ` : `
+                  <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                    Paste in this student's IEP goals and objectives below, then click "Save Changes" at the bottom to lock them in.
+                  </p>
+                `}
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
                   <label>Objective 1.1</label>
-                  <input type="text" id="edit_obj_1_1" value="${escapeHtml(student.obj_1_1)}">
+                  ${renderGoalFieldDisplay('edit_obj_1_1', student.obj_1_1, hasExistingGoals)}
                   <label>Objective 1.2</label>
-                  <input type="text" id="edit_obj_1_2" value="${escapeHtml(student.obj_1_2)}">
+                  ${renderGoalFieldDisplay('edit_obj_1_2', student.obj_1_2, hasExistingGoals)}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
                   <label>Objective 2.1</label>
-                  <input type="text" id="edit_obj_2_1" value="${escapeHtml(student.obj_2_1)}">
+                  ${renderGoalFieldDisplay('edit_obj_2_1', student.obj_2_1, hasExistingGoals)}
                   <label>Objective 2.2</label>
-                  <input type="text" id="edit_obj_2_2" value="${escapeHtml(student.obj_2_2)}">
+                  ${renderGoalFieldDisplay('edit_obj_2_2', student.obj_2_2, hasExistingGoals)}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
                   <label>Objective 3.1</label>
-                  <input type="text" id="edit_obj_3_1" value="${escapeHtml(student.obj_3_1)}">
+                  ${renderGoalFieldDisplay('edit_obj_3_1', student.obj_3_1, hasExistingGoals)}
                   <label>Objective 3.2</label>
-                  <input type="text" id="edit_obj_3_2" value="${escapeHtml(student.obj_3_2)}">
+                  ${renderGoalFieldDisplay('edit_obj_3_2', student.obj_3_2, hasExistingGoals)}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
                   <label>Domain Name</label>
-                  <input type="text" id="edit_goal_4_domain" value="${escapeHtml(student.goal_4_domain)}" placeholder="e.g. Recreation / Communication">
+                  ${renderGoalFieldDisplay('edit_goal_4_domain', student.goal_4_domain, hasExistingGoals)}
                   <label>Objective 4.1</label>
-                  <input type="text" id="edit_obj_4_1" value="${escapeHtml(student.obj_4_1)}">
+                  ${renderGoalFieldDisplay('edit_obj_4_1', student.obj_4_1, hasExistingGoals)}
                   <label>Objective 4.2</label>
-                  <input type="text" id="edit_obj_4_2" value="${escapeHtml(student.obj_4_2)}">
+                  ${renderGoalFieldDisplay('edit_obj_4_2', student.obj_4_2, hasExistingGoals)}
                 </div>
               </div>
 
@@ -1920,6 +2075,13 @@
                 <div id="report-content" style="margin-top:16px;">Loading...</div>
               </div>
 
+              <div id="tab-content-pastgoals" class="tab-content">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                  Every past set of IEP goals for this student, most recent first, along with a lifetime summary of the data logged against them. Read-only — these are closed out and can't be edited.
+                </p>
+                <div id="past-goals-content">Loading...</div>
+              </div>
+
               <div class="flex-between" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                 <div></div>
                 <button type="submit" class="success">Save Changes</button>
@@ -1947,6 +2109,10 @@
       if (tabName === 'report' && studentId) {
         renderProgressReportContent(studentId);
       }
+
+      if (tabName === 'pastgoals' && studentId) {
+        renderPastIepGoals(studentId);
+      }
     }
 
     function setChartView(view, studentId) {
@@ -1972,16 +2138,6 @@
         last_name: document.getElementById('edit_last_name')?.value.trim(),
         case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email')?.value),
 
-        obj_1_1: document.getElementById('edit_obj_1_1')?.value.trim() || null,
-        obj_1_2: document.getElementById('edit_obj_1_2')?.value.trim() || null,
-        obj_2_1: document.getElementById('edit_obj_2_1')?.value.trim() || null,
-        obj_2_2: document.getElementById('edit_obj_2_2')?.value.trim() || null,
-        obj_3_1: document.getElementById('edit_obj_3_1')?.value.trim() || null,
-        obj_3_2: document.getElementById('edit_obj_3_2')?.value.trim() || null,
-        goal_4_domain: document.getElementById('edit_goal_4_domain')?.value.trim() || null,
-        obj_4_1: document.getElementById('edit_obj_4_1')?.value.trim() || null,
-        obj_4_2: document.getElementById('edit_obj_4_2')?.value.trim() || null,
-
         teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1')?.value),
         teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2')?.value),
         teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3')?.value),
@@ -1994,6 +2150,23 @@
         paras_p4: parseParaUsernames(document.getElementById('edit_paras_p4')?.value),
         paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value)
       };
+
+      // Goal fields only render as editable inputs when the student has no
+      // goals set yet (or right after "Add New IEP Goals" clears them) — if
+      // they're locked and showing as read-only text instead, these ids
+      // won't exist in the DOM, so leave them out of the update entirely
+      // rather than saving over them.
+      if (document.getElementById('edit_obj_1_1')) {
+        updatedStudent.obj_1_1 = document.getElementById('edit_obj_1_1')?.value.trim() || null;
+        updatedStudent.obj_1_2 = document.getElementById('edit_obj_1_2')?.value.trim() || null;
+        updatedStudent.obj_2_1 = document.getElementById('edit_obj_2_1')?.value.trim() || null;
+        updatedStudent.obj_2_2 = document.getElementById('edit_obj_2_2')?.value.trim() || null;
+        updatedStudent.obj_3_1 = document.getElementById('edit_obj_3_1')?.value.trim() || null;
+        updatedStudent.obj_3_2 = document.getElementById('edit_obj_3_2')?.value.trim() || null;
+        updatedStudent.goal_4_domain = document.getElementById('edit_goal_4_domain')?.value.trim() || null;
+        updatedStudent.obj_4_1 = document.getElementById('edit_obj_4_1')?.value.trim() || null;
+        updatedStudent.obj_4_2 = document.getElementById('edit_obj_4_2')?.value.trim() || null;
+      }
 
       const { error } = await supabaseClient
         .from('students')
@@ -2115,12 +2288,14 @@
     async function renderObjectiveChart(studentId) {
       const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
       const historyTableEl = document.getElementById('data-history-table');
+      const student = allStudents.find(s => s.id === studentId);
 
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
         .eq('objective_key', objKey)
+        .eq('iep_version', student?.iep_version || 1)
         .order('created_at', { ascending: true });
 
       if (error) {
