@@ -55,6 +55,12 @@
 
     .nav-btn.active-nav { background: var(--active-btn) !important; color: white !important; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
 
+    .segmented-toggle { display: inline-flex; border: 1px solid var(--border-card); border-radius: 8px; overflow: hidden; }
+    .segmented-toggle button { background: white; color: var(--text); border: none; border-radius: 0; margin: 0; padding: 8px 14px; font-size: 13px; font-weight: 600; }
+    .segmented-toggle button:hover { background: #f8fafc; }
+    .segmented-toggle button + button { border-left: 1px solid var(--border-card); }
+    .segmented-toggle button.selected { background: var(--primary); color: white; }
+
     .login-box { max-width: 400px; margin: 80px auto; padding: 28px; background: white; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 
     .modal-backdrop {
@@ -426,22 +432,25 @@
       return !roster.some(s => s[`teacher_p${periodNum}_alternating_enabled`] === false);
     }
 
-    async function toggleAlternatingSchedule(periodNum) {
+    async function setAlternatingMode(periodNum, enabled) {
       const roster = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
       if (roster.length === 0) return;
+      if (isAlternatingEnabledForPeriod(periodNum) === enabled) return; // already on this side
 
-      const newState = !isAlternatingEnabledForPeriod(periodNum);
-      const btn = document.getElementById(`alternating-toggle-btn-${periodNum}`);
-      if (btn) btn.disabled = true;
+      const dailyBtn = document.getElementById(`daily-toggle-btn-${periodNum}`);
+      const altBtn = document.getElementById(`alternating-toggle-btn-${periodNum}`);
+      if (dailyBtn) dailyBtn.disabled = true;
+      if (altBtn) altBtn.disabled = true;
 
       const { error } = await supabaseClient
         .from('students')
-        .update({ [`teacher_p${periodNum}_alternating_enabled`]: newState })
+        .update({ [`teacher_p${periodNum}_alternating_enabled`]: enabled })
         .in('id', roster.map(s => s.id));
 
       if (error) {
         alert('Error updating data schedule mode: ' + error.message);
-        if (btn) btn.disabled = false;
+        if (dailyBtn) dailyBtn.disabled = false;
+        if (altBtn) altBtn.disabled = false;
         return;
       }
 
@@ -859,7 +868,12 @@
           <div style="display:flex; gap:8px;">
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAssignParaModal(${periodNum})">+ Assign Paraprofessional</button>` : ''}
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openDataScheduleModal(${periodNum})">Data Schedule</button>` : ''}
-            ${currentUserRole !== 'para' ? `<button class="outline" id="alternating-toggle-btn-${periodNum}" onclick="toggleAlternatingSchedule(${periodNum})">${isAlternatingEnabledForPeriod(periodNum) ? 'Alternating Data: ON' : 'Daily Data (no rotation)'}</button>` : ''}
+            ${currentUserRole !== 'para' ? `
+              <div class="segmented-toggle">
+                <button type="button" id="daily-toggle-btn-${periodNum}" class="${!isAlternatingEnabledForPeriod(periodNum) ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, false)">Daily Data</button>
+                <button type="button" id="alternating-toggle-btn-${periodNum}" class="${isAlternatingEnabledForPeriod(periodNum) ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, true)">Alternating</button>
+              </div>
+            ` : ''}
             ${currentUserRole !== 'para' ? `<button onclick="openAddExistingStudentModal(${periodNum})">Manage Students in Class</button>` : ''}
           </div>
         </div>
