@@ -862,9 +862,31 @@
         return (isTeacher || isPara) && isStudentScheduledTodayForPeriod(s, periodNum);
       });
 
+      // Gather the unique paraprofessionals assigned to this class period.
+      // Assignments are stored on each student's paras_pN field, so collect
+      // them across the students belonging to the class and avoid duplicates.
+      const classStudents = allStudents.filter(s => {
+        const isTeacherClassStudent = s[colName] === currentUserEmail;
+        const studentParas = Array.isArray(s[paraColName]) ? s[paraColName] : [];
+        const isSharedWithCurrentPara = studentParas.includes(currentUserEmail);
+        return isTeacherClassStudent || isSharedWithCurrentPara;
+      });
+      const assignedParaEmails = [...new Set(
+        classStudents.flatMap(s => Array.isArray(s[paraColName]) ? s[paraColName] : [])
+          .filter(email => typeof email === 'string' && email.trim())
+      )];
+      const assignedParaLabel = assignedParaEmails.length
+        ? assignedParaEmails.map(email => escapeHtml(emailToDisplayName(email))).join(', ')
+        : 'None assigned';
+
       let html = `
-        <div class="flex-between" style="margin-bottom: 20px;">
-          <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
+        <div class="flex-between" style="margin-bottom: 20px; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
+            <span style="font-size:13px; color:var(--text-muted); background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:6px 10px;">
+              <strong>Paraprofessional${assignedParaEmails.length === 1 ? '' : 's'}:</strong> ${assignedParaLabel}
+            </span>
+          </div>
           <div style="display:flex; gap:8px;">
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit Class</button>` : ''}
           </div>
