@@ -6,6 +6,7 @@
   <title>Progress Reporter - IEP Management</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     :root {
       --primary: #2563eb;
@@ -380,6 +381,12 @@
     // for another's, so this always needs the period it's being checked for.
     function isStudentActiveInRotationToday(student, periodNum) {
       if (!periodNum) return true; // no period context (e.g. caseload view) — rotation doesn't apply there
+
+      // The whole hour can be switched to "Daily Data" from the dashboard
+      // toggle, which overrides every student's individual group for that
+      // period without having to clear each one out in Data Schedule.
+      if (student[`teacher_p${periodNum}_alternating_enabled`] === false) return true;
+
       const group = student[`teacher_p${periodNum}_rotation_group`];
       if (!group) return true; // not part of the rotation — always active
 
@@ -406,6 +413,42 @@
       return group === activeGroupToday;
     }
 
+    // Period-wide mode: on means each student's individual Group A/B (or
+    // "no rotation") setting from Data Schedule applies as normal; off means
+    // the whole hour is tracked daily regardless of those settings. Stored
+    // per-student (like teacher_pN itself) since there's no separate
+    // per-period record — undefined/null defaults to on so existing data
+    // keeps working. If any student in the roster has been explicitly
+    // switched off, the hour reads as off.
+    function isAlternatingEnabledForPeriod(periodNum) {
+      const roster = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
+      if (roster.length === 0) return true;
+      return !roster.some(s => s[`teacher_p${periodNum}_alternating_enabled`] === false);
+    }
+
+    async function toggleAlternatingSchedule(periodNum) {
+      const roster = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
+      if (roster.length === 0) return;
+
+      const newState = !isAlternatingEnabledForPeriod(periodNum);
+      const btn = document.getElementById(`alternating-toggle-btn-${periodNum}`);
+      if (btn) btn.disabled = true;
+
+      const { error } = await supabaseClient
+        .from('students')
+        .update({ [`teacher_p${periodNum}_alternating_enabled`]: newState })
+        .in('id', roster.map(s => s.id));
+
+      if (error) {
+        alert('Error updating data schedule mode: ' + error.message);
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      await fetchAllStudents();
+      switchView(periodNum);
+    }
+
     function toGerund(verb) {
       const lower = (verb || '').toLowerCase();
       if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying';
@@ -413,10 +456,29 @@
       return lower + 'ing';
     }
 
-    function generateProgressSentence(objectiveText, firstName, percent) {
+    // Only Yes/No entries carry a meaningful prompt count — No Opportunity
+    // and Absent logs are excluded here the same way they're excluded from
+    // the percent calculation. "3+" is counted as 3 prompts since it's the
+    // floor of that bucket, not an exact value.
+    function computeAveragePrompts(entries) {
+      const values = entries
+        .filter(e => e.status === 'Yes' || e.status === 'No')
+        .map(e => parseFloat(e.prompts))
+        .filter(v => !isNaN(v));
+
+      if (values.length === 0) return null;
+      const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+      return Math.round(avg * 10) / 10;
+    }
+
+    function generateProgressSentence(objectiveText, firstName, percent, avgPrompts = null) {
       const rawText = (objectiveText || '').trim();
+      const promptsClause = (avgPrompts !== null && avgPrompts !== undefined)
+        ? ` with an average of ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}`
+        : '';
+
       if (!rawText) {
-        return `${firstName} met this objective in ${percent}% of observed occasions.`;
+        return `${firstName} met this objective${promptsClause} in ${percent}% of observed occasions.`;
       }
 
       const nameWillPattern = new RegExp(`^${firstName}\\s+will\\s+`, 'i');
@@ -448,14 +510,14 @@
         const rest = words.join(' ');
         const gerund = toGerund(verb);
 
-        return `${firstName} is ${gerund}${rest ? ' ' + rest : ''} in ${percent}% of observed occasions.`;
+        return `${firstName} is ${gerund}${rest ? ' ' + rest : ''}${promptsClause} in ${percent}% of observed occasions.`;
       }
 
       // Any other wording: don't guess at grammar — just quote the objective
       // as written alongside the percentage, so every objective produces a
       // usable draft sentence regardless of how it's phrased.
       const cleanText = rawText.replace(/\?\s*$/, '').trim();
-      return `${firstName} met the objective "${cleanText}" in ${percent}% of observed occasions.`;
+      return `${firstName} met the objective "${cleanText}"${promptsClause} in ${percent}% of observed occasions.`;
     }
 
     function getLocalDayBoundsISO() {
@@ -797,6 +859,7 @@
           <div style="display:flex; gap:8px;">
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAssignParaModal(${periodNum})">+ Assign Paraprofessional</button>` : ''}
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openDataScheduleModal(${periodNum})">Data Schedule</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" id="alternating-toggle-btn-${periodNum}" onclick="toggleAlternatingSchedule(${periodNum})">${isAlternatingEnabledForPeriod(periodNum) ? 'Alternating Data: ON' : 'Daily Data (no rotation)'}</button>` : ''}
             ${currentUserRole !== 'para' ? `<button onclick="openAddExistingStudentModal(${periodNum})">Manage Students in Class</button>` : ''}
           </div>
         </div>
@@ -1237,7 +1300,7 @@
               <button class="danger sm" onclick="closeModal()">✕ Close</button>
             </div>
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Set which days each student is actually in this class, and whether they're part of the alternating Group A / Group B data-collection rotation. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+              Set which days each student is actually in this class, and whether they're part of the alternating Group A / Group B data-collection rotation. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group. These group settings only take effect while this hour's dashboard toggle is set to "Alternating Data: ON" — switching that to "Daily Data" tracks everyone every day regardless of the groups set here.
             </p>
             <div id="data-schedule-list"></div>
           </div>
@@ -1437,7 +1500,7 @@
 
       const { data, error } = await supabaseClient
         .from('progress_data')
-        .select('objective_key, status')
+        .select('objective_key, status, prompts')
         .eq('student_id', studentId)
         .eq('iep_version', student.iep_version || 1)
         .gte('created_at', startISO)
@@ -1465,7 +1528,8 @@
         }
 
         const percent = Math.round((yesCount / total) * 100);
-        const sentence = generateProgressSentence(o.text, student.first_name, percent);
+        const avgPrompts = computeAveragePrompts(entries);
+        const sentence = generateProgressSentence(o.text, student.first_name, percent, avgPrompts);
 
         return `
           <div class="objective-card">
@@ -1992,6 +2056,8 @@
                   </select>
                 </div>
 
+                <div id="data-tab-objective-summary" style="margin-bottom:16px;"></div>
+
                 <div style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
                   <span style="font-size:13px; font-weight:600; color:var(--text-muted);">View:</span>
                   <button type="button" class="status-pill selected" id="chartview-line-btn" onclick="setChartView('line', '${student.id}')">Line (Progress Over Time)</button>
@@ -2000,6 +2066,7 @@
 
                 <div style="height:260px; position:relative; margin-bottom:24px;">
                   <canvas id="progress-chart-canvas"></canvas>
+                  <div id="chart-exclusion-counters" style="position:absolute; top:4px; right:4px; display:flex; flex-direction:column; gap:4px; align-items:flex-end;"></div>
                 </div>
 
                 <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
@@ -2285,6 +2352,48 @@
       }
     }
 
+    function renderChartExclusionCounters(data) {
+      const counterEl = document.getElementById('chart-exclusion-counters');
+      if (!counterEl) return;
+
+      const noOppCount = data.filter(d => d.status === 'No Opportunity').length;
+      const absentCount = data.filter(d => d.status === 'Absent').length;
+      const badgeStyle = 'font-size:11px; font-weight:600; color:#fff; padding:3px 8px; border-radius:10px; white-space:nowrap;';
+
+      counterEl.innerHTML = `
+        <div style="${badgeStyle} background:#f59e0b;">No Opportunity: ${noOppCount}</div>
+        <div style="${badgeStyle} background:#64748b;">Absent: ${absentCount}</div>
+      `;
+    }
+
+    function renderDataTabObjectiveSummary(student, objKey, entries) {
+      const summaryEl = document.getElementById('data-tab-objective-summary');
+      if (!summaryEl) return;
+
+      const objectiveText = student?.[objKey] || '';
+      const yesCount = entries.filter(e => e.status === 'Yes').length;
+      const noCount = entries.filter(e => e.status === 'No').length;
+      const total = yesCount + noCount;
+
+      if (total === 0) {
+        summaryEl.innerHTML = `
+          <div class="obj-text">${escapeHtml(objectiveText)}</div>
+          <p style="color:var(--text-muted); font-size:13px; font-style:italic; margin-top:4px;">No Yes/No data logged yet for this objective.</p>
+        `;
+        return;
+      }
+
+      const percent = Math.round((yesCount / total) * 100);
+      const avgPrompts = computeAveragePrompts(entries);
+      const sentence = generateProgressSentence(objectiveText, student.first_name, percent, avgPrompts);
+
+      summaryEl.innerHTML = `
+        <div class="obj-text">${escapeHtml(objectiveText)}</div>
+        <p style="font-size:13px; color:var(--text-muted); margin:4px 0 8px;">${percent}% (${yesCount} of ${total} observed occasions, all-time)</p>
+        <textarea readonly style="width:100%; min-height:50px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
+      `;
+    }
+
     async function renderObjectiveChart(studentId) {
       const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
       const historyTableEl = document.getElementById('data-history-table');
@@ -2306,8 +2415,13 @@
       if (!data || data.length === 0) {
         if (historyTableEl) historyTableEl.innerHTML = '<p style="color:var(--text-muted);">No logs found for this objective.</p>';
         if (activeChartInstance) activeChartInstance.destroy();
+        renderChartExclusionCounters([]);
+        renderDataTabObjectiveSummary(student, objKey, []);
         return;
       }
+
+      renderChartExclusionCounters(data);
+      renderDataTabObjectiveSummary(student, objKey, data);
 
       let tableHtml = `
         <table>
@@ -2347,17 +2461,23 @@
       }
 
       if (activeChartView === 'pie') {
-        const statusOrder = ['Yes', 'No', 'No Opportunity', 'Absent'];
+        // No Opportunity / Absent are excluded from the pie itself — they're
+        // not instances of the behavior occurring or not, so mixing them
+        // into the Yes/No slices would understate the real success rate.
+        // They're surfaced instead as plain counters (see
+        // renderChartExclusionCounters) over the chart.
+        const statusOrder = ['Yes', 'No'];
         const statusColors = {
           'Yes': '#16a34a',
-          'No': '#dc2626',
-          'No Opportunity': '#f59e0b',
-          'Absent': '#64748b'
+          'No': '#dc2626'
         };
         const counts = statusOrder.map(s => data.filter(d => d.status === s).length);
 
+        const pieTotal = counts.reduce((sum, c) => sum + c, 0);
+
         activeChartInstance = new Chart(ctx, {
           type: 'pie',
+          plugins: [ChartDataLabels],
           data: {
             labels: statusOrder,
             datasets: [{
@@ -2369,7 +2489,16 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'bottom' }
+              legend: { position: 'bottom' },
+              datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 13 },
+                formatter: (value, context) => {
+                  if (pieTotal === 0 || value === 0) return '';
+                  const pct = Math.round((value / pieTotal) * 100);
+                  return `${context.chart.data.labels[context.dataIndex]}\n${pct}%`;
+                }
+              }
             }
           }
         });
