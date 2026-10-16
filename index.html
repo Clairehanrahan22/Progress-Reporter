@@ -866,7 +866,7 @@
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div style="display:flex; gap:8px;">
-            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit Class</button>` : ''}
           </div>
         </div>
       `;
@@ -875,7 +875,7 @@
         html += `
           <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
             <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit Class</button>` : ''}
           </div>
         `;
       } else {
