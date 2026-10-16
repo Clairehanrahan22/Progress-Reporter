@@ -455,7 +455,8 @@
       }
 
       await fetchAllStudents();
-      switchView(periodNum);
+      renderDataScheduleTab(periodNum);
+      if (activePeriod === periodNum) switchView(periodNum);
     }
 
     function toGerund(verb) {
@@ -663,11 +664,10 @@
       renderDashboard();
       await fetchAllStudents();
 
-      if (currentUserRole === 'para') {
-        switchView(1);
-      } else {
-        loadCaseload();
-      }
+      // Everyone lands on 1st Hour by default, regardless of role — the
+      // dashboard teachers/paras actually log data on day-to-day. "My
+      // Caseload" is still reachable from the nav for whoever needs it.
+      switchView(1);
     }
 
     function renderLogin() {
@@ -866,15 +866,7 @@
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div style="display:flex; gap:8px;">
-            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAssignParaModal(${periodNum})">+ Assign Paraprofessional</button>` : ''}
-            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openDataScheduleModal(${periodNum})">Data Schedule</button>` : ''}
-            ${currentUserRole !== 'para' ? `
-              <div class="segmented-toggle">
-                <button type="button" id="daily-toggle-btn-${periodNum}" class="${!isAlternatingEnabledForPeriod(periodNum) ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, false)">Daily Data</button>
-                <button type="button" id="alternating-toggle-btn-${periodNum}" class="${isAlternatingEnabledForPeriod(periodNum) ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, true)">Alternating</button>
-              </div>
-            ` : ''}
-            ${currentUserRole !== 'para' ? `<button onclick="openAddExistingStudentModal(${periodNum})">Manage Students in Class</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit</button>` : ''}
           </div>
         </div>
       `;
@@ -883,7 +875,7 @@
         html += `
           <div class="card" style="text-align:center; padding:40px; color:var(--text-muted);">
             <p style="margin:0 0 12px 0;">No students assigned to your ${getOrdinalSuffix(periodNum)} hour yet.</p>
-            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openAddExistingStudentModal(${periodNum})">Manage Students in Class</button>` : ''}
+            ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit</button>` : ''}
           </div>
         `;
       } else {
@@ -1181,8 +1173,60 @@
     }
 
     let addExistingModalState = { periodNum: null, students: [] };
+    let assignParaModalState = { periodNum: null, paras: [] };
 
-    async function openAddExistingStudentModal(periodNum) {
+    // Everything a teacher can do to configure one hour — roster, the
+    // alternating-vs-daily data schedule, and para access — lives behind a
+    // single "Edit" button on that hour's dashboard, as tabs of one modal,
+    // rather than four separate buttons/modals.
+    function openHourEditModal(periodNum) {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:600px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Edit ${getOrdinalSuffix(periodNum)} Hour</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+
+            <div class="tab-buttons">
+              <button class="tab-btn active" id="hourtab-btn-students" onclick="switchHourEditTab('students', ${periodNum})">Manage Students</button>
+              <button class="tab-btn" id="hourtab-btn-schedule" onclick="switchHourEditTab('schedule', ${periodNum})">Data Schedule</button>
+              <button class="tab-btn" id="hourtab-btn-paras" onclick="switchHourEditTab('paras', ${periodNum})">Paraprofessionals</button>
+            </div>
+
+            <div id="hourtab-content-students" class="tab-content active">
+              <h4 style="margin:0 0 8px 0;">Currently in this class</h4>
+              <div id="current-roster-list" style="max-height:200px; overflow-y:auto; margin-bottom:20px;"></div>
+
+              <h4 style="margin:0 0 8px 0;">Add a student</h4>
+              <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
+              <div id="add-existing-list" style="max-height:300px; overflow-y:auto;"></div>
+            </div>
+
+            <div id="hourtab-content-schedule" class="tab-content"></div>
+
+            <div id="hourtab-content-paras" class="tab-content"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-root').innerHTML = modalHTML;
+      renderManageStudentsTab(periodNum);
+    }
+
+    function switchHourEditTab(tabName, periodNum) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      document.getElementById(`hourtab-btn-${tabName}`)?.classList.add('active');
+      document.getElementById(`hourtab-content-${tabName}`)?.classList.add('active');
+
+      if (tabName === 'students') renderManageStudentsTab(periodNum);
+      if (tabName === 'schedule') renderDataScheduleTab(periodNum);
+      if (tabName === 'paras') renderParaprosTab(periodNum);
+    }
+
+    function renderManageStudentsTab(periodNum) {
       const colName = `teacher_p${periodNum}`;
       const currentRoster = allStudents.filter(s => s[colName] === currentUserEmail);
       addExistingModalState = {
@@ -1190,25 +1234,6 @@
         students: allStudents.filter(s => s[colName] !== currentUserEmail)
       };
 
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content" style="max-width:500px;">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Manage Students in ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-
-            <h4 style="margin:0 0 8px 0;">Currently in this class</h4>
-            <div id="current-roster-list" style="max-height:200px; overflow-y:auto; margin-bottom:20px;"></div>
-
-            <h4 style="margin:0 0 8px 0;">Add a student</h4>
-            <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
-            <div id="add-existing-list" style="max-height:300px; overflow-y:auto;"></div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('modal-root').innerHTML = modalHTML;
       renderCurrentRosterList(currentRoster, periodNum);
       renderAddExistingList(addExistingModalState.students, periodNum);
     }
@@ -1269,9 +1294,9 @@
       if (error) {
         alert('Error adding student to class: ' + error.message);
       } else {
-        closeModal();
         await fetchAllStudents();
-        switchView(periodNum);
+        renderManageStudentsTab(periodNum);
+        if (activePeriod === periodNum) switchView(periodNum);
       }
     }
 
@@ -1291,37 +1316,41 @@
       if (error) {
         alert('Error removing student from class: ' + error.message);
       } else {
-        closeModal();
         await fetchAllStudents();
-        switchView(periodNum);
+        renderManageStudentsTab(periodNum);
+        if (activePeriod === periodNum) switchView(periodNum);
       }
     }
 
-    // Data Schedule: per period, per student — which days they're actually
-    // in this class, and whether they're part of the alternating Group A/B
-    // data-collection rotation. Both settings only make sense in the context
-    // of one specific period, so they live here rather than on the student's
-    // general Edit modal.
-    async function openDataScheduleModal(periodNum) {
+    // Data Schedule tab: a Daily/Alternating toggle at the top, plus — only
+    // while Alternating is selected — the per-student editor for which days
+    // they're in class and which Group A/B they rotate on. Collapsed away
+    // entirely under Daily Data since those per-student settings are moot
+    // while the whole hour ignores rotation.
+    function renderDataScheduleTab(periodNum) {
+      const contentEl = document.getElementById('hourtab-content-schedule');
+      if (!contentEl) return;
+
+      const alternating = isAlternatingEnabledForPeriod(periodNum);
       const colName = `teacher_p${periodNum}`;
       const roster = allStudents.filter(s => s[colName] === currentUserEmail);
 
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content" style="max-width:600px;">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Data Schedule — ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-              Set which days each student is actually in this class, and whether they're part of the alternating Group A / Group B data-collection rotation. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group. These group settings only take effect while this hour's dashboard toggle is set to "Alternating Data: ON" — switching that to "Daily Data" tracks everyone every day regardless of the groups set here.
-            </p>
-            <div id="data-schedule-list"></div>
-          </div>
+      contentEl.innerHTML = `
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+          Choose whether this hour tracks every student every day, or alternates which students are tracked on Mon/Wed vs. Tue/Thu each week.
+        </p>
+        <div class="segmented-toggle" style="margin-bottom:16px;">
+          <button type="button" id="daily-toggle-btn-${periodNum}" class="${!alternating ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, false)">Daily Data</button>
+          <button type="button" id="alternating-toggle-btn-${periodNum}" class="${alternating ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, true)">Alternating</button>
+        </div>
+        <div id="alternating-detail-${periodNum}" style="display:${alternating ? 'block' : 'none'};">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+          </p>
+          <div id="data-schedule-list"></div>
         </div>
       `;
 
-      document.getElementById('modal-root').innerHTML = modalHTML;
       renderDataScheduleList(roster, periodNum);
     }
 
@@ -1390,36 +1419,27 @@
       }
     }
 
-    let assignParaModalState = { periodNum: null, paras: [] };
-
     function emailToDisplayName(email) {
       const localPart = (email || '').split('@')[0];
       return localPart.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
     }
 
-    async function openAssignParaModal(periodNum) {
+    async function renderParaprosTab(periodNum) {
+      const contentEl = document.getElementById('hourtab-content-paras');
+      if (!contentEl) return;
+
       await fetchStaffMembers();
       const paraStaff = allStaffMembers.filter(s => s.role === 'para');
-
       assignParaModalState = { periodNum, paras: paraStaff };
 
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content" style="max-width:500px;">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Assign Paraprofessional to ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-              This gives the selected paraprofessional access to every student currently in your ${getOrdinalSuffix(periodNum)} hour class.
-            </p>
-            <input type="text" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
-            <div id="assign-para-list" style="max-height:400px; overflow-y:auto;"></div>
-          </div>
-        </div>
+      contentEl.innerHTML = `
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+          This gives the selected paraprofessional access to every student currently in your ${getOrdinalSuffix(periodNum)} hour class.
+        </p>
+        <input type="text" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
+        <div id="assign-para-list" style="max-height:400px; overflow-y:auto;"></div>
       `;
 
-      document.getElementById('modal-root').innerHTML = modalHTML;
       renderAssignParaList(assignParaModalState.paras, periodNum);
     }
 
@@ -1476,12 +1496,13 @@
         if (error) failCount++;
       }
 
-      closeModal();
       await fetchAllStudents();
-      switchView(periodNum);
+      if (activePeriod === periodNum) switchView(periodNum);
 
       if (failCount > 0) {
         alert(`Assigned, but ${failCount} student(s) failed to update. Check RLS policies in Supabase.`);
+      } else {
+        alert('Paraprofessional assigned.');
       }
     }
 
