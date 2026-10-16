@@ -1195,12 +1195,17 @@
             </div>
 
             <div id="hourtab-content-students" class="tab-content active">
-              <h4 style="margin:0 0 8px 0;">Currently in this class</h4>
-              <div id="current-roster-list" style="max-height:200px; overflow-y:auto; margin-bottom:20px;"></div>
+              <div class="flex-between" style="margin-bottom:12px;">
+                <h4 style="margin:0;">Currently in this class</h4>
+                <button type="button" onclick="toggleAddStudentPanel()">+ Add Student</button>
+              </div>
+              <div id="current-roster-list" style="margin-bottom:20px;"></div>
 
-              <h4 style="margin:0 0 8px 0;">Add a student</h4>
-              <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
-              <div id="add-existing-list" style="max-height:300px; overflow-y:auto;"></div>
+              <div id="add-student-panel" style="display:none;">
+                <h4 style="margin:0 0 8px 0;">Add a student</h4>
+                <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
+                <div id="add-existing-list" style="max-height:300px; overflow-y:auto;"></div>
+              </div>
             </div>
 
             <div id="hourtab-content-schedule" class="tab-content"></div>
@@ -1236,6 +1241,12 @@
 
       renderCurrentRosterList(currentRoster, periodNum);
       renderAddExistingList(addExistingModalState.students, periodNum);
+    }
+
+    function toggleAddStudentPanel() {
+      const panel = document.getElementById('add-student-panel');
+      if (!panel) return;
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
     function renderCurrentRosterList(students, periodNum) {
