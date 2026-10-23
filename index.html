@@ -540,6 +540,17 @@
     // sentence (e.g. conjugating a verb into "is Xing") - that kind of ad hoc
     // grammar transform breaks on real objective wording (adverbs before the
     // verb, irregular verbs, etc.) and can produce non-words.
+    // Only handles gerund formation (drop trailing e / treat -ie as -ying),
+    // not consonant doubling or irregular verbs - good enough for most
+    // objective wording, but not guaranteed perfect. Never states whether
+    // the goal was "met" - that's a judgment call for the IEP team, not this app.
+    function toGerund(verb) {
+      const lower = (verb || '').toLowerCase();
+      if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying';
+      if (lower.endsWith('e') && !lower.endsWith('ee') && !lower.endsWith('oe')) return lower.slice(0, -1) + 'ing';
+      return lower + 'ing';
+    }
+
     function generateProgressSentence(objectiveText, firstName, percent, avgPrompts = null) {
       const rawText = (objectiveText || '').trim();
       const promptsClause = (avgPrompts !== null && avgPrompts !== undefined)
@@ -548,6 +559,45 @@
 
       if (!rawText) {
         return `${firstName} was observed on this objective${promptsClause} in ${percent}% of observed occasions.`;
+      }
+
+      const nameWillPattern = new RegExp(`^${firstName}\\s+will\\s+`, 'i');
+      let text = null;
+
+      if (/^did\s+/i.test(rawText)) {
+        text = rawText.replace(/^did\s+/i, '');
+      } else if (nameWillPattern.test(rawText)) {
+        text = rawText.replace(nameWillPattern, '');
+      } else if (/^will\s+/i.test(rawText)) {
+        text = rawText.replace(/^will\s+/i, '');
+      }
+
+      if (text !== null) {
+        text = text.trim();
+
+        const namePattern = new RegExp(`^${firstName}\\s+`, 'i');
+        if (namePattern.test(text)) {
+          text = text.replace(namePattern, '').trim();
+        }
+
+        text = text.replace(/\?\s*$/, '').trim();
+
+        // Adverbs ("independently", "consistently"...) commonly sit before
+        // the verb in objective wording - skip past those first so the verb
+        // itself gets conjugated instead of the adverb in front of it.
+        const words = text.split(' ');
+        let verbIndex = 0;
+        while (verbIndex < words.length - 1 && /ly$/i.test(words[verbIndex])) {
+          verbIndex++;
+        }
+
+        if (words[verbIndex]) {
+          const lead = words.slice(0, verbIndex).join(' ');
+          const gerund = toGerund(words[verbIndex]);
+          const rest = words.slice(verbIndex + 1).join(' ');
+
+          return `${firstName} is ${lead ? lead + ' ' : ''}${gerund}${rest ? ' ' + rest : ''}${promptsClause} in ${percent}% of observed occasions.`;
+        }
       }
 
       const cleanText = rawText.replace(/\?\s*$/, '').trim();
@@ -882,7 +932,7 @@
       document.getElementById('app-root').innerHTML = `
         <div class="login-box">
           <h2 style="margin-top:0;">Set Your Password</h2>
-          <p style="font-size:13px; color:var(--text-muted);">Choose a password for your account. You'll use this along with your email to sign in from now on.</p>
+          <p style="font-size:13px; color:var(--text-muted);">Choose a password to sign in with your email.</p>
           <label>New Password</label>
           <input type="password" id="new-password" placeholder="At least 6 characters">
           <button style="width:100%; margin-top:10px;" onclick="handleSetPassword()">Set Password & Continue</button>
@@ -1112,7 +1162,7 @@
             <button class="outline" onclick="handleAddPlaceholderStaff()">Add Without Login Email</button>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">
-            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns - use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
+            "Send Email Invite" sends a password-setup link now. "Add Without Login Email" just adds them to the list - use "Send Login Email" below when ready.
           </p>
           <p id="invite-status" style="font-size:13px; margin-top:8px;"></p>
         </div>
@@ -1499,7 +1549,7 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      if (!confirm(`Remove this student from your ${getOrdinalSuffix(periodNum)} hour class? This only affects this class period - it does not delete the student or their data.`)) {
+      if (!confirm(`Remove from your ${getOrdinalSuffix(periodNum)} hour? This won't delete the student or their data.`)) {
         return;
       }
 
@@ -1527,7 +1577,7 @@
 
       contentEl.innerHTML = `
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-          Choose whether this hour tracks every student every day, or alternates which students are tracked on Mon/Wed vs. Tue/Thu each week.
+          Track everyone daily, or alternate Mon/Wed vs. Tue/Thu.
         </p>
         <div class="segmented-toggle" style="margin-bottom:16px;">
           <button type="button" id="daily-toggle-btn-${periodNum}" class="${!alternating ? 'selected' : ''}" onclick="setAlternatingMode(${periodNum}, false)">Daily Data</button>
@@ -1535,7 +1585,7 @@
         </div>
         <div id="alternating-detail-${periodNum}" style="display:${alternating ? 'block' : 'none'};">
           <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week - a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+            Set each student's days in class and rotation group (A/B alternates weekly). Days-in-class always come first.
           </p>
           <div id="data-schedule-list"></div>
         </div>
@@ -1624,7 +1674,7 @@
 
       contentEl.innerHTML = `
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-          This gives the selected paraprofessional access to every student currently in your ${getOrdinalSuffix(periodNum)} hour class.
+          Gives access to all students in your ${getOrdinalSuffix(periodNum)} hour.
         </p>
         <input type="text" autocomplete="off" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
         <div id="assign-para-list" style="max-height:400px; overflow-y:auto;"></div>
@@ -1850,7 +1900,7 @@
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
 
-      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals - you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
+      if (!confirm(`This archives ${student.first_name}'s current goals and data (viewable under Past IEP Goals), then clears the fields for the new IEP.\n\nContinue?`)) {
         return;
       }
 
@@ -2377,13 +2427,13 @@
                 ${hasExistingGoals ? `
                   <div class="flex-between" style="margin-bottom:16px; align-items:flex-start; gap:16px;">
                     <p style="font-size:12px; color:var(--text-muted); margin:0;">
-                      You can edit goal text directly here - for example to fix a typo - and click "Save Changes" below. Use "Add New IEP Goals" only when you want to formally start a new IEP version: it archives the current goals and all data logged against them (viewable under "Past IEP Goals"), then clears the fields for the new IEP.
+                      Edit goals directly to fix a typo. Use "Add New IEP Goals" only to start a new IEP version - it archives the current goals and data.
                     </p>
                     <button type="button" class="danger sm" style="white-space:nowrap;" onclick="startNewIepGoals('${student.id}')">Add New IEP Goals</button>
                   </div>
                 ` : `
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                    Paste in this student's IEP goals and objectives below, then click "Save Changes" at the bottom.
+                    Paste in goals below, then Save Changes.
                   </p>
                 `}
 
@@ -2469,7 +2519,7 @@
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0;">Assigned Teachers</h4>
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                    Type the email username only (the part before @ahschools.us) - e.g. firstname.lastname. For paras, separate multiple names with commas.
+                    Email username only, e.g. firstname.lastname. Separate multiple paras with commas.
                   </p>
                   <div style="display:grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); gap:12px 16px;">
                     ${[1, 2, 3, 4, 5].map(p => `
@@ -2493,7 +2543,7 @@
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-                    This permanently deletes the student and all of their data. If a student just had a schedule change, use "Manage Students in Class" to remove them from your class instead - don't delete them here.
+                    Permanently deletes this student and all their data. For a schedule change, remove them from the class instead.
                   </p>
                   <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
                 </div>
@@ -2983,7 +3033,7 @@
               </div>
 
               <p style="font-size:12px; color:var(--text-muted); margin:16px 0;">
-                Paste in this student's IEP goals and objectives below (optional - you can also add these later). Choose how each objective will be tracked on the daily logging cards.
+                Goals are optional here - add later if needed.
               </p>
 
               <div class="goal-box">
@@ -3075,7 +3125,7 @@
     }
 
     async function deleteStudent(studentId) {
-      if (!confirm('Are you absolutely sure you want to delete this student and ALL associated progress data? This action cannot be undone.')) {
+      if (!confirm('Permanently delete this student and all their data? This cannot be undone.')) {
         return;
       }
 
