@@ -739,10 +739,11 @@
       currentUserRole = (allStaffMembers.find(s => s.email === currentUserEmail) || {}).role || 'teacher';
 
       renderDashboard();
-      await fetchAllStudents();
       await fetchObjectiveFlags();
       subscribeToFlagAlerts();
 
+      // switchView fetches its own (scoped) student data - no need to
+      // pre-fetch everyone here first.
       switchView(1);
     }
 
@@ -756,10 +757,15 @@
       return allObjectiveFlags.find(f => f.student_id === studentId && f.objective_key === objKey && f.iep_version === (iepVersion || 1));
     }
 
-    function updateCaseloadFlagBadge() {
+    // Looks up the user's own caseload IDs directly (just the id column,
+    // not full student rows) instead of relying on the shared allStudents
+    // list - that list is now scoped to whatever screen is active, which
+    // often isn't the caseload at all.
+    async function updateCaseloadFlagBadge() {
       const badgeEl = document.getElementById('caseload-flag-badge');
       if (!badgeEl) return;
-      const myCaseloadIds = new Set(allStudents.filter(s => s.case_manager_email === currentUserEmail).map(s => s.id));
+      const { data } = await supabaseClient.from('students').select('id').eq('case_manager_email', currentUserEmail);
+      const myCaseloadIds = new Set((data || []).map(s => s.id));
       const count = allObjectiveFlags.filter(f => myCaseloadIds.has(f.student_id)).length;
       if (count > 0) {
         badgeEl.style.display = 'inline-flex';
@@ -1018,16 +1024,24 @@
       }
     }
 
-    async function fetchAllStudents() {
-      const { data, error } = await supabaseClient.from('students').select('*');
+    // applyFilter narrows the query to only the rows a given screen actually
+    // needs (e.g. "just my caseload") instead of always pulling every
+    // student in the school - cuts down on data transferred on every click.
+    // Screens that genuinely need the full roster (Admin, Students, and the
+    // "add an existing student" search inside Edit Class) call this with no
+    // filter, same as before.
+    async function fetchAllStudents(applyFilter) {
+      let query = supabaseClient.from('students').select('*');
+      if (applyFilter) query = applyFilter(query);
+      const { data, error } = await query;
       if (!error && data) allStudents = data;
     }
 
     async function loadCaseload() {
       updateNavHighlights('caseload');
       activePeriod = null;
-      await fetchAllStudents();
-      const myCaseload = allStudents.filter(s => s.case_manager_email === currentUserEmail);
+      await fetchAllStudents(q => q.eq('case_manager_email', currentUserEmail));
+      const myCaseload = allStudents;
 
       let html = `
         <div class="flex-between" style="margin-bottom: 20px;">
@@ -1055,16 +1069,14 @@
     async function switchView(periodNum) {
       updateNavHighlights(periodNum);
       activePeriod = periodNum;
-      await fetchAllStudents();
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      const periodRoster = allStudents.filter(s => {
-        const isTeacher = s[colName] === currentUserEmail;
-        const parasArr = s[paraColName] || [];
-        const isPara = Array.isArray(parasArr) && parasArr.includes(currentUserEmail);
-        return (isTeacher || isPara) && isStudentScheduledTodayForPeriod(s, periodNum);
-      });
+      // Only fetch students actually taught by (or para'd by) the current
+      // user this period, instead of the whole school.
+      await fetchAllStudents(q => q.or(`${colName}.eq.${currentUserEmail},${paraColName}.cs.{${currentUserEmail}}`));
+
+      const periodRoster = allStudents.filter(s => isStudentScheduledTodayForPeriod(s, periodNum));
 
       const assignedParaEmails = [...new Set(
         periodRoster.flatMap(s => Array.isArray(s[paraColName]) ? s[paraColName] : [])
@@ -1802,14 +1814,15 @@
         }
 
         const avgPrompts = computeAveragePrompts(entries);
+        const promptsLabel = (avgPrompts !== null && avgPrompts !== undefined) ? `, avg ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}` : '';
         let statLine, sentence;
 
         if (format === 'tally') {
-          statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions)`;
+          statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions${promptsLabel})`;
           sentence = generateTallySentence(o.text, student.first_name, summary.avg, summary.count, avgPrompts);
         } else {
           const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
-          statLine = `${summary.percent}% (${occasionsLabel})`;
+          statLine = `${summary.percent}% (${occasionsLabel}${promptsLabel})`;
           sentence = generateProgressSentence(o.text, student.first_name, summary.percent, avgPrompts);
         }
 
@@ -2363,14 +2376,15 @@
       }
 
       const avgPrompts = computeAveragePrompts(entries);
+      const promptsLabel = (avgPrompts !== null && avgPrompts !== undefined) ? `, avg ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}` : '';
       let statLine, sentence;
 
       if (format === 'tally') {
-        statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions)`;
+        statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions${promptsLabel})`;
         sentence = generateTallySentence(student[objKey], student.first_name, summary.avg, summary.count, avgPrompts);
       } else {
         const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
-        statLine = `${summary.percent}% (${occasionsLabel})`;
+        statLine = `${summary.percent}% (${occasionsLabel}${promptsLabel})`;
         sentence = generateProgressSentence(student[objKey], student.first_name, summary.percent, avgPrompts);
       }
 
@@ -2896,7 +2910,12 @@
         return;
       }
 
-      if (!data || data.length === 0) {
+      // Absent / No Opportunity are already surfaced as counters above the
+      // chart - no need to clutter this table with rows that aren't actual
+      // data points.
+      const displayData = (data || []).filter(d => d.status !== 'Absent' && d.status !== 'No Opportunity');
+
+      if (displayData.length === 0) {
         containerEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No entries logged yet.</p>';
         return;
       }
@@ -2916,7 +2935,7 @@
               </tr>
             </thead>
             <tbody>
-              ${data.map(d => {
+              ${displayData.map(d => {
                 let valueCell = 'N/A';
                 if (format === 'accuracy' && d.status === 'Logged') {
                   valueCell = `${escapeHtml(d.numerator)} / ${escapeHtml(d.denominator)}`;
@@ -2992,7 +3011,6 @@
       if (error) {
         alert('Error saving changes: ' + error.message);
       } else {
-        await fetchAllStudents();
         closeModal();
         if (activeNav === 'caseload') loadCaseload();
         else if (activeNav === 'admin') loadAdminView();
@@ -3115,7 +3133,6 @@
       if (error) {
         alert('Error creating student: ' + error.message);
       } else {
-        await fetchAllStudents();
         closeModal();
         if (activeNav === 'caseload') loadCaseload();
         else if (activeNav === 'admin') loadAdminView();
@@ -3136,7 +3153,6 @@
       if (error) {
         alert('Error deleting student: ' + error.message);
       } else {
-        await fetchAllStudents();
         closeModal();
         if (activeNav === 'caseload') loadCaseload();
         else if (activeNav === 'admin') loadAdminView();
