@@ -206,6 +206,46 @@
 
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
+    .flag-icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--border-card);
+      font-size: 16px;
+      padding: 0 0 0 8px;
+      cursor: pointer;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .flag-icon-btn:hover { color: #94a3b8; }
+    .flag-icon-btn.flagged { color: var(--danger); }
+
+    .format-select {
+      width: auto !important;
+      margin: 0 0 0 8px !important;
+      display: inline-block;
+      font-size: 12px;
+      padding: 4px 6px !important;
+    }
+
+    .numeric-entry-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .numeric-entry-row label {
+      font-size: 12px;
+      color: #475569;
+      font-weight: 500;
+      white-space: nowrap;
+      margin: 0;
+    }
+    .numeric-entry-row input[type="number"] {
+      width: 64px !important;
+      margin: 0 !important;
+      text-align: center;
+    }
+
     .email-input-wrapper {
       display: flex;
       align-items: center;
@@ -257,12 +297,14 @@
     let currentUserId = '';
     let allStudents = [];
     let allStaffMembers = [];
+    let allObjectiveFlags = [];
     let currentUserRole = 'teacher';
     let activeNav = 'caseload';
     let activePeriod = null;
     let activeChartInstance = null;
     let activeChartView = 'line';
     let showingSetPasswordScreen = false;
+    let flagsRealtimeChannel = null;
 
     const ADMIN_EMAILS = [
       'claire.hanrahan@ahschools.us',
@@ -273,6 +315,20 @@
       'keri.mikkelson@ahschools.us',
       'sarah.svedberg@ahschools.us'
     ];
+
+    function isStaffAdmin() {
+      return ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) || currentUserRole === 'admin';
+    }
+
+    const OBJECTIVE_FORMAT_LABELS = {
+      yes_no: 'Yes / No',
+      accuracy: 'Accuracy / Opportunities',
+      tally: 'Tally Count'
+    };
+
+    function getObjectiveFormat(student, objKey) {
+      return (student && student[`${objKey}_format`]) || 'yes_no';
+    }
 
     function escapeHtml(value) {
       if (value === null || value === undefined) return '';
@@ -301,6 +357,21 @@
         return `<div style="padding:8px 10px; margin-top:4px; margin-bottom:12px; background:#f8fafc; border:1px solid var(--border-light); border-radius:6px; font-size:13px; min-height:18px;">${display}</div>`;
       }
       return `<input type="text" id="${id}" value="${escapeHtml(value)}">`;
+    }
+
+    // Tracking format stays editable even once the objective's goal text is
+    // locked ‚Äî changing how an objective is tracked doesn't rewrite history,
+    // it only changes what the logging card looks like going forward.
+    function renderGoalFormatSelect(id, value) {
+      const current = value || 'yes_no';
+      return `
+        <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:0;">Tracking Format</label>
+        <select id="${id}" class="format-select" style="width:100%; margin-top:4px; margin-bottom:12px;">
+          ${Object.entries(OBJECTIVE_FORMAT_LABELS).map(([val, label]) =>
+            `<option value="${val}" ${current === val ? 'selected' : ''}>${escapeHtml(label)}</option>`
+          ).join('')}
+        </select>
+      `;
     }
 
     const TRIMESTER_RANGES = {
@@ -435,13 +506,39 @@
 
     function computeAveragePrompts(entries) {
       const values = entries
-        .filter(e => e.status === 'Yes' || e.status === 'No')
+        .filter(e => e.status === 'Yes' || e.status === 'No' || e.status === 'Logged')
         .map(e => parseFloat(e.prompts))
         .filter(v => !isNaN(v));
 
       if (values.length === 0) return null;
       const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
       return Math.round(avg * 10) / 10;
+    }
+
+    // Normalizes Yes/No, Accuracy, and Tally entries into one summary shape
+    // so the report/chart/dashboard code doesn't need to branch on format
+    // everywhere it reads logged data.
+    function computeObjectiveSummary(entries, format) {
+      if (format === 'accuracy') {
+        const evaluable = entries.filter(e => e.status === 'Logged' && e.denominator !== null && e.denominator !== undefined);
+        const numSum = evaluable.reduce((sum, e) => sum + (Number(e.numerator) || 0), 0);
+        const denSum = evaluable.reduce((sum, e) => sum + (Number(e.denominator) || 0), 0);
+        const percent = (evaluable.length > 0 && denSum > 0) ? Math.round((numSum / denSum) * 100) : null;
+        return { kind: 'accuracy', percent, count: evaluable.length, numSum, denSum };
+      }
+
+      if (format === 'tally') {
+        const evaluable = entries.filter(e => e.status === 'Logged' && e.numerator !== null && e.numerator !== undefined);
+        const total = evaluable.reduce((sum, e) => sum + (Number(e.numerator) || 0), 0);
+        const avg = evaluable.length > 0 ? Math.round((total / evaluable.length) * 10) / 10 : null;
+        return { kind: 'tally', avg, total, count: evaluable.length };
+      }
+
+      const yesCount = entries.filter(e => e.status === 'Yes').length;
+      const noCount = entries.filter(e => e.status === 'No').length;
+      const total = yesCount + noCount;
+      const percent = total > 0 ? Math.round((yesCount / total) * 100) : null;
+      return { kind: 'yes_no', percent, count: total, yesCount, noCount };
     }
 
     function generateProgressSentence(objectiveText, firstName, percent, avgPrompts = null) {
@@ -485,6 +582,24 @@
 
       const cleanText = rawText.replace(/\?\s*$/, '').trim();
       return `${firstName} met the objective "${cleanText}"${promptsClause} in ${percent}% of observed occasions.`;
+    }
+
+    // Tally Count objectives track a raw occurrence count rather than a
+    // pass/fail rate, so they get their own sentence shape instead of a percent.
+    function generateTallySentence(objectiveText, firstName, avgCount, sessionCount, avgPrompts = null) {
+      const promptsClause = (avgPrompts !== null && avgPrompts !== undefined)
+        ? ` with an average of ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}`
+        : '';
+      const sessionWord = sessionCount === 1 ? 'session' : 'sessions';
+      const occurrenceWord = avgCount === 1 ? 'occurrence' : 'occurrences';
+      const rawText = (objectiveText || '').trim();
+
+      if (!rawText) {
+        return `${firstName} averaged ${avgCount} ${occurrenceWord} per session${promptsClause} across ${sessionCount} ${sessionWord}.`;
+      }
+
+      const cleanText = rawText.replace(/\?\s*$/, '').trim();
+      return `${firstName} averaged ${avgCount} ${occurrenceWord} per session on "${cleanText}"${promptsClause} across ${sessionCount} ${sessionWord}.`;
     }
 
     function getLocalDayBoundsISO() {
@@ -605,8 +720,134 @@
 
       renderDashboard();
       await fetchAllStudents();
+      await fetchObjectiveFlags();
+      subscribeToFlagAlerts();
 
       switchView(1);
+    }
+
+    async function fetchObjectiveFlags() {
+      const { data, error } = await supabaseClient.from('objective_flags').select('*');
+      if (!error && data) allObjectiveFlags = data;
+      updateCaseloadFlagBadge();
+    }
+
+    function getObjectiveFlag(studentId, objKey, iepVersion) {
+      return allObjectiveFlags.find(f => f.student_id === studentId && f.objective_key === objKey && f.iep_version === (iepVersion || 1));
+    }
+
+    function updateCaseloadFlagBadge() {
+      const badgeEl = document.getElementById('caseload-flag-badge');
+      if (!badgeEl) return;
+      const myCaseloadIds = new Set(allStudents.filter(s => s.case_manager_email === currentUserEmail).map(s => s.id));
+      const count = allObjectiveFlags.filter(f => myCaseloadIds.has(f.student_id)).length;
+      if (count > 0) {
+        badgeEl.style.display = 'inline-flex';
+        badgeEl.textContent = count;
+      } else {
+        badgeEl.style.display = 'none';
+      }
+    }
+
+    function subscribeToFlagAlerts() {
+      if (flagsRealtimeChannel) return;
+      flagsRealtimeChannel = supabaseClient
+        .channel('objective_flags_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'objective_flags' }, async () => {
+          await fetchObjectiveFlags();
+        })
+        .subscribe();
+    }
+
+    async function flagObjective(studentId, objKey, iepVersion) {
+      const payload = {
+        student_id: studentId,
+        objective_key: objKey,
+        iep_version: iepVersion || 1,
+        flagged_by: currentUserEmail
+      };
+      const { error } = await supabaseClient.from('objective_flags').upsert([payload], { onConflict: 'student_id,objective_key,iep_version' });
+      if (error) {
+        alert('Error flagging objective: ' + error.message);
+        return;
+      }
+      await fetchObjectiveFlags();
+      refreshCurrentFlagIcon(studentId, objKey, iepVersion);
+    }
+
+    function refreshCurrentFlagIcon(studentId, objKey, iepVersion) {
+      const btn = document.getElementById(`flag_btn_${studentId}_${objKey}`);
+      if (!btn) return;
+      const flag = getObjectiveFlag(studentId, objKey, iepVersion);
+      if (flag) {
+        btn.classList.add('flagged');
+        btn.title = `Flagged by ${emailToDisplayName(flag.flagged_by)} on ${new Date(flag.flagged_at).toLocaleDateString()}`;
+      } else {
+        btn.classList.remove('flagged');
+        btn.title = 'Flag for case manager';
+      }
+    }
+
+    function openFlagResolutionModal(studentId, objKey, iepVersion) {
+      const flag = getObjectiveFlag(studentId, objKey, iepVersion);
+      if (!flag) return;
+      const student = allStudents.find(s => s.id === studentId);
+      const flaggedDate = new Date(flag.flagged_at).toLocaleString();
+
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:420px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0; font-size:18px;">Resolve Flag</h2>
+              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
+            </div>
+            <p style="font-size:14px; margin-bottom:6px;"><strong>${escapeHtml(student ? student.first_name + ' ' + student.last_name : '')}</strong></p>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+              Flagged by <strong>${escapeHtml(emailToDisplayName(flag.flagged_by))}</strong> on ${escapeHtml(flaggedDate)}.
+            </p>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+              <button type="button" class="outline" onclick="closeModal()">Cancel</button>
+              <button type="button" class="success" onclick="resolveObjectiveFlag('${studentId}', '${objKey}', ${iepVersion || 1})">Yes, please remove</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function resolveObjectiveFlag(studentId, objKey, iepVersion) {
+      const { error } = await supabaseClient
+        .from('objective_flags')
+        .delete()
+        .eq('student_id', studentId)
+        .eq('objective_key', objKey)
+        .eq('iep_version', iepVersion || 1);
+
+      if (error) {
+        alert('Error removing flag: ' + error.message);
+        return;
+      }
+
+      closeModal();
+      await fetchObjectiveFlags();
+      refreshCurrentFlagIcon(studentId, objKey, iepVersion);
+    }
+
+    function handleFlagIconClick(studentId, objKey, iepVersion) {
+      const flag = getObjectiveFlag(studentId, objKey, iepVersion);
+      if (flag) {
+        openFlagResolutionModal(studentId, objKey, iepVersion);
+      } else {
+        flagObjective(studentId, objKey, iepVersion);
+      }
+    }
+
+    function renderFlagIconHTML(studentId, objKey, iepVersion) {
+      const flag = getObjectiveFlag(studentId, objKey, iepVersion);
+      const title = flag
+        ? `Flagged by ${emailToDisplayName(flag.flagged_by)} on ${new Date(flag.flagged_at).toLocaleDateString()}`
+        : 'Flag for case manager';
+      return `<button type="button" id="flag_btn_${studentId}_${objKey}" class="flag-icon-btn ${flag ? 'flagged' : ''}" title="${escapeHtml(title)}" onclick="handleFlagIconClick('${studentId}', '${objKey}', ${iepVersion || 1})">&#9873;</button>`;
     }
 
     function renderLogin() {
@@ -616,7 +857,7 @@
           <label>Email Address</label>
           <input type="email" id="login-email" placeholder="teacher@school.org">
           <label>Password</label>
-          <input type="password" id="login-pass" placeholder="••••••••">
+          <input type="password" id="login-pass" placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢">
           <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:13px; margin-top:-6px; margin-bottom:12px;">
             <input type="checkbox" id="login-show-pass" style="width:auto; margin:0;" onchange="document.getElementById('login-pass').type = this.checked ? 'text' : 'password'">
             Show password
@@ -711,9 +952,9 @@
           </div>
         </header>
 
-        ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) && isTrimesterCalendarStale() ? `
+        ${isStaffAdmin() && isTrimesterCalendarStale() ? `
           <div class="card" style="background:#fef3c7; border-color:#fcd34d; margin-bottom:16px; padding:14px 20px;">
-            <strong>⚠️ Trimester calendar needs updating.</strong>
+            <strong>‚ö†Ô∏è Trimester calendar needs updating.</strong>
             <span style="color:var(--text-muted); font-size:13px;">Today's date doesn't fall within any configured trimester range. Update <code>TRIMESTER_RANGES</code> in the code with this year's school calendar dates so reports use the correct trimester.</span>
           </div>
         ` : ''}
@@ -724,12 +965,14 @@
           <button id="nav-p3" class="nav-btn outline" onclick="switchView(3)">3rd Hour</button>
           <button id="nav-p4" class="nav-btn outline" onclick="switchView(4)">4th Hour</button>
           <button id="nav-p5" class="nav-btn outline" onclick="switchView(5)">5th Hour</button>
-          ${currentUserRole !== 'para' ? `<button id="nav-caseload" class="nav-btn outline active-nav" onclick="loadCaseload()">My Caseload</button>` : ''}
-          ${ADMIN_EMAILS.includes(currentUserEmail.toLowerCase()) ? `<button id="nav-admin" class="nav-btn outline" onclick="loadAdminView()">Admin</button>` : ''}
+          ${currentUserRole !== 'para' ? `<button id="nav-caseload" class="nav-btn outline active-nav" style="position:relative;" onclick="loadCaseload()">My Caseload<span id="caseload-flag-badge" style="display:none; position:absolute; top:-8px; right:-8px; background:var(--danger); color:#fff; font-size:11px; font-weight:700; border-radius:999px; min-width:18px; height:18px; align-items:center; justify-content:center; padding:0 5px;"></span></button>` : ''}
+          ${isStaffAdmin() ? `<button id="nav-students" class="nav-btn outline" onclick="loadStudentsView()">Students</button>` : ''}
+          ${isStaffAdmin() ? `<button id="nav-admin" class="nav-btn outline" onclick="loadAdminView()">Admin</button>` : ''}
         </div>
 
         <div id="main-view"></div>
       `;
+      updateCaseloadFlagBadge();
     }
 
     function updateNavHighlights(selectedNav) {
@@ -739,6 +982,8 @@
         document.getElementById('nav-caseload')?.classList.add('active-nav');
       } else if (selectedNav === 'admin') {
         document.getElementById('nav-admin')?.classList.add('active-nav');
+      } else if (selectedNav === 'students') {
+        document.getElementById('nav-students')?.classList.add('active-nav');
       } else {
         document.getElementById(`nav-p${selectedNav}`)?.classList.add('active-nav');
       }
@@ -801,33 +1046,26 @@
         return (isTeacher || isPara) && isStudentScheduledTodayForPeriod(s, periodNum);
       });
 
-      const classStudents = allStudents.filter(s => {
-        const isTeacherClassStudent = s[colName] === currentUserEmail;
-        const studentParas = Array.isArray(s[paraColName]) ? s[paraColName] : [];
-        const isSharedWithCurrentPara = studentParas.includes(currentUserEmail);
-        return isTeacherClassStudent || isSharedWithCurrentPara;
-      });
       const assignedParaEmails = [...new Set(
-        classStudents.flatMap(s => Array.isArray(s[paraColName]) ? s[paraColName] : [])
-          .filter(email => typeof email === 'string' && email.trim())
+        periodRoster.flatMap(s => Array.isArray(s[paraColName]) ? s[paraColName] : [])
       )];
-      const assignedParaLabel = assignedParaEmails.length
-        ? assignedParaEmails.map(email => escapeHtml(emailToDisplayName(email))).join(', ')
-        : 'None assigned';
 
       let html = `
-        <div class="flex-between" style="margin-bottom: 20px; gap:12px; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
-            <span style="font-size:13px; color:var(--text-muted); background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:6px 10px;">
-              <strong>Paraprofessional${assignedParaEmails.length === 1 ? '' : 's'}:</strong> ${assignedParaLabel}
-            </span>
-          </div>
+        <div class="flex-between" style="margin-bottom: ${assignedParaEmails.length > 0 ? '4px' : '20px'};">
+          <h2 style="margin:0; font-size:20px;">${getOrdinalSuffix(periodNum)} Hour Class Dashboard</h2>
           <div style="display:flex; gap:8px;">
             ${currentUserRole !== 'para' ? `<button class="outline" onclick="openHourEditModal(${periodNum})">Edit Class</button>` : ''}
           </div>
         </div>
       `;
+
+      if (assignedParaEmails.length > 0) {
+        html += `
+          <p style="color:var(--text-muted); font-size:13px; margin:0 0 20px 0;">
+            Paraprofessional${assignedParaEmails.length > 1 ? 's' : ''}: ${assignedParaEmails.map(e => escapeHtml(emailToDisplayName(e))).join(', ')}
+          </p>
+        `;
+      }
 
       if (periodRoster.length === 0) {
         html += `
@@ -895,6 +1133,7 @@
               <select id="invite_role">
                 <option value="teacher">Teacher</option>
                 <option value="para">Paraprofessional</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
           </div>
@@ -903,7 +1142,7 @@
             <button class="outline" onclick="handleAddPlaceholderStaff()">Add Without Login Email</button>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">
-            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns — use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
+            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns ‚Äî use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
           </p>
           <p id="invite-status" style="font-size:13px; margin-top:8px;"></p>
         </div>
@@ -925,6 +1164,29 @@
 
       document.getElementById('main-view').innerHTML = html;
       renderStaffList();
+      renderAdminStudentList();
+    }
+
+    // A lighter-weight view than the full Staff Admin page ‚Äî just the
+    // school-wide student list, for viewing/creating students and
+    // (re)assigning case managers, without the staff-management tools.
+    async function loadStudentsView() {
+      updateNavHighlights('students');
+      activePeriod = null;
+      await fetchAllStudents();
+
+      const html = `
+        <div class="flex-between" style="margin-bottom: 20px;">
+          <h2 style="margin:0; font-size:20px;">Students</h2>
+          <button onclick="openCreateStudentModal(true)">+ Add Student</button>
+        </div>
+        <div class="card">
+          <input type="text" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
+          <div id="admin-student-list" style="margin-top:12px;"></div>
+        </div>
+      `;
+
+      document.getElementById('main-view').innerHTML = html;
       renderAdminStudentList();
     }
 
@@ -994,6 +1256,7 @@
             <select style="width:auto; margin:0;" onchange="handleChangeStaffRole('${escapeForInlineHandler(s.email)}', this.value)">
               <option value="teacher" ${s.role === 'teacher' ? 'selected' : ''}>Teacher</option>
               <option value="para" ${s.role === 'para' ? 'selected' : ''}>Paraprofessional</option>
+              <option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Admin</option>
             </select>
             <button class="outline sm" onclick="handleSendPasswordReset('${escapeForInlineHandler(s.email)}')">Send Login Email</button>
             <button class="danger sm" onclick="handleRemoveStaff('${escapeForInlineHandler(s.email)}')">Remove</button>
@@ -1106,7 +1369,7 @@
         statusEl.innerText = error.message;
       } else {
         statusEl.style.color = 'green';
-        statusEl.innerText = `Added ${email} — they can't log in yet. Use "Send Login Email" below whenever you're ready.`;
+        statusEl.innerText = `Added ${email} ‚Äî they can't log in yet. Use "Send Login Email" below whenever you're ready.`;
         document.getElementById('invite_first_name').value = '';
         document.getElementById('invite_last_name').value = '';
         await fetchStaffMembers();
@@ -1136,7 +1399,7 @@
           <div class="modal-content" style="max-width:600px;">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">Edit ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
             </div>
 
             <div class="tab-buttons">
@@ -1266,7 +1529,7 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      if (!confirm(`Remove this student from your ${getOrdinalSuffix(periodNum)} hour class? This only affects this class period — it does not delete the student or their data.`)) {
+      if (!confirm(`Remove this student from your ${getOrdinalSuffix(periodNum)} hour class? This only affects this class period ‚Äî it does not delete the student or their data.`)) {
         return;
       }
 
@@ -1302,7 +1565,7 @@
         </div>
         <div id="alternating-detail-${periodNum}" style="display:${alternating ? 'block' : 'none'};">
           <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week — a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week ‚Äî a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
           </p>
           <div id="data-schedule-list"></div>
         </div>
@@ -1370,7 +1633,7 @@
         await fetchAllStudents();
         if (saveBtn) {
           saveBtn.disabled = false;
-          saveBtn.innerText = '✓ Saved';
+          saveBtn.innerText = '‚úì Saved';
           setTimeout(() => { saveBtn.innerText = 'Save'; }, 1500);
         }
       }
@@ -1492,7 +1755,7 @@
 
       const { data, error } = await supabaseClient
         .from('progress_data')
-        .select('objective_key, status, prompts')
+        .select('objective_key, status, prompts, numerator, denominator')
         .eq('student_id', studentId)
         .eq('iep_version', student.iep_version || 1)
         .gte('created_at', startISO)
@@ -1506,11 +1769,10 @@
 
       contentEl.innerHTML = rawObjectives.map(o => {
         const entries = (data || []).filter(d => d.objective_key === o.key);
-        const yesCount = entries.filter(d => d.status === 'Yes').length;
-        const noCount = entries.filter(d => d.status === 'No').length;
-        const total = yesCount + noCount;
+        const format = getObjectiveFormat(student, o.key);
+        const summary = computeObjectiveSummary(entries, format);
 
-        if (total === 0) {
+        if (summary.count === 0) {
           return `
             <div class="objective-card">
               <div class="obj-text">${escapeHtml(o.text)}</div>
@@ -1519,14 +1781,22 @@
           `;
         }
 
-        const percent = Math.round((yesCount / total) * 100);
         const avgPrompts = computeAveragePrompts(entries);
-        const sentence = generateProgressSentence(o.text, student.first_name, percent, avgPrompts);
+        let statLine, sentence;
+
+        if (format === 'tally') {
+          statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions)`;
+          sentence = generateTallySentence(o.text, student.first_name, summary.avg, summary.count, avgPrompts);
+        } else {
+          const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
+          statLine = `${summary.percent}% (${occasionsLabel})`;
+          sentence = generateProgressSentence(o.text, student.first_name, summary.percent, avgPrompts);
+        }
 
         return `
           <div class="objective-card">
             <div class="obj-text">${escapeHtml(o.text)}</div>
-            <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">${percent}% (${yesCount} of ${total} observed occasions)</p>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">${statLine}</p>
             <textarea readonly style="width:100%; min-height:60px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
           </div>
         `;
@@ -1556,31 +1826,33 @@
 
       const sections = await Promise.all(archives.map(async archive => {
         const objectives = [
-          { key: 'obj_1_1', label: 'Goal 1 · Objective 1', text: archive.obj_1_1 },
-          { key: 'obj_1_2', label: 'Goal 1 · Objective 2', text: archive.obj_1_2 },
-          { key: 'obj_2_1', label: 'Goal 2 · Objective 1', text: archive.obj_2_1 },
-          { key: 'obj_2_2', label: 'Goal 2 · Objective 2', text: archive.obj_2_2 },
-          { key: 'obj_3_1', label: 'Goal 3 · Objective 1', text: archive.obj_3_1 },
-          { key: 'obj_3_2', label: 'Goal 3 · Objective 2', text: archive.obj_3_2 },
-          { key: 'obj_4_1', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) · Objective 1`, text: archive.obj_4_1 },
-          { key: 'obj_4_2', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) · Objective 2`, text: archive.obj_4_2 }
+          { key: 'obj_1_1', label: 'Goal 1 ¬∑ Objective 1', text: archive.obj_1_1 },
+          { key: 'obj_1_2', label: 'Goal 1 ¬∑ Objective 2', text: archive.obj_1_2 },
+          { key: 'obj_2_1', label: 'Goal 2 ¬∑ Objective 1', text: archive.obj_2_1 },
+          { key: 'obj_2_2', label: 'Goal 2 ¬∑ Objective 2', text: archive.obj_2_2 },
+          { key: 'obj_3_1', label: 'Goal 3 ¬∑ Objective 1', text: archive.obj_3_1 },
+          { key: 'obj_3_2', label: 'Goal 3 ¬∑ Objective 2', text: archive.obj_3_2 },
+          { key: 'obj_4_1', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) ¬∑ Objective 1`, text: archive.obj_4_1 },
+          { key: 'obj_4_2', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) ¬∑ Objective 2`, text: archive.obj_4_2 }
         ].filter(o => o.text && o.text.trim() !== '');
 
         const { data: progressRows } = await supabaseClient
           .from('progress_data')
-          .select('objective_key, status')
+          .select('objective_key, status, numerator, denominator')
           .eq('student_id', studentId)
           .eq('iep_version', archive.iep_version)
           .in('objective_key', objectives.map(o => o.key));
 
         const objectivesHtml = objectives.map(o => {
           const entries = (progressRows || []).filter(d => d.objective_key === o.key);
-          const yesCount = entries.filter(d => d.status === 'Yes').length;
-          const noCount = entries.filter(d => d.status === 'No').length;
-          const total = yesCount + noCount;
-          const summary = total > 0
-            ? `${Math.round((yesCount / total) * 100)}% (${yesCount} of ${total} observed occasions, lifetime)`
-            : 'No data logged.';
+          const format = archive[`${o.key}_format`] || 'yes_no';
+          const objSummary = computeObjectiveSummary(entries, format);
+          let summary = 'No data logged.';
+          if (objSummary.count > 0) {
+            summary = format === 'tally'
+              ? `Averaged ${objSummary.avg} per session (${objSummary.total} total across ${objSummary.count} sessions, lifetime)`
+              : `${objSummary.percent}% (${objSummary.count} observed occasions, lifetime)`;
+          }
 
           return `
             <div class="objective-card">
@@ -1595,7 +1867,7 @@
 
         return `
           <div class="goal-box" style="margin-bottom:20px;">
-            <h4 style="margin:0 0 12px 0;">IEP Version ${archive.iep_version} — archived ${archivedDate}</h4>
+            <h4 style="margin:0 0 12px 0;">IEP Version ${archive.iep_version} ‚Äî archived ${archivedDate}</h4>
             ${objectivesHtml || '<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No objectives were set for this version.</p>'}
           </div>
         `;
@@ -1608,7 +1880,7 @@
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
 
-      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals — you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
+      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals ‚Äî you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
         return;
       }
 
@@ -1625,7 +1897,15 @@
           obj_3_2: student.obj_3_2,
           goal_4_domain: student.goal_4_domain,
           obj_4_1: student.obj_4_1,
-          obj_4_2: student.obj_4_2
+          obj_4_2: student.obj_4_2,
+          obj_1_1_format: student.obj_1_1_format,
+          obj_1_2_format: student.obj_1_2_format,
+          obj_2_1_format: student.obj_2_1_format,
+          obj_2_2_format: student.obj_2_2_format,
+          obj_3_1_format: student.obj_3_1_format,
+          obj_3_2_format: student.obj_3_2_format,
+          obj_4_1_format: student.obj_4_1_format,
+          obj_4_2_format: student.obj_4_2_format
         }]);
 
       if (archiveError) {
@@ -1681,6 +1961,38 @@
       }
     }
 
+    // Accuracy/Tally objectives only have one pill (Absent) rather than an
+    // exclusive group, so clicking it toggles on/off instead of just selecting.
+    function toggleAbsentPill(studentId, objKey) {
+      const input = document.getElementById(`status_input_${studentId}_${objKey}`);
+      if (!input) return;
+      const turningOn = input.value !== 'Absent';
+      const numeratorEl = document.getElementById(`numerator_${studentId}_${objKey}`);
+      const denominatorEl = document.getElementById(`denominator_${studentId}_${objKey}`);
+
+      applyStatusToObjective(studentId, objKey, turningOn ? 'Absent' : '');
+
+      if (turningOn) {
+        if (numeratorEl) { numeratorEl.value = ''; numeratorEl.disabled = true; }
+        if (denominatorEl) { denominatorEl.value = ''; denominatorEl.disabled = true; }
+      } else {
+        if (numeratorEl) numeratorEl.disabled = false;
+        if (denominatorEl) denominatorEl.disabled = false;
+      }
+    }
+
+    // Typing a value into the Correct/Out of/Tally boxes counts as logging
+    // that objective ‚Äî this keeps the hidden status input (and therefore
+    // "has this been logged today" tracking) in sync without a pill click.
+    function handleNumericEntryInput(studentId, objKey) {
+      const input = document.getElementById(`status_input_${studentId}_${objKey}`);
+      if (!input || input.value === 'Absent') return;
+      const numeratorEl = document.getElementById(`numerator_${studentId}_${objKey}`);
+      const denominatorEl = document.getElementById(`denominator_${studentId}_${objKey}`);
+      const hasValue = (numeratorEl && numeratorEl.value !== '') || (denominatorEl && denominatorEl.value !== '');
+      input.value = hasValue ? 'Logged' : '';
+    }
+
     function renderStudentDashboardCard(student, periodNum) {
       const rawObjectives = [
         { key: 'obj_1_1', gNum: 'Goal 1', objNum: 'Objective 1', domain: 'Ind. Living', text: student.obj_1_1 },
@@ -1698,26 +2010,51 @@
       let cardsHTML = '';
       activeObjectives.forEach((o, index) => {
         const nextObjKey = activeObjectives[index + 1] ? activeObjectives[index + 1].key : null;
+        const format = getObjectiveFormat(student, o.key);
+
+        const entryRowHTML = format === 'accuracy' ? `
+          <div class="status-prompt-row">
+            <div class="numeric-entry-row">
+              <label>Correct:</label>
+              <input type="number" min="0" id="numerator_${student.id}_${o.key}" oninput="handleNumericEntryInput('${student.id}', '${o.key}')">
+              <label>Out of:</label>
+              <input type="number" min="0" id="denominator_${student.id}_${o.key}" oninput="handleNumericEntryInput('${student.id}', '${o.key}')">
+            </div>
+            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="toggleAbsentPill('${student.id}', '${o.key}')">Absent</button>
+          </div>
+        ` : format === 'tally' ? `
+          <div class="status-prompt-row">
+            <div class="numeric-entry-row">
+              <label>Tally:</label>
+              <input type="number" min="0" id="numerator_${student.id}_${o.key}" oninput="handleNumericEntryInput('${student.id}', '${o.key}')">
+            </div>
+            <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="toggleAbsentPill('${student.id}', '${o.key}')">Absent</button>
+          </div>
+        ` : `
+          <div class="status-prompt-row">
+            <div class="status-pill-group">
+              <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">Yes</button>
+              <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">No</button>
+              <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">No Opportunity</button>
+              <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">Absent</button>
+            </div>
+          </div>
+        `;
 
         cardsHTML += `
           <div class="objective-card" id="card_${student.id}_${o.key}">
-            <div class="obj-breadcrumbs">
-              ${o.gNum} &bull; ${o.objNum} &bull; ${escapeHtml(o.domain)}
-              <span class="saved-badge" id="badge_${student.id}_${o.key}">✓ Logged</span>
+            <div class="obj-breadcrumbs flex-between">
+              <span>${o.gNum} &bull; ${o.objNum} &bull; ${escapeHtml(o.domain)}
+                <span class="saved-badge" id="badge_${student.id}_${o.key}">‚úì Logged</span>
+              </span>
+              ${renderFlagIconHTML(student.id, o.key, student.iep_version || 1)}
             </div>
 
             <div class="obj-text">${escapeHtml(o.text)}</div>
 
             <input type="hidden" id="status_input_${student.id}_${o.key}" value="">
 
-            <div class="status-prompt-row">
-              <div class="status-pill-group">
-                <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Yes" onclick="selectStatusOption('${student.id}', '${o.key}', 'Yes')">Yes</button>
-                <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No" onclick="selectStatusOption('${student.id}', '${o.key}', 'No')">No</button>
-                <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="No Opportunity" onclick="selectStatusOption('${student.id}', '${o.key}', 'No Opportunity')">No Opportunity</button>
-                <button type="button" class="status-pill pill-${student.id}-${o.key}" data-value="Absent" onclick="selectStatusOption('${student.id}', '${o.key}', 'Absent')">Absent</button>
-              </div>
-            </div>
+            ${entryRowHTML}
 
             <div class="notes-log-row">
               <div class="prompts-container">
@@ -1780,7 +2117,7 @@
       const badgeEl = document.getElementById(`collapsed_badge_${studentId}`);
       if (collapsedEl) collapsedEl.style.display = 'flex';
       if (expandedEl) expandedEl.style.display = 'none';
-      if (badgeEl && logged) badgeEl.textContent = '✓ Logged';
+      if (badgeEl && logged) badgeEl.textContent = '‚úì Logged';
     }
 
     function expandStudentCard(studentId) {
@@ -1818,9 +2155,17 @@
         const badge = document.getElementById(`badge_${studentId}_${objKey}`);
         const promptsEl = document.getElementById(`prompts_${studentId}_${objKey}`);
         const notesEl = document.getElementById(`notes_${studentId}_${objKey}`);
+        const numeratorEl = document.getElementById(`numerator_${studentId}_${objKey}`);
+        const denominatorEl = document.getElementById(`denominator_${studentId}_${objKey}`);
 
-        if (entry.status) {
+        if (entry.status === 'Absent') {
+          applyStatusToObjective(studentId, objKey, 'Absent');
+          if (numeratorEl) numeratorEl.disabled = true;
+          if (denominatorEl) denominatorEl.disabled = true;
+        } else if (entry.status) {
           applyStatusToObjective(studentId, objKey, entry.status);
+          if (numeratorEl && entry.numerator !== null && entry.numerator !== undefined) numeratorEl.value = entry.numerator;
+          if (denominatorEl && entry.denominator !== null && entry.denominator !== undefined) denominatorEl.value = entry.denominator;
         }
         if (promptsEl && entry.prompts !== null) promptsEl.value = entry.prompts;
         if (notesEl && entry.notes) notesEl.value = entry.notes;
@@ -1831,7 +2176,7 @@
       if (data.length > 0) {
         const logAllBtn = document.getElementById(`logall_${studentId}`);
         if (logAllBtn) {
-          logAllBtn.innerText = '✓ Logged All';
+          logAllBtn.innerText = '‚úì Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
       }
@@ -1853,12 +2198,16 @@
         const objKey = input.id.slice(`status_input_${studentId}_`.length);
         const promptsVal = document.getElementById(`prompts_${studentId}_${objKey}`)?.value || '0';
         const notesVal = document.getElementById(`notes_${studentId}_${objKey}`)?.value || '';
+        const numeratorEl = document.getElementById(`numerator_${studentId}_${objKey}`);
+        const denominatorEl = document.getElementById(`denominator_${studentId}_${objKey}`);
+        const numeratorVal = (numeratorEl && numeratorEl.value !== '') ? Number(numeratorEl.value) : null;
+        const denominatorVal = (denominatorEl && denominatorEl.value !== '') ? Number(denominatorEl.value) : null;
 
-        entries.push({ objKey, statusVal, promptsVal, notesVal });
+        entries.push({ objKey, statusVal, promptsVal, notesVal, numeratorVal, denominatorVal });
       });
 
       if (entries.length === 0) {
-        alert('Please select a status option (Yes, No, No Opportunity, or Absent) for at least one objective before logging.');
+        alert('Please select a status, enter a value, or mark Absent for at least one objective before logging.');
         return;
       }
 
@@ -1905,6 +2254,8 @@
           status: entry.statusVal,
           prompts: String(entry.promptsVal),
           notes: entry.notesVal,
+          numerator: entry.numeratorVal,
+          denominator: entry.denominatorVal,
           logged_by: currentUserEmail,
           iep_version: iepVersion,
           period: activePeriod
@@ -1928,7 +2279,7 @@
 
       if (failedObjKeys.length === 0) {
         if (logAllBtn) {
-          logAllBtn.innerText = '✓ Logged All';
+          logAllBtn.innerText = '‚úì Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
         collapseStudentCard(studentId, true);
@@ -1957,7 +2308,7 @@
           <div class="modal-content">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
             </div>
 
             <div class="tab-buttons">
@@ -1975,7 +2326,7 @@
                 ${hasExistingGoals ? `
                   <div class="flex-between" style="margin-bottom:16px; align-items:flex-start; gap:16px;">
                     <p style="font-size:12px; color:var(--text-muted); margin:0;">
-                      Goals are locked once set, so historical data always stays tied to the goal it was actually logged against. To revise goals after an IEP meeting, use "Add New IEP Goals" — this archives the current goals and their data (viewable under "Past IEP Goals"), then clears the fields so you can paste in the new IEP.
+                      Goals are locked once set, so historical data always stays tied to the goal it was actually logged against. To revise goals after an IEP meeting, use "Add New IEP Goals" ‚Äî this archives the current goals and their data (viewable under "Past IEP Goals"), then clears the fields so you can paste in the new IEP.
                     </p>
                     <button type="button" class="danger sm" style="white-space:nowrap;" onclick="startNewIepGoals('${student.id}')">Add New IEP Goals</button>
                   </div>
@@ -1989,24 +2340,30 @@
                   <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
                   <label>Objective 1.1</label>
                   ${renderGoalFieldDisplay('edit_obj_1_1', student.obj_1_1, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_1_1_format', getObjectiveFormat(student, 'obj_1_1'))}
                   <label>Objective 1.2</label>
                   ${renderGoalFieldDisplay('edit_obj_1_2', student.obj_1_2, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_1_2_format', getObjectiveFormat(student, 'obj_1_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
                   <label>Objective 2.1</label>
                   ${renderGoalFieldDisplay('edit_obj_2_1', student.obj_2_1, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_2_1_format', getObjectiveFormat(student, 'obj_2_1'))}
                   <label>Objective 2.2</label>
                   ${renderGoalFieldDisplay('edit_obj_2_2', student.obj_2_2, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_2_2_format', getObjectiveFormat(student, 'obj_2_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
                   <label>Objective 3.1</label>
                   ${renderGoalFieldDisplay('edit_obj_3_1', student.obj_3_1, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_3_1_format', getObjectiveFormat(student, 'obj_3_1'))}
                   <label>Objective 3.2</label>
                   ${renderGoalFieldDisplay('edit_obj_3_2', student.obj_3_2, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_3_2_format', getObjectiveFormat(student, 'obj_3_2'))}
                 </div>
 
                 <div class="goal-box">
@@ -2015,8 +2372,10 @@
                   ${renderGoalFieldDisplay('edit_goal_4_domain', student.goal_4_domain, hasExistingGoals)}
                   <label>Objective 4.1</label>
                   ${renderGoalFieldDisplay('edit_obj_4_1', student.obj_4_1, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_4_1_format', getObjectiveFormat(student, 'obj_4_1'))}
                   <label>Objective 4.2</label>
                   ${renderGoalFieldDisplay('edit_obj_4_2', student.obj_4_2, hasExistingGoals)}
+                  ${renderGoalFormatSelect('edit_obj_4_2_format', getObjectiveFormat(student, 'obj_4_2'))}
                 </div>
               </div>
 
@@ -2063,7 +2422,7 @@
 
                 <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
                 <p style="font-size:12px; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">
-                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard — click "Data Schedule" on the ${getOrdinalSuffix(1)}–${getOrdinalSuffix(5)} Hour dashboards, not here.
+                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard ‚Äî click "Data Schedule" on the ${getOrdinalSuffix(1)}‚Äì${getOrdinalSuffix(5)} Hour dashboards, not here.
                 </p>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                   ${[1, 2, 3, 4, 5].map(p => `
@@ -2105,7 +2464,7 @@
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-                    This permanently deletes the student and all of their data. If a student just had a schedule change, use "Manage Students in Class" to remove them from your class instead — don't delete them here.
+                    This permanently deletes the student and all of their data. If a student just had a schedule change, use "Manage Students in Class" to remove them from your class instead ‚Äî don't delete them here.
                   </p>
                   <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
                 </div>
@@ -2232,6 +2591,133 @@
         exclusionEl.innerHTML = exclusionHTML;
       }
 
+      const format = getObjectiveFormat(student, objKey);
+
+      // Tally Count is a raw occurrence count, not a pass/fail rate, so a
+      // pie breakdown doesn't mean anything for it ‚Äî show a note instead.
+      if (format === 'tally' && activeChartView === 'pie') {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px system-ui';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.fillText("Pie summary isn't available for Tally Count objectives.", canvas.width / 2, 100);
+        return;
+      }
+
+      if (format === 'accuracy') {
+        const evaluableData = data.filter(d => d.status === 'Logged' && d.denominator);
+
+        if (evaluableData.length === 0) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px system-ui';
+          ctx.fillStyle = '#64748b';
+          ctx.textAlign = 'center';
+          ctx.fillText('No evaluable entries logged for this objective yet.', canvas.width / 2, 100);
+          return;
+        }
+
+        if (activeChartView === 'pie') {
+          const correctSum = evaluableData.reduce((sum, d) => sum + (Number(d.numerator) || 0), 0);
+          const incorrectSum = evaluableData.reduce((sum, d) => sum + Math.max((Number(d.denominator) || 0) - (Number(d.numerator) || 0), 0), 0);
+
+          activeChartInstance = new Chart(canvas, {
+            type: 'pie',
+            data: {
+              labels: ['Correct', 'Incorrect'],
+              datasets: [{
+                data: [correctSum, incorrectSum],
+                backgroundColor: ['#16a34a', '#dc2626']
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom' },
+                datalabels: {
+                  color: '#fff',
+                  font: { weight: 'bold' },
+                  formatter: (value, ctx) => {
+                    const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = Math.round((value / sum) * 100) + '%';
+                    return value > 0 ? percentage : '';
+                  }
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
+          const values = evaluableData.map(d => Math.round(((Number(d.numerator) || 0) / Number(d.denominator)) * 100));
+
+          activeChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Accuracy %',
+                data: values,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: { min: 0, max: 100, ticks: { callback: value => value + '%' } }
+              },
+              plugins: { legend: { display: false }, datalabels: { display: false } }
+            }
+          });
+        }
+        return;
+      }
+
+      if (format === 'tally') {
+        const evaluableData = data.filter(d => d.status === 'Logged');
+
+        if (evaluableData.length === 0) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px system-ui';
+          ctx.fillStyle = '#64748b';
+          ctx.textAlign = 'center';
+          ctx.fillText('No evaluable entries logged for this objective yet.', canvas.width / 2, 100);
+          return;
+        }
+
+        const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
+        const values = evaluableData.map(d => Number(d.numerator) || 0);
+
+        activeChartInstance = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Tally Count',
+              data: values,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              fill: true,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { min: 0, ticks: { stepSize: 1 } } },
+            plugins: { legend: { display: false }, datalabels: { display: false } }
+          }
+        });
+        return;
+      }
+
       const evaluableData = data.filter(d => d.status === 'Yes' || d.status === 'No');
 
       if (evaluableData.length === 0) {
@@ -2346,6 +2832,7 @@
                 <th>Date</th>
                 <th>Objective</th>
                 <th>Status</th>
+                <th>Value</th>
                 <th>Prompts</th>
                 <th>Notes</th>
                 <th>Logged By</th>
@@ -2353,11 +2840,20 @@
               </tr>
             </thead>
             <tbody>
-              ${data.map(d => `
+              ${data.map(d => {
+                const format = getObjectiveFormat(student, d.objective_key);
+                let valueCell = '‚Äî';
+                if (format === 'accuracy' && d.status === 'Logged') {
+                  valueCell = `${escapeHtml(d.numerator)} / ${escapeHtml(d.denominator)}`;
+                } else if (format === 'tally' && d.status === 'Logged') {
+                  valueCell = escapeHtml(d.numerator);
+                }
+                return `
                 <tr>
                   <td>${new Date(d.created_at).toLocaleDateString()}</td>
                   <td>${escapeHtml(d.objective_key)}</td>
                   <td><strong>${escapeHtml(d.status)}</strong></td>
+                  <td>${valueCell}</td>
                   <td>${escapeHtml(d.prompts || '0')}</td>
                   <td>${escapeHtml(d.notes || '')}</td>
                   <td>${escapeHtml(d.logged_by || '')}</td>
@@ -2365,7 +2861,8 @@
                     <button class="danger sm" onclick="deleteProgressEntry('${d.id}', '${studentId}')">Delete</button>
                   </td>
                 </tr>
-              `).join('')}
+              `;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -2409,6 +2906,13 @@
         }
       });
 
+      // Tracking format selects stay on the page (and editable) regardless of
+      // whether the goal text itself is locked, so these always get saved.
+      ['obj_1_1', 'obj_1_2', 'obj_2_1', 'obj_2_2', 'obj_3_1', 'obj_3_2', 'obj_4_1', 'obj_4_2'].forEach(key => {
+        const formatEl = document.getElementById(`edit_${key}_format`);
+        if (formatEl) payload[`${key}_format`] = formatEl.value;
+      });
+
       const { error } = await supabaseClient.from('students').update(payload).eq('id', studentId);
 
       if (error) {
@@ -2418,34 +2922,88 @@
         closeModal();
         if (activeNav === 'caseload') loadCaseload();
         else if (activeNav === 'admin') loadAdminView();
+        else if (activeNav === 'students') loadStudentsView();
         else switchView(activePeriod);
       }
     }
 
+    // Basic info, case manager, and all 8 goals/objectives (with tracking
+    // format) are all configured on this one screen and saved together ‚Äî
+    // no second "now go fill in the goals" modal afterward.
     async function openCreateStudentModal(fromAdmin = false) {
+      const defaultCmUsername = fromAdmin ? '' : currentUserEmail.replace('@ahschools.us', '');
+
       const modalHTML = `
         <div class="modal-backdrop">
-          <div class="modal-content" style="max-width:500px;">
+          <div class="modal-content">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">Add New Student</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
             </div>
-            <form onsubmit="handleCreateStudent(event, ${fromAdmin})">
+            <form onsubmit="handleCreateStudent(event)">
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                 <div>
-                  <label>First Name</label>
-                  <input type="text" id="create_first_name" required>
+                  <label>First Name *</label>
+                  <input type="text" id="new_first_name" required>
                 </div>
                 <div>
-                  <label>Last Name</label>
-                  <input type="text" id="create_last_name" required>
+                  <label>Last Name *</label>
+                  <input type="text" id="new_last_name" required>
                 </div>
               </div>
+
               <label>Case Manager Email Username</label>
               <div class="email-input-wrapper">
-                <input type="text" id="create_cm_email" value="${escapeHtml(currentUserEmail.replace('@ahschools.us', ''))}">
+                <input type="text" id="new_cm_email" value="${escapeHtml(defaultCmUsername)}">
                 <div class="email-domain-tag">@ahschools.us</div>
               </div>
+
+              <p style="font-size:12px; color:var(--text-muted); margin:16px 0;">
+                Paste in this student's IEP goals and objectives below (optional ‚Äî you can also add these later). Choose how each objective will be tracked on the daily logging cards.
+              </p>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
+                <label>Objective 1.1</label>
+                ${renderGoalFieldDisplay('new_obj_1_1', '', false)}
+                ${renderGoalFormatSelect('new_obj_1_1_format', 'yes_no')}
+                <label>Objective 1.2</label>
+                ${renderGoalFieldDisplay('new_obj_1_2', '', false)}
+                ${renderGoalFormatSelect('new_obj_1_2_format', 'yes_no')}
+              </div>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
+                <label>Objective 2.1</label>
+                ${renderGoalFieldDisplay('new_obj_2_1', '', false)}
+                ${renderGoalFormatSelect('new_obj_2_1_format', 'yes_no')}
+                <label>Objective 2.2</label>
+                ${renderGoalFieldDisplay('new_obj_2_2', '', false)}
+                ${renderGoalFormatSelect('new_obj_2_2_format', 'yes_no')}
+              </div>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
+                <label>Objective 3.1</label>
+                ${renderGoalFieldDisplay('new_obj_3_1', '', false)}
+                ${renderGoalFormatSelect('new_obj_3_1_format', 'yes_no')}
+                <label>Objective 3.2</label>
+                ${renderGoalFieldDisplay('new_obj_3_2', '', false)}
+                ${renderGoalFormatSelect('new_obj_3_2_format', 'yes_no')}
+              </div>
+
+              <div class="goal-box">
+                <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
+                <label>Domain Name</label>
+                ${renderGoalFieldDisplay('new_goal_4_domain', '', false)}
+                <label>Objective 4.1</label>
+                ${renderGoalFieldDisplay('new_obj_4_1', '', false)}
+                ${renderGoalFormatSelect('new_obj_4_1_format', 'yes_no')}
+                <label>Objective 4.2</label>
+                ${renderGoalFieldDisplay('new_obj_4_2', '', false)}
+                ${renderGoalFormatSelect('new_obj_4_2_format', 'yes_no')}
+              </div>
+
               <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" class="outline" onclick="closeModal()">Cancel</button>
                 <button type="submit">Create Student</button>
@@ -2457,12 +3015,12 @@
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    async function handleCreateStudent(e, fromAdmin) {
+    async function handleCreateStudent(e) {
       e.preventDefault();
 
-      const firstName = document.getElementById('create_first_name')?.value.trim();
-      const lastName = document.getElementById('create_last_name')?.value.trim();
-      const cmEmail = formatUserEmailInput(document.getElementById('create_cm_email')?.value);
+      const firstName = document.getElementById('new_first_name')?.value.trim();
+      const lastName = document.getElementById('new_last_name')?.value.trim();
+      const cmEmail = formatUserEmailInput(document.getElementById('new_cm_email')?.value);
 
       const payload = {
         first_name: firstName,
@@ -2471,6 +3029,13 @@
         iep_version: 1
       };
 
+      ['obj_1_1', 'obj_1_2', 'obj_2_1', 'obj_2_2', 'obj_3_1', 'obj_3_2', 'goal_4_domain', 'obj_4_1', 'obj_4_2'].forEach(key => {
+        payload[key] = document.getElementById(`new_${key}`)?.value.trim() || null;
+      });
+      ['obj_1_1', 'obj_1_2', 'obj_2_1', 'obj_2_2', 'obj_3_1', 'obj_3_2', 'obj_4_1', 'obj_4_2'].forEach(key => {
+        payload[`${key}_format`] = document.getElementById(`new_${key}_format`)?.value || 'yes_no';
+      });
+
       const { data, error } = await supabaseClient.from('students').insert([payload]).select().single();
 
       if (error) {
@@ -2478,11 +3043,10 @@
       } else {
         await fetchAllStudents();
         closeModal();
-        if (fromAdmin) {
-          loadAdminView();
-        } else {
-          openStudentModal(data.id);
-        }
+        if (activeNav === 'caseload') loadCaseload();
+        else if (activeNav === 'admin') loadAdminView();
+        else if (activeNav === 'students') loadStudentsView();
+        else if (activePeriod) switchView(activePeriod);
       }
     }
 
@@ -2502,6 +3066,7 @@
         closeModal();
         if (activeNav === 'caseload') loadCaseload();
         else if (activeNav === 'admin') loadAdminView();
+        else if (activeNav === 'students') loadStudentsView();
         else switchView(activePeriod);
       }
     }
