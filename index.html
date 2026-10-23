@@ -284,9 +284,6 @@
         .replace(/'/g, '&#39;');
     }
 
-    // Safe to drop into onclick="fn('${...}')" — escapes JS string delimiters first,
-    // then HTML-escapes for the surrounding attribute. Use this (not escapeHtml) for
-    // any value passed as a quoted argument inside an inline event handler.
     function escapeForInlineHandler(value) {
       if (value === null || value === undefined) return '';
       return String(value)
@@ -298,10 +295,6 @@
         .replace(/"/g, '&quot;');
     }
 
-    // Once a student has any goal text set, goals render read-only (locked)
-    // instead of editable inputs — see startNewIepGoals for how they get
-    // unlocked again. Keeps historical progress data from ever silently
-    // ending up tied to goal text that's since been overwritten.
     function renderGoalFieldDisplay(id, value, locked) {
       if (locked) {
         const display = value ? escapeHtml(value) : '<span style="color:var(--text-muted); font-style:italic;">Empty</span>';
@@ -310,7 +303,6 @@
       return `<input type="text" id="${id}" value="${escapeHtml(value)}">`;
     }
 
-    // Update these each year once the district publishes the new school calendar.
     const TRIMESTER_RANGES = {
       1: { start: '2026-09-08', end: '2026-12-03' },
       2: { start: '2026-12-04', end: '2027-03-12' },
@@ -333,9 +325,6 @@
         if (nowISO >= startISO && nowISO <= endISO) return num;
       }
 
-      // Today doesn't fall inside any configured range — TRIMESTER_RANGES is
-      // out of date for the current school year. Fall back to whichever
-      // trimester is chronologically closest rather than always picking 1st.
       let closestNum = 1;
       let closestDistance = Infinity;
       [1, 2, 3].forEach(num => {
@@ -365,40 +354,25 @@
       return WEEKDAY_ABBRS[new Date().getDay()];
     }
 
-    // A student only appears in a given period's roster on the days they're
-    // actually scheduled into that class. No days saved yet (null/empty)
-    // means "every day", so existing students keep showing up as before
-    // until someone deliberately narrows their schedule.
     function isStudentScheduledTodayForPeriod(student, periodNum) {
       const days = student[`teacher_p${periodNum}_days`];
       if (!days || !Array.isArray(days) || days.length === 0) return true;
       return days.includes(getTodayWeekdayAbbr());
     }
 
-    // The data-collection rotation alternates which group (A or B) is
-    // expected to be tracked on Monday/Wednesday vs Tuesday/Thursday each
-    // week, flipping automatically every week from this anchor date (any
-    // Monday works as the anchor — it never goes stale the way a school
-    // calendar does, since it's just used to compute week parity).
     const ROTATION_ANCHOR_DATE = '2026-09-08';
 
-    // Rotation group is per class period — the same student can be Group A
-    // for one teacher's period and Group B (or not in the rotation at all)
-    // for another's, so this always needs the period it's being checked for.
     function isStudentActiveInRotationToday(student, periodNum) {
-      if (!periodNum) return true; // no period context (e.g. caseload view) — rotation doesn't apply there
+      if (!periodNum) return true;
 
-      // The whole hour can be switched to "Daily Data" from the dashboard
-      // toggle, which overrides every student's individual group for that
-      // period without having to clear each one out in Data Schedule.
       if (student[`teacher_p${periodNum}_alternating_enabled`] === false) return true;
 
       const group = student[`teacher_p${periodNum}_rotation_group`];
-      if (!group) return true; // not part of the rotation — always active
+      if (!group) return true;
 
       const todayAbbr = getTodayWeekdayAbbr();
       if (todayAbbr !== 'Mon' && todayAbbr !== 'Tue' && todayAbbr !== 'Wed' && todayAbbr !== 'Thu') {
-        return true; // rotation only alternates Mon-Thu; Fri/weekend aren't restricted
+        return true;
       }
 
       const [ay, am, ad] = ROTATION_ANCHOR_DATE.split('-').map(Number);
@@ -419,13 +393,6 @@
       return group === activeGroupToday;
     }
 
-    // Period-wide mode: on means each student's individual Group A/B (or
-    // "no rotation") setting from Data Schedule applies as normal; off means
-    // the whole hour is tracked daily regardless of those settings. Stored
-    // per-student (like teacher_pN itself) since there's no separate
-    // per-period record — undefined/null defaults to on so existing data
-    // keeps working. If any student in the roster has been explicitly
-    // switched off, the hour reads as off.
     function isAlternatingEnabledForPeriod(periodNum) {
       const roster = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
       if (roster.length === 0) return true;
@@ -435,7 +402,7 @@
     async function setAlternatingMode(periodNum, enabled) {
       const roster = allStudents.filter(s => s[`teacher_p${periodNum}`] === currentUserEmail);
       if (roster.length === 0) return;
-      if (isAlternatingEnabledForPeriod(periodNum) === enabled) return; // already on this side
+      if (isAlternatingEnabledForPeriod(periodNum) === enabled) return;
 
       const dailyBtn = document.getElementById(`daily-toggle-btn-${periodNum}`);
       const altBtn = document.getElementById(`alternating-toggle-btn-${periodNum}`);
@@ -466,10 +433,6 @@
       return lower + 'ing';
     }
 
-    // Only Yes/No entries carry a meaningful prompt count — No Opportunity
-    // and Absent logs are excluded here the same way they're excluded from
-    // the percent calculation. "3+" is counted as 3 prompts since it's the
-    // floor of that bucket, not an exact value.
     function computeAveragePrompts(entries) {
       const values = entries
         .filter(e => e.status === 'Yes' || e.status === 'No')
@@ -497,14 +460,11 @@
       if (/^did\s+/i.test(rawText)) {
         text = rawText.replace(/^did\s+/i, '');
       } else if (nameWillPattern.test(rawText)) {
-        // e.g. "Sam will independently raise his hand..."
         text = rawText.replace(nameWillPattern, '');
       } else if (/^will\s+/i.test(rawText)) {
-        // e.g. "Will independently raise his hand..."
         text = rawText.replace(/^will\s+/i, '');
       }
 
-      // A recognized pattern lets us weave the objective into a natural sentence.
       if (text !== null) {
         text = text.trim();
 
@@ -523,9 +483,6 @@
         return `${firstName} is ${gerund}${rest ? ' ' + rest : ''}${promptsClause} in ${percent}% of observed occasions.`;
       }
 
-      // Any other wording: don't guess at grammar — just quote the objective
-      // as written alongside the percentage, so every objective produces a
-      // usable draft sentence regardless of how it's phrased.
       const cleanText = rawText.replace(/\?\s*$/, '').trim();
       return `${firstName} met the objective "${cleanText}"${promptsClause} in ${percent}% of observed occasions.`;
     }
@@ -554,18 +511,6 @@
       return `${num}th`;
     }
 
-    // CSS-only masonry (column-based) causes cards to visually overlap once
-    // content height varies a lot, since the browser balances columns before
-    // it knows every card's true rendered height. This lays cards out with
-    // real measured heights instead.
-    //
-    // Positions alone aren't enough, though: cards keep changing height after
-    // the initial layout (a "✓ Logged" badge appearing can wrap a line, a
-    // card collapses after logging, etc.), and any of those changes can leave
-    // stale positions behind if nothing re-triggers a relayout. Rather than
-    // guessing every moment a card might resize, a ResizeObserver watches
-    // every card directly and relayouts whenever any of them actually change
-    // size — so this never goes stale, no matter what causes the resize.
     let currentMasonryGrid = null;
     let masonryResizeObserver = null;
     let masonryRelayoutTimer = null;
@@ -613,9 +558,6 @@
       }, 30);
     }
 
-    // Call this once right after a .student-grid's HTML is in the DOM. It
-    // does the first layout pass and starts watching every card for future
-    // size changes so the layout keeps itself correct automatically.
     function activateMasonryGrid(containerEl) {
       if (masonryResizeObserver) {
         masonryResizeObserver.disconnect();
@@ -664,9 +606,6 @@
       renderDashboard();
       await fetchAllStudents();
 
-      // Everyone lands on 1st Hour by default, regardless of role — the
-      // dashboard teachers/paras actually log data on day-to-day. "My
-      // Caseload" is still reachable from the nav for whoever needs it.
       switchView(1);
     }
 
@@ -845,7 +784,7 @@
 
       activateMasonryGrid(document.querySelector('#main-view .student-grid'));
 
-      await Promise.all(myCaseload.map(student => restoreTeacherSavedState(student.id)));
+      await Promise.all(myCaseload.map(student => restoreTeacherSavedState(student.id, null)));
     }
 
     async function switchView(periodNum) {
@@ -862,9 +801,6 @@
         return (isTeacher || isPara) && isStudentScheduledTodayForPeriod(s, periodNum);
       });
 
-      // Gather the unique paraprofessionals assigned to this class period.
-      // Assignments are stored on each student's paras_pN field, so collect
-      // them across the students belonging to the class and avoid duplicates.
       const classStudents = allStudents.filter(s => {
         const isTeacherClassStudent = s[colName] === currentUserEmail;
         const studentParas = Array.isArray(s[paraColName]) ? s[paraColName] : [];
@@ -911,7 +847,7 @@
 
       activateMasonryGrid(document.querySelector('#main-view .student-grid'));
 
-      await Promise.all(periodRoster.map(student => restoreTeacherSavedState(student.id)));
+      await Promise.all(periodRoster.map(student => restoreTeacherSavedState(student.id, periodNum)));
     }
 
     async function callAdminFunction(action, payload) {
@@ -1069,9 +1005,6 @@
     async function handleSendPasswordReset(email) {
       const staffRow = allStaffMembers.find(s => s.email === email);
 
-      // Placeholder staff (added without an email invite) have no real Auth
-      // account yet, so a password-reset link would have nothing to reset.
-      // Send them a first-time invite instead — same button, right behavior.
       if (staffRow && !staffRow.has_login) {
         const redirectTo = window.location.origin + window.location.pathname;
         const result = await callAdminFunction('activate', { email, role: staffRow.role, redirectTo });
@@ -1197,10 +1130,6 @@
     let addExistingModalState = { periodNum: null, students: [] };
     let assignParaModalState = { periodNum: null, paras: [] };
 
-    // Everything a teacher can do to configure one hour — roster, the
-    // alternating-vs-daily data schedule, and para access — lives behind a
-    // single "Edit" button on that hour's dashboard, as tabs of one modal,
-    // rather than four separate buttons/modals.
     function openHourEditModal(periodNum) {
       const modalHTML = `
         <div class="modal-backdrop">
@@ -1355,11 +1284,6 @@
       }
     }
 
-    // Data Schedule tab: a Daily/Alternating toggle at the top, plus — only
-    // while Alternating is selected — the per-student editor for which days
-    // they're in class and which Group A/B they rotate on. Collapsed away
-    // entirely under Daily Data since those per-student settings are moot
-    // while the whole hour ignores rotation.
     function renderDataScheduleTab(periodNum) {
       const contentEl = document.getElementById('hourtab-content-schedule');
       if (!contentEl) return;
@@ -1729,10 +1653,6 @@
       openStudentModal(studentId);
     }
 
-    // Sets one objective's status pill/hidden input without triggering the
-    // Absent auto-fill below — used both by selectStatusOption itself and by
-    // restoreTeacherSavedState, which must be able to display a day's saved
-    // statuses exactly as recorded rather than cascading Absent over them.
     function applyStatusToObjective(studentId, objKey, selectedVal) {
       const input = document.getElementById(`status_input_${studentId}_${objKey}`);
       if (!input) return;
@@ -1751,9 +1671,6 @@
       applyStatusToObjective(studentId, objKey, selectedVal);
 
       if (selectedVal === 'Absent') {
-        // Marking one objective Absent means the student wasn't there for
-        // any of them today — fill the rest in so staff don't have to click
-        // through each objective individually.
         const statusInputs = document.querySelectorAll(`[id^="status_input_${studentId}_"]`);
         statusInputs.forEach(input => {
           const otherObjKey = input.id.slice(`status_input_${studentId}_`.length);
@@ -1826,10 +1743,6 @@
         cardsHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No active objectives set for this student.</p>`;
       }
 
-      // Students outside today's active data-collection rotation group start
-      // collapsed to just their name (no badge yet — nothing's been logged),
-      // so the roster only draws attention to who you're actually expected
-      // to track today. Still clickable to expand and log anyway.
       const startsCollapsed = !isStudentActiveInRotationToday(student, periodNum);
 
       return `
@@ -1861,14 +1774,6 @@
       `;
     }
 
-    // Once a student's objectives are fully logged for the day, their card
-    // collapses to just a name + checkmark to keep the roster clean — click
-    // it to expand back and review/edit. Resets naturally each day since
-    // restoreTeacherSavedState only looks at today's entries. Cards can also
-    // start collapsed because a student is outside today's rotation group
-    // (see renderStudentDashboardCard) — pass logged:true only when there's
-    // actually something logged, so an untouched off-rotation card stays a
-    // plain name with no checkmark until real data exists.
     function collapseStudentCard(studentId, logged) {
       const collapsedEl = document.getElementById(`collapsed_${studentId}`);
       const expandedEl = document.getElementById(`expanded_${studentId}`);
@@ -1885,24 +1790,26 @@
       if (expandedEl) expandedEl.style.display = 'block';
     }
 
-    async function restoreTeacherSavedState(studentId) {
+    async function restoreTeacherSavedState(studentId, periodNum) {
       const { startISO, endISO } = getLocalDayBoundsISO();
       const student = allStudents.find(s => s.id === studentId);
 
-      // Scoped to the current viewer only — a student can be logged
-      // independently by multiple staff (e.g. different periods), and each
-      // person should only see their own entries reflected back, not a
-      // coworker's. Also scoped to the student's current IEP version, so a
-      // freshly-reset goal never appears pre-filled with data from before
-      // the goals changed.
-      const { data, error } = await supabaseClient
+      // Query for data logged today for this student, period, and IEP version
+      let query = supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
-        .eq('logged_by', currentUserEmail)
         .eq('iep_version', student?.iep_version || 1)
         .gte('created_at', startISO)
         .lte('created_at', endISO);
+
+      if (periodNum !== null && periodNum !== undefined) {
+        query = query.eq('period', periodNum);
+      } else {
+        query = query.eq('logged_by', currentUserEmail);
+      }
+
+      const { data, error } = await query;
 
       if (error || !data) return;
 
@@ -1962,15 +1869,22 @@
       const student = allStudents.find(s => s.id === studentId);
       const iepVersion = student?.iep_version || 1;
 
-      const { data: existingRows, error: fetchError } = await supabaseClient
+      let fetchQuery = supabaseClient
         .from('progress_data')
         .select('id, objective_key')
         .eq('student_id', studentId)
-        .eq('logged_by', currentUserEmail)
         .eq('iep_version', iepVersion)
         .gte('created_at', startISO)
         .lte('created_at', endISO)
         .in('objective_key', entries.map(e => e.objKey));
+
+      if (activePeriod !== null && activePeriod !== undefined) {
+        fetchQuery = fetchQuery.eq('period', activePeriod);
+      } else {
+        fetchQuery = fetchQuery.eq('logged_by', currentUserEmail);
+      }
+
+      const { data: existingRows, error: fetchError } = await fetchQuery;
 
       if (fetchError) {
         console.error("Supabase Error Details:", fetchError);
@@ -1992,7 +1906,8 @@
           prompts: String(entry.promptsVal),
           notes: entry.notesVal,
           logged_by: currentUserEmail,
-          iep_version: iepVersion
+          iep_version: iepVersion,
+          period: activePeriod
         };
 
         const existingId = existingIdByObjKey[entry.objKey];
@@ -2187,7 +2102,6 @@
                   <div class="email-domain-tag">@ahschools.us</div>
                 </div>
 
-
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
@@ -2198,28 +2112,24 @@
               </div>
 
               <div id="tab-content-report" class="tab-content">
-                <label>Trimester</label>
-                <select id="report-trimester-select" onchange="renderProgressReportContent('${student.id}')">
-                  <option value="1" ${defaultTri === 1 ? 'selected' : ''}>Trimester 1</option>
-                  <option value="2" ${defaultTri === 2 ? 'selected' : ''}>Trimester 2</option>
-                  <option value="3" ${defaultTri === 3 ? 'selected' : ''}>Trimester 3</option>
-                </select>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:-8px;">
-                  These are draft sentences based on your logged data — review and tweak the wording before pasting into the official report. The goal-level summary line and progress checkbox still need to be filled in by hand.
-                </p>
-                <div id="report-content" style="margin-top:16px;">Loading...</div>
+                <div style="margin-bottom:16px; display:flex; align-items:center; gap:12px;">
+                  <label style="margin:0; font-size:13px; font-weight:600;">Select Trimester:</label>
+                  <select id="report-trimester-select" style="width:auto; margin:0;" onchange="renderProgressReportContent('${student.id}')">
+                    <option value="1" ${defaultTri === 1 ? 'selected' : ''}>Trimester 1 (${TRIMESTER_RANGES[1].start} to ${TRIMESTER_RANGES[1].end})</option>
+                    <option value="2" ${defaultTri === 2 ? 'selected' : ''}>Trimester 2 (${TRIMESTER_RANGES[2].start} to ${TRIMESTER_RANGES[2].end})</option>
+                    <option value="3" ${defaultTri === 3 ? 'selected' : ''}>Trimester 3 (${TRIMESTER_RANGES[3].start} to ${TRIMESTER_RANGES[3].end})</option>
+                  </select>
+                </div>
+                <div id="report-content">Loading...</div>
               </div>
 
               <div id="tab-content-pastgoals" class="tab-content">
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  Every past set of IEP goals for this student, most recent first, along with a lifetime summary of the data logged against them. Read-only — these are closed out and can't be edited.
-                </p>
-                <div id="past-goals-content">Loading...</div>
+                <div id="past-goals-content">Loading past goals...</div>
               </div>
 
-              <div class="flex-between" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
-                <div></div>
-                <button type="submit" class="success">Save Changes</button>
+              <div id="modal-save-footer" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light); display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="outline" onclick="closeModal()">Cancel</button>
+                <button type="submit">Save Changes</button>
               </div>
 
             </form>
@@ -2230,242 +2140,55 @@
       document.getElementById('modal-root').innerHTML = modalHTML;
     }
 
-    function switchModalTab(tabName, studentId = null) {
+    function switchModalTab(tabName, studentId) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
       document.getElementById(`tab-btn-${tabName}`)?.classList.add('active');
       document.getElementById(`tab-content-${tabName}`)?.classList.add('active');
 
-      if (tabName === 'data' && studentId) {
-        renderObjectiveChart(studentId);
+      const footer = document.getElementById('modal-save-footer');
+      if (footer) {
+        footer.style.display = (tabName === 'report' || tabName === 'pastgoals' || tabName === 'data') ? 'none' : 'flex';
       }
 
+      if (tabName === 'data' && studentId) {
+        renderObjectiveChart(studentId);
+        renderDataHistoryTable(studentId);
+      }
       if (tabName === 'report' && studentId) {
         renderProgressReportContent(studentId);
       }
-
       if (tabName === 'pastgoals' && studentId) {
         renderPastIepGoals(studentId);
       }
     }
 
-    function setChartView(view, studentId) {
-      activeChartView = view;
-      document.getElementById('chartview-line-btn')?.classList.toggle('selected', view === 'line');
-      document.getElementById('chartview-pie-btn')?.classList.toggle('selected', view === 'pie');
+    function setChartView(viewType, studentId) {
+      activeChartView = viewType;
+
+      const lineBtn = document.getElementById('chartview-line-btn');
+      const pieBtn = document.getElementById('chartview-pie-btn');
+
+      if (viewType === 'line') {
+        lineBtn?.classList.add('selected');
+        pieBtn?.classList.remove('selected');
+      } else {
+        pieBtn?.classList.add('selected');
+        lineBtn?.classList.remove('selected');
+      }
+
       renderObjectiveChart(studentId);
-    }
-
-    function closeModal() {
-      if (activeChartInstance) {
-        activeChartInstance.destroy();
-        activeChartInstance = null;
-      }
-      document.getElementById('modal-root').innerHTML = '';
-    }
-
-    async function saveStudentChanges(e, studentId) {
-      e.preventDefault();
-
-      const updatedStudent = {
-        first_name: document.getElementById('edit_first_name')?.value.trim(),
-        last_name: document.getElementById('edit_last_name')?.value.trim(),
-        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email')?.value),
-
-        teacher_p1: formatUserEmailInput(document.getElementById('edit_teacher_p1')?.value),
-        teacher_p2: formatUserEmailInput(document.getElementById('edit_teacher_p2')?.value),
-        teacher_p3: formatUserEmailInput(document.getElementById('edit_teacher_p3')?.value),
-        teacher_p4: formatUserEmailInput(document.getElementById('edit_teacher_p4')?.value),
-        teacher_p5: formatUserEmailInput(document.getElementById('edit_teacher_p5')?.value),
-
-        paras_p1: parseParaUsernames(document.getElementById('edit_paras_p1')?.value),
-        paras_p2: parseParaUsernames(document.getElementById('edit_paras_p2')?.value),
-        paras_p3: parseParaUsernames(document.getElementById('edit_paras_p3')?.value),
-        paras_p4: parseParaUsernames(document.getElementById('edit_paras_p4')?.value),
-        paras_p5: parseParaUsernames(document.getElementById('edit_paras_p5')?.value)
-      };
-
-      // Goal fields only render as editable inputs when the student has no
-      // goals set yet (or right after "Add New IEP Goals" clears them) — if
-      // they're locked and showing as read-only text instead, these ids
-      // won't exist in the DOM, so leave them out of the update entirely
-      // rather than saving over them.
-      if (document.getElementById('edit_obj_1_1')) {
-        updatedStudent.obj_1_1 = document.getElementById('edit_obj_1_1')?.value.trim() || null;
-        updatedStudent.obj_1_2 = document.getElementById('edit_obj_1_2')?.value.trim() || null;
-        updatedStudent.obj_2_1 = document.getElementById('edit_obj_2_1')?.value.trim() || null;
-        updatedStudent.obj_2_2 = document.getElementById('edit_obj_2_2')?.value.trim() || null;
-        updatedStudent.obj_3_1 = document.getElementById('edit_obj_3_1')?.value.trim() || null;
-        updatedStudent.obj_3_2 = document.getElementById('edit_obj_3_2')?.value.trim() || null;
-        updatedStudent.goal_4_domain = document.getElementById('edit_goal_4_domain')?.value.trim() || null;
-        updatedStudent.obj_4_1 = document.getElementById('edit_obj_4_1')?.value.trim() || null;
-        updatedStudent.obj_4_2 = document.getElementById('edit_obj_4_2')?.value.trim() || null;
-      }
-
-      const { error } = await supabaseClient
-        .from('students')
-        .update(updatedStudent)
-        .eq('id', studentId);
-
-      if (error) {
-        console.error('Error updating student:', error);
-        alert('Error saving student details: ' + error.message);
-      } else {
-        alert('Student details saved successfully!');
-        closeModal();
-        await fetchAllStudents();
-        if (activeNav === 'caseload') {
-          loadCaseload();
-        } else if (activeNav === 'admin') {
-          loadAdminView();
-        } else {
-          switchView(activePeriod);
-        }
-      }
-    }
-
-    async function openCreateStudentModal(fromAdmin = false) {
-      const defaultCmUsername = fromAdmin ? '' : currentUserEmail.replace('@ahschools.us', '');
-
-      const modalHTML = `
-        <div class="modal-backdrop">
-          <div class="modal-content">
-            <div class="flex-between" style="margin-bottom:12px;">
-              <h2 style="margin:0;">Add New Student</h2>
-              <button class="danger sm" onclick="closeModal()">✕ Close</button>
-            </div>
-
-            <form onsubmit="handleCreateStudent(event)">
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                <div>
-                  <label>First Name *</label>
-                  <input type="text" id="new_first_name" required>
-                </div>
-                <div>
-                  <label>Last Name *</label>
-                  <input type="text" id="new_last_name" required>
-                </div>
-              </div>
-
-              <label>Case Manager Email Username</label>
-              <div class="email-input-wrapper">
-                <input type="text" id="new_cm_email" value="${escapeHtml(defaultCmUsername)}">
-                <div class="email-domain-tag">@ahschools.us</div>
-              </div>
-
-              <div class="flex-between" style="margin-top:20px;">
-                <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="success">Create Student</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-root').innerHTML = modalHTML;
-    }
-
-    async function handleCreateStudent(e) {
-      e.preventDefault();
-      const firstName = document.getElementById('new_first_name').value.trim();
-      const lastName = document.getElementById('new_last_name').value.trim();
-      const cmEmail = formatUserEmailInput(document.getElementById('new_cm_email').value);
-
-      const { data, error } = await supabaseClient
-        .from('students')
-        .insert([{
-          first_name: firstName,
-          last_name: lastName,
-          case_manager_email: cmEmail
-        }])
-        .select();
-
-      if (error) {
-        console.error('Error creating student:', error);
-        alert('Error creating student: ' + error.message);
-      } else {
-        closeModal();
-        await fetchAllStudents();
-        if (activeNav === 'caseload') {
-          loadCaseload();
-        } else if (activeNav === 'admin') {
-          loadAdminView();
-        } else if (activePeriod) {
-          switchView(activePeriod);
-        }
-      }
-    }
-
-    async function deleteStudent(studentId) {
-      const student = allStudents.find(s => s.id === studentId);
-      const studentName = student ? `${student.first_name} ${student.last_name}` : 'this student';
-
-      if (!confirm(`This will PERMANENTLY delete ${studentName} and ALL of their data — goals, objectives, and every logged data point — from the entire system. This cannot be undone.\n\nIf ${studentName} just had a schedule change, close this and use "Manage Students in Class" to remove them from your class instead.\n\nAre you sure you want to permanently delete ${studentName}?`)) {
-        return;
-      }
-
-      const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
-      if (error) {
-        alert('Error deleting student: ' + error.message);
-      } else {
-        closeModal();
-        await fetchAllStudents();
-        if (activeNav === 'caseload') {
-          loadCaseload();
-        } else if (activeNav === 'admin') {
-          loadAdminView();
-        } else if (activePeriod) {
-          switchView(activePeriod);
-        }
-      }
-    }
-
-    function renderChartExclusionCounters(data) {
-      const counterEl = document.getElementById('chart-exclusion-counters');
-      if (!counterEl) return;
-
-      const noOppCount = data.filter(d => d.status === 'No Opportunity').length;
-      const absentCount = data.filter(d => d.status === 'Absent').length;
-      const badgeStyle = 'font-size:11px; font-weight:600; color:#fff; padding:3px 8px; border-radius:10px; white-space:nowrap;';
-
-      counterEl.innerHTML = `
-        <div style="${badgeStyle} background:#f59e0b;">No Opportunity: ${noOppCount}</div>
-        <div style="${badgeStyle} background:#64748b;">Absent: ${absentCount}</div>
-      `;
-    }
-
-    function renderDataTabObjectiveSummary(student, objKey, entries) {
-      const summaryEl = document.getElementById('data-tab-objective-summary');
-      if (!summaryEl) return;
-
-      const objectiveText = student?.[objKey] || '';
-      const yesCount = entries.filter(e => e.status === 'Yes').length;
-      const noCount = entries.filter(e => e.status === 'No').length;
-      const total = yesCount + noCount;
-
-      if (total === 0) {
-        summaryEl.innerHTML = `
-          <div class="obj-text">${escapeHtml(objectiveText)}</div>
-          <p style="color:var(--text-muted); font-size:13px; font-style:italic; margin-top:4px;">No Yes/No data logged yet for this objective.</p>
-        `;
-        return;
-      }
-
-      const percent = Math.round((yesCount / total) * 100);
-      const avgPrompts = computeAveragePrompts(entries);
-      const sentence = generateProgressSentence(objectiveText, student.first_name, percent, avgPrompts);
-
-      summaryEl.innerHTML = `
-        <div class="obj-text">${escapeHtml(objectiveText)}</div>
-        <p style="font-size:13px; color:var(--text-muted); margin:4px 0 8px;">${percent}% (${yesCount} of ${total} observed occasions, all-time)</p>
-        <textarea readonly style="width:100%; min-height:50px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
-      `;
     }
 
     async function renderObjectiveChart(studentId) {
       const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
-      const historyTableEl = document.getElementById('data-history-table');
       const student = allStudents.find(s => s.id === studentId);
+
+      const summaryEl = document.getElementById('data-tab-objective-summary');
+      if (summaryEl && student) {
+        summaryEl.innerHTML = `<div style="font-weight:600; font-size:14px;">Full Objective Wording:</div><div style="color:var(--text-muted); font-size:13px; margin-top:2px;">${escapeHtml(student[objKey]) || 'No text entered'}</div>`;
+      }
 
       const { data, error } = await supabaseClient
         .from('progress_data')
@@ -2475,101 +2198,63 @@
         .eq('iep_version', student?.iep_version || 1)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        if (historyTableEl) historyTableEl.innerHTML = '<p style="color:red;">Failed to load history data.</p>';
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        if (historyTableEl) historyTableEl.innerHTML = '<p style="color:var(--text-muted);">No logs found for this objective.</p>';
-        if (activeChartInstance) activeChartInstance.destroy();
-        renderChartExclusionCounters([]);
-        renderDataTabObjectiveSummary(student, objKey, []);
-        return;
-      }
-
-      renderChartExclusionCounters(data);
-      renderDataTabObjectiveSummary(student, objKey, data);
-
-      // Only show actual Yes/No responses in Logged Data History.
-      // No Opportunity and Absent remain saved but are hidden from this table.
-      const historyRows = data.filter(
-        row => row.status === 'Yes' || row.status === 'No'
-      );
-
-      if (historyRows.length === 0) {
-        if (historyTableEl) {
-          historyTableEl.innerHTML =
-            '<p style="color:var(--text-muted);">No Yes/No entries to display.</p>';
-        }
-      } else {
-        let tableHtml = `
-          <table>
-            <thead>
-              <tr>
-                <th>Date / Time</th>
-                <th>Status</th>
-                <th>Prompts</th>
-                <th>Notes</th>
-                <th>Logged By</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        historyRows.slice().reverse().forEach(row => {
-          const d = new Date(row.created_at);
-          tableHtml += `
-            <tr>
-              <td>${d.toLocaleDateString()} ${d.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</td>
-              <td><strong>${escapeHtml(row.status)}</strong></td>
-              <td>${escapeHtml(row.prompts) || '0'}</td>
-              <td>${escapeHtml(row.notes)}</td>
-              <td>${escapeHtml(row.logged_by)}</td>
-            </tr>
-          `;
-        });
-
-        tableHtml += `</tbody></table>`;
-
-        if (historyTableEl) {
-          historyTableEl.innerHTML = tableHtml;
-        }
-      }
-
-      const ctx = document.getElementById('progress-chart-canvas')?.getContext('2d');
-      if (!ctx) return;
+      const canvas = document.getElementById('progress-chart-canvas');
+      if (!canvas) return;
 
       if (activeChartInstance) {
         activeChartInstance.destroy();
       }
 
+      const exclusionEl = document.getElementById('chart-exclusion-counters');
+      if (exclusionEl) exclusionEl.innerHTML = '';
+
+      if (error || !data || data.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px system-ui';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data logged for this objective yet.', canvas.width / 2, 100);
+        return;
+      }
+
+      const noOppCount = data.filter(d => d.status === 'No Opportunity').length;
+      const absentCount = data.filter(d => d.status === 'Absent').length;
+
+      if (exclusionEl) {
+        let exclusionHTML = '';
+        if (noOppCount > 0) {
+          exclusionHTML += `<span style="font-size:11px; font-weight:600; background:#f1f5f9; color:var(--text-muted); border:1px solid var(--border-card); border-radius:12px; padding:2px 8px;">No Opp: ${noOppCount}</span>`;
+        }
+        if (absentCount > 0) {
+          exclusionHTML += `<span style="font-size:11px; font-weight:600; background:#fee2e2; color:var(--danger); border:1px solid #fca5a5; border-radius:12px; padding:2px 8px;">Absent: ${absentCount}</span>`;
+        }
+        exclusionEl.innerHTML = exclusionHTML;
+      }
+
+      const evaluableData = data.filter(d => d.status === 'Yes' || d.status === 'No');
+
+      if (evaluableData.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px system-ui';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.fillText('No evaluable entries (Yes/No) logged for this objective yet.', canvas.width / 2, 100);
+        return;
+      }
+
       if (activeChartView === 'pie') {
-        // No Opportunity / Absent are excluded from the pie itself — they're
-        // not instances of the behavior occurring or not, so mixing them
-        // into the Yes/No slices would understate the real success rate.
-        // They're surfaced instead as plain counters (see
-        // renderChartExclusionCounters) over the chart.
-        const statusOrder = ['Yes', 'No'];
-        const statusColors = {
-          'Yes': '#16a34a',
-          'No': '#dc2626'
-        };
-        const counts = statusOrder.map(s => data.filter(d => d.status === s).length);
+        const yesCount = evaluableData.filter(d => d.status === 'Yes').length;
+        const noCount = evaluableData.filter(d => d.status === 'No').length;
 
-        const pieTotal = counts.reduce((sum, c) => sum + c, 0);
-
-        activeChartInstance = new Chart(ctx, {
+        activeChartInstance = new Chart(canvas, {
           type: 'pie',
-          plugins: [ChartDataLabels],
           data: {
-            labels: statusOrder,
+            labels: ['Yes', 'No'],
             datasets: [{
-              data: counts,
-              backgroundColor: statusOrder.map(s => statusColors[s])
+              data: [yesCount, noCount],
+              backgroundColor: ['#16a34a', '#dc2626']
             }]
           },
           options: {
@@ -2579,32 +2264,34 @@
               legend: { position: 'bottom' },
               datalabels: {
                 color: '#fff',
-                font: { weight: 'bold', size: 13 },
-                formatter: (value, context) => {
-                  if (pieTotal === 0 || value === 0) return '';
-                  const pct = Math.round((value / pieTotal) * 100);
-                  return `${context.chart.data.labels[context.dataIndex]}\n${pct}%`;
+                font: { weight: 'bold' },
+                formatter: (value, ctx) => {
+                  const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = Math.round((value / sum) * 100) + '%';
+                  return value > 0 ? percentage : '';
                 }
               }
             }
-          }
+          },
+          plugins: [ChartDataLabels]
         });
       } else {
-        const labels = data.map(d => new Date(d.created_at).toLocaleDateString());
-        const chartValues = data.map(d => (d.status === 'Yes' ? 1 : 0));
+        const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
+        const values = evaluableData.map(d => d.status === 'Yes' ? 100 : 0);
 
-        activeChartInstance = new Chart(ctx, {
+        activeChartInstance = new Chart(canvas, {
           type: 'line',
           data: {
-            labels: labels,
+            labels,
             datasets: [{
-              label: 'Success (1 = Yes, 0 = No / Other)',
-              data: chartValues,
+              label: 'Success (% Yes)',
+              data: values,
               borderColor: '#2563eb',
               backgroundColor: 'rgba(37, 99, 235, 0.1)',
               fill: true,
               tension: 0.2,
-              stepped: true
+              pointRadius: 5,
+              pointBackgroundColor: values.map(v => v === 100 ? '#16a34a' : '#dc2626')
             }]
           },
           options: {
@@ -2613,31 +2300,219 @@
             scales: {
               y: {
                 min: 0,
-                max: 1,
+                max: 100,
                 ticks: {
-                  stepSize: 1,
-                  callback: value => (value === 1 ? 'Yes' : 'No')
+                  callback: value => value + '%'
                 }
               }
+            },
+            plugins: {
+              legend: { display: false },
+              datalabels: { display: false }
             }
           }
         });
       }
     }
 
-    if (window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')) {
-      showingSetPasswordScreen = true;
-      renderSetPasswordScreen();
+    async function renderDataHistoryTable(studentId) {
+      const containerEl = document.getElementById('data-history-table');
+      if (!containerEl) return;
+
+      const student = allStudents.find(s => s.id === studentId);
+
+      const { data, error } = await supabaseClient
+        .from('progress_data')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('iep_version', student?.iep_version || 1)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        containerEl.innerHTML = '<p style="color:red;">Error loading logs.</p>';
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        containerEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No entries logged yet.</p>';
+        return;
+      }
+
+      containerEl.innerHTML = `
+        <div style="max-height:220px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Objective</th>
+                <th>Status</th>
+                <th>Prompts</th>
+                <th>Notes</th>
+                <th>Logged By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(d => `
+                <tr>
+                  <td>${new Date(d.created_at).toLocaleDateString()}</td>
+                  <td>${escapeHtml(d.objective_key)}</td>
+                  <td><strong>${escapeHtml(d.status)}</strong></td>
+                  <td>${escapeHtml(d.prompts || '0')}</td>
+                  <td>${escapeHtml(d.notes || '')}</td>
+                  <td>${escapeHtml(d.logged_by || '')}</td>
+                  <td>
+                    <button class="danger sm" onclick="deleteProgressEntry('${d.id}', '${studentId}')">Delete</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
-    supabaseClient.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        showingSetPasswordScreen = true;
-        renderSetPasswordScreen();
-      }
-    });
+    async function deleteProgressEntry(entryId, studentId) {
+      if (!confirm('Delete this logged entry?')) return;
 
-    window.addEventListener('DOMContentLoaded', initApp);
+      const { error } = await supabaseClient.from('progress_data').delete().eq('id', entryId);
+      if (error) {
+        alert('Error deleting entry: ' + error.message);
+      } else {
+        renderObjectiveChart(studentId);
+        renderDataHistoryTable(studentId);
+      }
+    }
+
+    async function saveStudentChanges(e, studentId) {
+      e.preventDefault();
+
+      const payload = {
+        first_name: document.getElementById('edit_first_name')?.value.trim(),
+        last_name: document.getElementById('edit_last_name')?.value.trim(),
+        case_manager_email: formatUserEmailInput(document.getElementById('edit_cm_email')?.value)
+      };
+
+      [1, 2, 3, 4, 5].forEach(p => {
+        const tVal = document.getElementById(`edit_teacher_p${p}`)?.value;
+        const pVal = document.getElementById(`edit_paras_p${p}`)?.value;
+
+        if (tVal !== undefined) payload[`teacher_p${p}`] = formatUserEmailInput(tVal);
+        if (pVal !== undefined) payload[`paras_p${p}`] = parseParaUsernames(pVal);
+      });
+
+      const objKeys = ['obj_1_1', 'obj_1_2', 'obj_2_1', 'obj_2_2', 'obj_3_1', 'obj_3_2', 'goal_4_domain', 'obj_4_1', 'obj_4_2'];
+      objKeys.forEach(key => {
+        const el = document.getElementById(`edit_${key}`);
+        if (el && el.tagName === 'INPUT') {
+          payload[key] = el.value;
+        }
+      });
+
+      const { error } = await supabaseClient.from('students').update(payload).eq('id', studentId);
+
+      if (error) {
+        alert('Error saving changes: ' + error.message);
+      } else {
+        await fetchAllStudents();
+        closeModal();
+        if (activeNav === 'caseload') loadCaseload();
+        else if (activeNav === 'admin') loadAdminView();
+        else switchView(activePeriod);
+      }
+    }
+
+    async function openCreateStudentModal(fromAdmin = false) {
+      const modalHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:500px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0;">Add New Student</h2>
+              <button class="danger sm" onclick="closeModal()">✕ Close</button>
+            </div>
+            <form onsubmit="handleCreateStudent(event, ${fromAdmin})">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div>
+                  <label>First Name</label>
+                  <input type="text" id="create_first_name" required>
+                </div>
+                <div>
+                  <label>Last Name</label>
+                  <input type="text" id="create_last_name" required>
+                </div>
+              </div>
+              <label>Case Manager Email Username</label>
+              <div class="email-input-wrapper">
+                <input type="text" id="create_cm_email" value="${escapeHtml(currentUserEmail.replace('@ahschools.us', ''))}">
+                <div class="email-domain-tag">@ahschools.us</div>
+              </div>
+              <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="outline" onclick="closeModal()">Cancel</button>
+                <button type="submit">Create Student</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').innerHTML = modalHTML;
+    }
+
+    async function handleCreateStudent(e, fromAdmin) {
+      e.preventDefault();
+
+      const firstName = document.getElementById('create_first_name')?.value.trim();
+      const lastName = document.getElementById('create_last_name')?.value.trim();
+      const cmEmail = formatUserEmailInput(document.getElementById('create_cm_email')?.value);
+
+      const payload = {
+        first_name: firstName,
+        last_name: lastName,
+        case_manager_email: cmEmail,
+        iep_version: 1
+      };
+
+      const { data, error } = await supabaseClient.from('students').insert([payload]).select().single();
+
+      if (error) {
+        alert('Error creating student: ' + error.message);
+      } else {
+        await fetchAllStudents();
+        closeModal();
+        if (fromAdmin) {
+          loadAdminView();
+        } else {
+          openStudentModal(data.id);
+        }
+      }
+    }
+
+    async function deleteStudent(studentId) {
+      if (!confirm('Are you absolutely sure you want to delete this student and ALL associated progress data? This action cannot be undone.')) {
+        return;
+      }
+
+      await supabaseClient.from('progress_data').delete().eq('student_id', studentId);
+      await supabaseClient.from('iep_goal_archive').delete().eq('student_id', studentId);
+      const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
+
+      if (error) {
+        alert('Error deleting student: ' + error.message);
+      } else {
+        await fetchAllStudents();
+        closeModal();
+        if (activeNav === 'caseload') loadCaseload();
+        else if (activeNav === 'admin') loadAdminView();
+        else switchView(activePeriod);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal-root').innerHTML = '';
+    }
+
+    window.onload = function() {
+      initApp();
+    };
   </script>
 </body>
 </html>
