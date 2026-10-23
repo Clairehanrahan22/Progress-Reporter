@@ -355,7 +355,7 @@
     // staff need to be able to fix typos directly. Use "Add New IEP Goals"
     // separately when a real IEP revision needs its own archived version.
     function renderGoalFieldDisplay(id, value) {
-      return `<input type="text" id="${id}" value="${escapeHtml(value)}">`;
+      return `<input type="text" autocomplete="off" id="${id}" value="${escapeHtml(value)}">`;
     }
 
     // Tracking format stays editable even once the objective's goal text is
@@ -1121,11 +1121,11 @@
           <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; align-items:end;">
             <div>
               <label>First Name</label>
-              <input type="text" id="invite_first_name" placeholder="Jane">
+              <input type="text" autocomplete="off" id="invite_first_name" placeholder="Jane">
             </div>
             <div>
               <label>Last Name</label>
-              <input type="text" id="invite_last_name" placeholder="Doe">
+              <input type="text" autocomplete="off" id="invite_last_name" placeholder="Doe">
             </div>
             <div>
               <label>Role</label>
@@ -1156,7 +1156,7 @@
             <h3 style="margin:0; font-size:16px;">All Students</h3>
             <button onclick="openCreateStudentModal(true)">+ Add Student</button>
           </div>
-          <input type="text" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
+          <input type="text" autocomplete="off" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
           <div id="admin-student-list" style="margin-top:12px;"></div>
         </div>
       `;
@@ -1180,7 +1180,7 @@
           <button onclick="openCreateStudentModal(true)">+ Add Student</button>
         </div>
         <div class="card">
-          <input type="text" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
+          <input type="text" autocomplete="off" id="admin-student-search" placeholder="Search by student or case manager..." oninput="renderAdminStudentList()">
           <div id="admin-student-list" style="margin-top:12px;"></div>
         </div>
       `;
@@ -1416,7 +1416,7 @@
 
               <div id="add-student-panel" style="display:none;">
                 <h4 style="margin:0 0 8px 0;">Add a student</h4>
-                <input type="text" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
+                <input type="text" autocomplete="off" id="add-existing-search" placeholder="Search by name..." oninput="filterAddExistingList()">
                 <div id="add-existing-list" style="max-height:300px; overflow-y:auto;"></div>
               </div>
             </div>
@@ -1655,7 +1655,7 @@
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
           This gives the selected paraprofessional access to every student currently in your ${getOrdinalSuffix(periodNum)} hour class.
         </p>
-        <input type="text" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
+        <input type="text" autocomplete="off" id="assign-para-search" placeholder="Search by name..." oninput="filterAssignParaList()">
         <div id="assign-para-list" style="max-height:400px; overflow-y:auto;"></div>
       `;
 
@@ -2066,7 +2066,7 @@
                   <option value="3+">3+</option>
                 </select>
               </div>
-              <input type="text" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..."
+              <input type="text" autocomplete="off" class="notes-input" id="notes_${student.id}_${o.key}" placeholder="Add notes here..."
                 onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('${nextObjKey ? `notes_${student.id}_${nextObjKey}` : `logall_${student.id}`}')?.focus(); }">
             </div>
           </div>
@@ -2313,7 +2313,6 @@
             <div class="tab-buttons">
               <button class="tab-btn active" id="tab-btn-goals" onclick="switchModalTab('goals')">IEP Goals & Objectives</button>
               <button class="tab-btn" id="tab-btn-data" onclick="switchModalTab('data', '${student.id}')">Data & Graphs</button>
-              <button class="tab-btn" id="tab-btn-teachers" onclick="switchModalTab('teachers')">Assigned Teachers</button>
               <button class="tab-btn" id="tab-btn-setup" onclick="switchModalTab('setup')">Student Setup</button>
               <button class="tab-btn" id="tab-btn-report" onclick="switchModalTab('report', '${student.id}')">Generate Progress Report</button>
               <button class="tab-btn" id="tab-btn-pastgoals" onclick="switchModalTab('pastgoals', '${student.id}')">Past IEP Goals</button>
@@ -2414,50 +2413,42 @@
                 <div id="data-history-table">Loading logs...</div>
               </div>
 
-              <div id="tab-content-teachers" class="tab-content">
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  Manage teacher/staff permissions, assign case managers, service providers, or general ed teachers to this student.
-                </p>
-
-                <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">
-                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard - click "Data Schedule" on the ${getOrdinalSuffix(1)}-${getOrdinalSuffix(5)} Hour dashboards, not here.
-                </p>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                  ${[1, 2, 3, 4, 5].map(p => `
-                    <div>
-                      <label>${getOrdinalSuffix(p)} Hour Teacher Username</label>
-                      <div class="email-input-wrapper">
-                        <input type="text" id="edit_teacher_p${p}" value="${escapeHtml((student[`teacher_p${p}`] || '').replace('@ahschools.us', ''))}">
-                        <div class="email-domain-tag">@ahschools.us</div>
-                      </div>
-                      <label>${getOrdinalSuffix(p)} Hour Para(s) Username(s)</label>
-                      <input type="text" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="comma-separated, e.g. jane.doe, john.smith">
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-
               <div id="tab-content-setup" class="tab-content">
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  Edit basic profile information and case manager details.
-                </p>
-
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                   <div>
                     <label>First Name</label>
-                    <input type="text" id="edit_first_name" value="${escapeHtml(student.first_name)}" required>
+                    <input type="text" autocomplete="off" id="edit_first_name" value="${escapeHtml(student.first_name)}" required>
                   </div>
                   <div>
                     <label>Last Name</label>
-                    <input type="text" id="edit_last_name" value="${escapeHtml(student.last_name)}" required>
+                    <input type="text" autocomplete="off" id="edit_last_name" value="${escapeHtml(student.last_name)}" required>
                   </div>
                 </div>
 
                 <label>Case Manager Email Username</label>
                 <div class="email-input-wrapper">
-                  <input type="text" id="edit_cm_email" value="${escapeHtml((student.case_manager_email || '').replace('@ahschools.us', ''))}">
+                  <input type="text" autocomplete="off" id="edit_cm_email" value="${escapeHtml((student.case_manager_email || '').replace('@ahschools.us', ''))}">
                   <div class="email-domain-tag">@ahschools.us</div>
+                </div>
+
+                <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
+                  <h4 style="margin:0 0 8px 0;">Assigned Teachers</h4>
+                  <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                    Type the email username only (the part before @ahschools.us) - e.g. firstname.lastname. For paras, separate multiple names with commas.
+                  </p>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    ${[1, 2, 3, 4, 5].map(p => `
+                      <div>
+                        <label>${getOrdinalSuffix(p)} Hour Teacher</label>
+                        <div class="email-input-wrapper">
+                          <input type="text" autocomplete="off" id="edit_teacher_p${p}" value="${escapeHtml((student[`teacher_p${p}`] || '').replace('@ahschools.us', ''))}">
+                          <div class="email-domain-tag">@ahschools.us</div>
+                        </div>
+                        <label>${getOrdinalSuffix(p)} Hour Para(s)</label>
+                        <input type="text" autocomplete="off" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="jane.doe, john.smith">
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
 
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
@@ -2943,17 +2934,17 @@
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                 <div>
                   <label>First Name *</label>
-                  <input type="text" id="new_first_name" required>
+                  <input type="text" autocomplete="off" id="new_first_name" required>
                 </div>
                 <div>
                   <label>Last Name *</label>
-                  <input type="text" id="new_last_name" required>
+                  <input type="text" autocomplete="off" id="new_last_name" required>
                 </div>
               </div>
 
               <label>Case Manager Email Username</label>
               <div class="email-input-wrapper">
-                <input type="text" id="new_cm_email" value="${escapeHtml(defaultCmUsername)}">
+                <input type="text" autocomplete="off" id="new_cm_email" value="${escapeHtml(defaultCmUsername)}">
                 <div class="email-domain-tag">@ahschools.us</div>
               </div>
 
