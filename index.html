@@ -496,13 +496,6 @@
       if (activePeriod === periodNum) switchView(periodNum);
     }
 
-    function toGerund(verb) {
-      const lower = (verb || '').toLowerCase();
-      if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying';
-      if (lower.endsWith('e') && !lower.endsWith('ee') && !lower.endsWith('oe')) return lower.slice(0, -1) + 'ing';
-      return lower + 'ing';
-    }
-
     function computeAveragePrompts(entries) {
       const values = entries
         .filter(e => e.status === 'Yes' || e.status === 'No' || e.status === 'Logged')
@@ -540,6 +533,13 @@
       return { kind: 'yes_no', percent, count: total, yesCount, noCount };
     }
 
+    // Deliberately neutral - just states the observed rate, never whether the
+    // goal itself was "met." Whether an objective counts as met is a clinical/
+    // IEP-team judgment call, not something this app should assert on its own.
+    // Also deliberately doesn't try to rewrite the objective text into a new
+    // sentence (e.g. conjugating a verb into "is Xing") - that kind of ad hoc
+    // grammar transform breaks on real objective wording (adverbs before the
+    // verb, irregular verbs, etc.) and can produce non-words.
     function generateProgressSentence(objectiveText, firstName, percent, avgPrompts = null) {
       const rawText = (objectiveText || '').trim();
       const promptsClause = (avgPrompts !== null && avgPrompts !== undefined)
@@ -547,40 +547,11 @@
         : '';
 
       if (!rawText) {
-        return `${firstName} met this objective${promptsClause} in ${percent}% of observed occasions.`;
-      }
-
-      const nameWillPattern = new RegExp(`^${firstName}\\s+will\\s+`, 'i');
-      let text = null;
-
-      if (/^did\s+/i.test(rawText)) {
-        text = rawText.replace(/^did\s+/i, '');
-      } else if (nameWillPattern.test(rawText)) {
-        text = rawText.replace(nameWillPattern, '');
-      } else if (/^will\s+/i.test(rawText)) {
-        text = rawText.replace(/^will\s+/i, '');
-      }
-
-      if (text !== null) {
-        text = text.trim();
-
-        const namePattern = new RegExp(`^${firstName}\\s+`, 'i');
-        if (namePattern.test(text)) {
-          text = text.replace(namePattern, '').trim();
-        }
-
-        text = text.replace(/\?\s*$/, '').trim();
-
-        const words = text.split(' ');
-        const verb = words.shift();
-        const rest = words.join(' ');
-        const gerund = toGerund(verb);
-
-        return `${firstName} is ${gerund}${rest ? ' ' + rest : ''}${promptsClause} in ${percent}% of observed occasions.`;
+        return `${firstName} was observed on this objective${promptsClause} in ${percent}% of observed occasions.`;
       }
 
       const cleanText = rawText.replace(/\?\s*$/, '').trim();
-      return `${firstName} met the objective "${cleanText}"${promptsClause} in ${percent}% of observed occasions.`;
+      return `${firstName} was observed on "${cleanText}"${promptsClause} in ${percent}% of observed occasions.`;
     }
 
     // Tally Count objectives track a raw occurrence count rather than a
@@ -2461,10 +2432,10 @@
 
               <div id="tab-content-data" class="tab-content">
                 <div class="tab-buttons" style="margin-bottom:16px;">
-                  <button type="button" class="tab-btn active" id="datagoal-btn-1" onclick="switchDataGoalTab(1, '${student.id}')">Goal 1</button>
-                  <button type="button" class="tab-btn" id="datagoal-btn-2" onclick="switchDataGoalTab(2, '${student.id}')">Goal 2</button>
-                  <button type="button" class="tab-btn" id="datagoal-btn-3" onclick="switchDataGoalTab(3, '${student.id}')">Goal 3</button>
-                  <button type="button" class="tab-btn" id="datagoal-btn-4" onclick="switchDataGoalTab(4, '${student.id}')">Goal 4${student.goal_4_domain ? ` (${escapeHtml(student.goal_4_domain)})` : ''}</button>
+                  <button type="button" class="tab-btn active" id="datagoal-btn-1" onclick="switchDataGoalTab(1, '${student.id}')">Goal 1: Independent Living</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-2" onclick="switchDataGoalTab(2, '${student.id}')">Goal 2: Post-Secondary Education</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-3" onclick="switchDataGoalTab(3, '${student.id}')">Goal 3: Employment</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-4" onclick="switchDataGoalTab(4, '${student.id}')">Goal 4${student.goal_4_domain ? `: ${escapeHtml(student.goal_4_domain)}` : ''}</button>
                 </div>
 
                 ${[1, 2, 3, 4].map(g => `
