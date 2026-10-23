@@ -301,8 +301,8 @@
     let currentUserRole = 'teacher';
     let activeNav = 'caseload';
     let activePeriod = null;
-    let activeChartInstance = null;
-    let activeChartView = 'line';
+    let activeChartInstances = {};
+    let activeChartViews = {};
     let showingSetPasswordScreen = false;
     let flagsRealtimeChannel = null;
 
@@ -2291,11 +2291,93 @@
       }
     }
 
+    // One objective's chart/summary/history panel - two of these (Objective 1
+    // and Objective 2) render side by side under each Goal sub-tab in the
+    // Data & Graphs tab. Each gets its own canvas/chart instance/view toggle,
+    // keyed by objective key, since the two objectives are independent.
+    function renderDataObjectivePanelHTML(student, objKey, label) {
+      const text = student[objKey];
+      if (!text || !text.trim()) {
+        return `
+          <div>
+            <h4 style="margin:0 0 8px 0; font-size:14px;">${escapeHtml(label)}</h4>
+            <p style="color:var(--text-muted); font-size:13px; font-style:italic;">No objective set.</p>
+          </div>
+        `;
+      }
+
+      return `
+        <div>
+          <h4 style="margin:0 0 4px 0; font-size:14px;">${escapeHtml(label)}</h4>
+          <p style="color:var(--text-muted); font-size:13px; margin:0 0 12px 0;">${escapeHtml(text)}</p>
+
+          <div id="data-tab-objective-summary-${objKey}" style="margin-bottom:12px;"></div>
+
+          <div style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+            <button type="button" class="status-pill selected" id="chartview-line-btn-${objKey}" onclick="setChartView('line', '${student.id}', '${objKey}')">Line</button>
+            <button type="button" class="status-pill" id="chartview-pie-btn-${objKey}" onclick="setChartView('pie', '${student.id}', '${objKey}')">Pie</button>
+          </div>
+
+          <div style="height:220px; position:relative; margin-bottom:16px;">
+            <canvas id="progress-chart-canvas-${objKey}"></canvas>
+            <div id="chart-exclusion-counters-${objKey}" style="position:absolute; top:4px; right:4px; display:flex; flex-direction:column; gap:4px; align-items:flex-end;"></div>
+          </div>
+
+          <h4 style="margin:0 0 8px 0; font-size:13px;">Logged Data History</h4>
+          <div id="data-history-table-${objKey}">Loading logs...</div>
+        </div>
+      `;
+    }
+
+    function renderDataTabObjectiveSummary(student, objKey, entries) {
+      const summaryEl = document.getElementById(`data-tab-objective-summary-${objKey}`);
+      if (!summaryEl) return;
+
+      const format = getObjectiveFormat(student, objKey);
+      const summary = computeObjectiveSummary(entries, format);
+
+      if (summary.count === 0) {
+        summaryEl.innerHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No data logged yet.</p>`;
+        return;
+      }
+
+      const avgPrompts = computeAveragePrompts(entries);
+      let statLine, sentence;
+
+      if (format === 'tally') {
+        statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions)`;
+        sentence = generateTallySentence(student[objKey], student.first_name, summary.avg, summary.count, avgPrompts);
+      } else {
+        const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
+        statLine = `${summary.percent}% (${occasionsLabel})`;
+        sentence = generateProgressSentence(student[objKey], student.first_name, summary.percent, avgPrompts);
+      }
+
+      summaryEl.innerHTML = `
+        <p style="font-size:13px; color:var(--text-muted); margin:0 0 8px;">${statLine}</p>
+        <textarea readonly style="width:100%; min-height:50px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
+      `;
+    }
+
+    // Shows one Goal's two objectives side by side, fetching/rendering both
+    // on demand - switching tabs doesn't pre-render all 8 objectives at once.
+    function switchDataGoalTab(goalNum, studentId) {
+      [1, 2, 3, 4].forEach(g => {
+        document.getElementById(`datagoal-btn-${g}`)?.classList.toggle('active', g === goalNum);
+        document.getElementById(`datagoal-content-${g}`)?.classList.toggle('active', g === goalNum);
+      });
+      renderObjectiveChart(studentId, `obj_${goalNum}_1`);
+      renderDataHistoryTable(studentId, `obj_${goalNum}_1`);
+      renderObjectiveChart(studentId, `obj_${goalNum}_2`);
+      renderDataHistoryTable(studentId, `obj_${goalNum}_2`);
+    }
+
     async function openStudentModal(studentId) {
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
 
-      activeChartView = 'line';
+      activeChartInstances = {};
+      activeChartViews = {};
       const defaultTri = getDefaultTrimester();
       const hasExistingGoals = [
         student.obj_1_1, student.obj_1_2, student.obj_2_1, student.obj_2_2,
@@ -2304,7 +2386,7 @@
 
       const modalHTML = `
         <div class="modal-backdrop">
-          <div class="modal-content">
+          <div class="modal-content" style="max-width:1200px; width:95%;">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h2>
               <button class="danger sm" onclick="closeModal()">Close</button>
@@ -2378,39 +2460,21 @@
               </div>
 
               <div id="tab-content-data" class="tab-content">
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                  View raw progress tracking data logs, visual line graphs/charts, filter by date ranges, and export reports.
-                </p>
-
-                <div style="margin-bottom:16px;">
-                  <label>Select Objective to View:</label>
-                  <select id="chart-obj-select" onchange="renderObjectiveChart('${student.id}')">
-                    <option value="obj_1_1">G1 Obj 1: ${student.obj_1_1 ? escapeHtml(student.obj_1_1.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_1_2">G1 Obj 2: ${student.obj_1_2 ? escapeHtml(student.obj_1_2.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_2_1">G2 Obj 1: ${student.obj_2_1 ? escapeHtml(student.obj_2_1.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_2_2">G2 Obj 2: ${student.obj_2_2 ? escapeHtml(student.obj_2_2.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_3_1">G3 Obj 1: ${student.obj_3_1 ? escapeHtml(student.obj_3_1.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_3_2">G3 Obj 2: ${student.obj_3_2 ? escapeHtml(student.obj_3_2.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_4_1">G4 Obj 1: ${student.obj_4_1 ? escapeHtml(student.obj_4_1.substring(0, 40)) + '...' : 'Empty'}</option>
-                    <option value="obj_4_2">G4 Obj 2: ${student.obj_4_2 ? escapeHtml(student.obj_4_2.substring(0, 40)) + '...' : 'Empty'}</option>
-                  </select>
+                <div class="tab-buttons" style="margin-bottom:16px;">
+                  <button type="button" class="tab-btn active" id="datagoal-btn-1" onclick="switchDataGoalTab(1, '${student.id}')">Goal 1</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-2" onclick="switchDataGoalTab(2, '${student.id}')">Goal 2</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-3" onclick="switchDataGoalTab(3, '${student.id}')">Goal 3</button>
+                  <button type="button" class="tab-btn" id="datagoal-btn-4" onclick="switchDataGoalTab(4, '${student.id}')">Goal 4${student.goal_4_domain ? ` (${escapeHtml(student.goal_4_domain)})` : ''}</button>
                 </div>
 
-                <div id="data-tab-objective-summary" style="margin-bottom:16px;"></div>
-
-                <div style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:13px; font-weight:600; color:var(--text-muted);">View:</span>
-                  <button type="button" class="status-pill selected" id="chartview-line-btn" onclick="setChartView('line', '${student.id}')">Line (Progress Over Time)</button>
-                  <button type="button" class="status-pill" id="chartview-pie-btn" onclick="setChartView('pie', '${student.id}')">Pie (Overall Summary)</button>
-                </div>
-
-                <div style="height:260px; position:relative; margin-bottom:24px;">
-                  <canvas id="progress-chart-canvas"></canvas>
-                  <div id="chart-exclusion-counters" style="position:absolute; top:4px; right:4px; display:flex; flex-direction:column; gap:4px; align-items:flex-end;"></div>
-                </div>
-
-                <h4 style="margin:0 0 8px 0;">Logged Data History</h4>
-                <div id="data-history-table">Loading logs...</div>
+                ${[1, 2, 3, 4].map(g => `
+                  <div id="datagoal-content-${g}" class="tab-content ${g === 1 ? 'active' : ''}">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+                      ${renderDataObjectivePanelHTML(student, `obj_${g}_1`, 'Objective 1')}
+                      ${renderDataObjectivePanelHTML(student, `obj_${g}_2`, 'Objective 2')}
+                    </div>
+                  </div>
+                `).join('')}
               </div>
 
               <div id="tab-content-setup" class="tab-content">
@@ -2436,7 +2500,7 @@
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
                     Type the email username only (the part before @ahschools.us) - e.g. firstname.lastname. For paras, separate multiple names with commas.
                   </p>
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); gap:12px 16px;">
                     ${[1, 2, 3, 4, 5].map(p => `
                       <div>
                         <label>${getOrdinalSuffix(p)} Hour Teacher</label>
@@ -2444,6 +2508,10 @@
                           <input type="text" autocomplete="off" id="edit_teacher_p${p}" value="${escapeHtml((student[`teacher_p${p}`] || '').replace('@ahschools.us', ''))}">
                           <div class="email-domain-tag">@ahschools.us</div>
                         </div>
+                      </div>
+                    `).join('')}
+                    ${[1, 2, 3, 4, 5].map(p => `
+                      <div>
                         <label>${getOrdinalSuffix(p)} Hour Para(s)</label>
                         <input type="text" autocomplete="off" id="edit_paras_p${p}" value="${escapeHtml(formatParaArrayForDisplay(student[`paras_p${p}`]))}" placeholder="jane.doe, john.smith">
                       </div>
@@ -2502,8 +2570,7 @@
       }
 
       if (tabName === 'data' && studentId) {
-        renderObjectiveChart(studentId);
-        renderDataHistoryTable(studentId);
+        switchDataGoalTab(1, studentId);
       }
       if (tabName === 'report' && studentId) {
         renderProgressReportContent(studentId);
@@ -2513,11 +2580,11 @@
       }
     }
 
-    function setChartView(viewType, studentId) {
-      activeChartView = viewType;
+    function setChartView(viewType, studentId, objKey) {
+      activeChartViews[objKey] = viewType;
 
-      const lineBtn = document.getElementById('chartview-line-btn');
-      const pieBtn = document.getElementById('chartview-pie-btn');
+      const lineBtn = document.getElementById(`chartview-line-btn-${objKey}`);
+      const pieBtn = document.getElementById(`chartview-pie-btn-${objKey}`);
 
       if (viewType === 'line') {
         lineBtn?.classList.add('selected');
@@ -2527,17 +2594,13 @@
         lineBtn?.classList.remove('selected');
       }
 
-      renderObjectiveChart(studentId);
+      renderObjectiveChart(studentId, objKey);
     }
 
-    async function renderObjectiveChart(studentId) {
-      const objKey = document.getElementById('chart-obj-select')?.value || 'obj_1_1';
+    async function renderObjectiveChart(studentId, objKey) {
       const student = allStudents.find(s => s.id === studentId);
-
-      const summaryEl = document.getElementById('data-tab-objective-summary');
-      if (summaryEl && student) {
-        summaryEl.innerHTML = `<div style="font-weight:600; font-size:14px;">Full Objective Wording:</div><div style="color:var(--text-muted); font-size:13px; margin-top:2px;">${escapeHtml(student[objKey]) || 'No text entered'}</div>`;
-      }
+      const canvas = document.getElementById(`progress-chart-canvas-${objKey}`);
+      if (!canvas) return;
 
       const { data, error } = await supabaseClient
         .from('progress_data')
@@ -2547,15 +2610,15 @@
         .eq('iep_version', student?.iep_version || 1)
         .order('created_at', { ascending: true });
 
-      const canvas = document.getElementById('progress-chart-canvas');
-      if (!canvas) return;
-
-      if (activeChartInstance) {
-        activeChartInstance.destroy();
+      if (activeChartInstances[objKey]) {
+        activeChartInstances[objKey].destroy();
+        activeChartInstances[objKey] = null;
       }
 
-      const exclusionEl = document.getElementById('chart-exclusion-counters');
+      const exclusionEl = document.getElementById(`chart-exclusion-counters-${objKey}`);
       if (exclusionEl) exclusionEl.innerHTML = '';
+
+      renderDataTabObjectiveSummary(student, objKey, data || []);
 
       if (error || !data || data.length === 0) {
         const ctx = canvas.getContext('2d');
@@ -2582,10 +2645,11 @@
       }
 
       const format = getObjectiveFormat(student, objKey);
+      const activeView = activeChartViews[objKey] || 'line';
 
       // Tally Count is a raw occurrence count, not a pass/fail rate, so a
       // pie breakdown doesn't mean anything for it - show a note instead.
-      if (format === 'tally' && activeChartView === 'pie') {
+      if (format === 'tally' && activeView === 'pie') {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.font = '14px system-ui';
@@ -2608,11 +2672,11 @@
           return;
         }
 
-        if (activeChartView === 'pie') {
+        if (activeView === 'pie') {
           const correctSum = evaluableData.reduce((sum, d) => sum + (Number(d.numerator) || 0), 0);
           const incorrectSum = evaluableData.reduce((sum, d) => sum + Math.max((Number(d.denominator) || 0) - (Number(d.numerator) || 0), 0), 0);
 
-          activeChartInstance = new Chart(canvas, {
+          activeChartInstances[objKey] = new Chart(canvas, {
             type: 'pie',
             data: {
               labels: ['Correct', 'Incorrect'],
@@ -2643,7 +2707,7 @@
           const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
           const values = evaluableData.map(d => Math.round(((Number(d.numerator) || 0) / Number(d.denominator)) * 100));
 
-          activeChartInstance = new Chart(canvas, {
+          activeChartInstances[objKey] = new Chart(canvas, {
             type: 'line',
             data: {
               labels,
@@ -2685,7 +2749,7 @@
         const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
         const values = evaluableData.map(d => Number(d.numerator) || 0);
 
-        activeChartInstance = new Chart(canvas, {
+        activeChartInstances[objKey] = new Chart(canvas, {
           type: 'line',
           data: {
             labels,
@@ -2720,11 +2784,11 @@
         return;
       }
 
-      if (activeChartView === 'pie') {
+      if (activeView === 'pie') {
         const yesCount = evaluableData.filter(d => d.status === 'Yes').length;
         const noCount = evaluableData.filter(d => d.status === 'No').length;
 
-        activeChartInstance = new Chart(canvas, {
+        activeChartInstances[objKey] = new Chart(canvas, {
           type: 'pie',
           data: {
             labels: ['Yes', 'No'],
@@ -2755,7 +2819,7 @@
         const labels = evaluableData.map(d => new Date(d.created_at).toLocaleDateString());
         const values = evaluableData.map(d => d.status === 'Yes' ? 100 : 0);
 
-        activeChartInstance = new Chart(canvas, {
+        activeChartInstances[objKey] = new Chart(canvas, {
           type: 'line',
           data: {
             labels,
@@ -2791,16 +2855,18 @@
       }
     }
 
-    async function renderDataHistoryTable(studentId) {
-      const containerEl = document.getElementById('data-history-table');
+    async function renderDataHistoryTable(studentId, objKey) {
+      const containerEl = document.getElementById(`data-history-table-${objKey}`);
       if (!containerEl) return;
 
       const student = allStudents.find(s => s.id === studentId);
+      const format = getObjectiveFormat(student, objKey);
 
       const { data, error } = await supabaseClient
         .from('progress_data')
         .select('*')
         .eq('student_id', studentId)
+        .eq('objective_key', objKey)
         .eq('iep_version', student?.iep_version || 1)
         .order('created_at', { ascending: false });
 
@@ -2815,12 +2881,11 @@
       }
 
       containerEl.innerHTML = `
-        <div style="max-height:220px; overflow-y:auto;">
+        <div style="max-height:180px; overflow-y:auto;">
           <table>
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Objective</th>
                 <th>Status</th>
                 <th>Value</th>
                 <th>Prompts</th>
@@ -2831,7 +2896,6 @@
             </thead>
             <tbody>
               ${data.map(d => {
-                const format = getObjectiveFormat(student, d.objective_key);
                 let valueCell = 'N/A';
                 if (format === 'accuracy' && d.status === 'Logged') {
                   valueCell = `${escapeHtml(d.numerator)} / ${escapeHtml(d.denominator)}`;
@@ -2841,14 +2905,13 @@
                 return `
                 <tr>
                   <td>${new Date(d.created_at).toLocaleDateString()}</td>
-                  <td>${escapeHtml(d.objective_key)}</td>
                   <td><strong>${escapeHtml(d.status)}</strong></td>
                   <td>${valueCell}</td>
                   <td>${escapeHtml(d.prompts || '0')}</td>
                   <td>${escapeHtml(d.notes || '')}</td>
                   <td>${escapeHtml(d.logged_by || '')}</td>
                   <td>
-                    <button class="danger sm" onclick="deleteProgressEntry('${d.id}', '${studentId}')">Delete</button>
+                    <button class="danger sm" onclick="deleteProgressEntry('${d.id}', '${studentId}', '${objKey}')">Delete</button>
                   </td>
                 </tr>
               `;
@@ -2859,15 +2922,15 @@
       `;
     }
 
-    async function deleteProgressEntry(entryId, studentId) {
+    async function deleteProgressEntry(entryId, studentId, objKey) {
       if (!confirm('Delete this logged entry?')) return;
 
       const { error } = await supabaseClient.from('progress_data').delete().eq('id', entryId);
       if (error) {
         alert('Error deleting entry: ' + error.message);
       } else {
-        renderObjectiveChart(studentId);
-        renderDataHistoryTable(studentId);
+        renderObjectiveChart(studentId, objKey);
+        renderDataHistoryTable(studentId, objKey);
       }
     }
 
@@ -3062,6 +3125,8 @@
     }
 
     function closeModal() {
+      Object.values(activeChartInstances).forEach(instance => instance && instance.destroy());
+      activeChartInstances = {};
       document.getElementById('modal-root').innerHTML = '';
     }
 
