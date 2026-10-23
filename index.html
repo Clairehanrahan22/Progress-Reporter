@@ -351,16 +351,15 @@
         .replace(/"/g, '&quot;');
     }
 
-    function renderGoalFieldDisplay(id, value, locked) {
-      if (locked) {
-        const display = value ? escapeHtml(value) : '<span style="color:var(--text-muted); font-style:italic;">Empty</span>';
-        return `<div style="padding:8px 10px; margin-top:4px; margin-bottom:12px; background:#f8fafc; border:1px solid var(--border-light); border-radius:6px; font-size:13px; min-height:18px;">${display}</div>`;
-      }
+    // Goal/objective text is always editable, including after it's been set -
+    // staff need to be able to fix typos directly. Use "Add New IEP Goals"
+    // separately when a real IEP revision needs its own archived version.
+    function renderGoalFieldDisplay(id, value) {
       return `<input type="text" id="${id}" value="${escapeHtml(value)}">`;
     }
 
     // Tracking format stays editable even once the objective's goal text is
-    // locked ‚Äî changing how an objective is tracked doesn't rewrite history,
+    // locked - changing how an objective is tracked doesn't rewrite history,
     // it only changes what the logging card looks like going forward.
     function renderGoalFormatSelect(id, value) {
       const current = value || 'yes_no';
@@ -799,7 +798,7 @@
           <div class="modal-content" style="max-width:420px;">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0; font-size:18px;">Resolve Flag</h2>
-              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
+              <button class="danger sm" onclick="closeModal()">Close</button>
             </div>
             <p style="font-size:14px; margin-bottom:6px;"><strong>${escapeHtml(student ? student.first_name + ' ' + student.last_name : '')}</strong></p>
             <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
@@ -857,7 +856,7 @@
           <label>Email Address</label>
           <input type="email" id="login-email" placeholder="teacher@school.org">
           <label>Password</label>
-          <input type="password" id="login-pass" placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢">
+          <input type="password" id="login-pass" placeholder="********">
           <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:13px; margin-top:-6px; margin-bottom:12px;">
             <input type="checkbox" id="login-show-pass" style="width:auto; margin:0;" onchange="document.getElementById('login-pass').type = this.checked ? 'text' : 'password'">
             Show password
@@ -954,7 +953,7 @@
 
         ${isStaffAdmin() && isTrimesterCalendarStale() ? `
           <div class="card" style="background:#fef3c7; border-color:#fcd34d; margin-bottom:16px; padding:14px 20px;">
-            <strong>‚ö†Ô∏è Trimester calendar needs updating.</strong>
+            <strong>Warning: Trimester calendar needs updating.</strong>
             <span style="color:var(--text-muted); font-size:13px;">Today's date doesn't fall within any configured trimester range. Update <code>TRIMESTER_RANGES</code> in the code with this year's school calendar dates so reports use the correct trimester.</span>
           </div>
         ` : ''}
@@ -1142,7 +1141,7 @@
             <button class="outline" onclick="handleAddPlaceholderStaff()">Add Without Login Email</button>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">
-            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns ‚Äî use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
+            "Send Email Invite" emails them a link to set up their password right away. "Add Without Login Email" just adds them to the staff list and class-assignment dropdowns - use "Send Login Email" from the list below whenever you're ready to actually let them sign in.
           </p>
           <p id="invite-status" style="font-size:13px; margin-top:8px;"></p>
         </div>
@@ -1167,7 +1166,7 @@
       renderAdminStudentList();
     }
 
-    // A lighter-weight view than the full Staff Admin page ‚Äî just the
+    // A lighter-weight view than the full Staff Admin page - just the
     // school-wide student list, for viewing/creating students and
     // (re)assigning case managers, without the staff-management tools.
     async function loadStudentsView() {
@@ -1369,7 +1368,7 @@
         statusEl.innerText = error.message;
       } else {
         statusEl.style.color = 'green';
-        statusEl.innerText = `Added ${email} ‚Äî they can't log in yet. Use "Send Login Email" below whenever you're ready.`;
+        statusEl.innerText = `Added ${email} - they can't log in yet. Use "Send Login Email" below whenever you're ready.`;
         document.getElementById('invite_first_name').value = '';
         document.getElementById('invite_last_name').value = '';
         await fetchStaffMembers();
@@ -1399,7 +1398,7 @@
           <div class="modal-content" style="max-width:600px;">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">Edit ${getOrdinalSuffix(periodNum)} Hour</h2>
-              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
+              <button class="danger sm" onclick="closeModal()">Close</button>
             </div>
 
             <div class="tab-buttons">
@@ -1529,7 +1528,7 @@
       const colName = `teacher_p${periodNum}`;
       const paraColName = `paras_p${periodNum}`;
 
-      if (!confirm(`Remove this student from your ${getOrdinalSuffix(periodNum)} hour class? This only affects this class period ‚Äî it does not delete the student or their data.`)) {
+      if (!confirm(`Remove this student from your ${getOrdinalSuffix(periodNum)} hour class? This only affects this class period - it does not delete the student or their data.`)) {
         return;
       }
 
@@ -1565,7 +1564,7 @@
         </div>
         <div id="alternating-detail-${periodNum}" style="display:${alternating ? 'block' : 'none'};">
           <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week ‚Äî a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
+            Set which days each student is actually in this class, and which Group A/B they rotate on. Groups auto-swap which days (Mon/Wed vs. Tue/Thu) they're tracked on every week - a student not in a group is tracked every day they're in class. A student's days-in-class always come first: they'll never show up on a day they're not scheduled, group or no group.
           </p>
           <div id="data-schedule-list"></div>
         </div>
@@ -1633,7 +1632,7 @@
         await fetchAllStudents();
         if (saveBtn) {
           saveBtn.disabled = false;
-          saveBtn.innerText = '‚úì Saved';
+          saveBtn.innerText = 'Saved';
           setTimeout(() => { saveBtn.innerText = 'Save'; }, 1500);
         }
       }
@@ -1826,14 +1825,14 @@
 
       const sections = await Promise.all(archives.map(async archive => {
         const objectives = [
-          { key: 'obj_1_1', label: 'Goal 1 ¬∑ Objective 1', text: archive.obj_1_1 },
-          { key: 'obj_1_2', label: 'Goal 1 ¬∑ Objective 2', text: archive.obj_1_2 },
-          { key: 'obj_2_1', label: 'Goal 2 ¬∑ Objective 1', text: archive.obj_2_1 },
-          { key: 'obj_2_2', label: 'Goal 2 ¬∑ Objective 2', text: archive.obj_2_2 },
-          { key: 'obj_3_1', label: 'Goal 3 ¬∑ Objective 1', text: archive.obj_3_1 },
-          { key: 'obj_3_2', label: 'Goal 3 ¬∑ Objective 2', text: archive.obj_3_2 },
-          { key: 'obj_4_1', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) ¬∑ Objective 1`, text: archive.obj_4_1 },
-          { key: 'obj_4_2', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) ¬∑ Objective 2`, text: archive.obj_4_2 }
+          { key: 'obj_1_1', label: 'Goal 1 - Objective 1', text: archive.obj_1_1 },
+          { key: 'obj_1_2', label: 'Goal 1 - Objective 2', text: archive.obj_1_2 },
+          { key: 'obj_2_1', label: 'Goal 2 - Objective 1', text: archive.obj_2_1 },
+          { key: 'obj_2_2', label: 'Goal 2 - Objective 2', text: archive.obj_2_2 },
+          { key: 'obj_3_1', label: 'Goal 3 - Objective 1', text: archive.obj_3_1 },
+          { key: 'obj_3_2', label: 'Goal 3 - Objective 2', text: archive.obj_3_2 },
+          { key: 'obj_4_1', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) - Objective 1`, text: archive.obj_4_1 },
+          { key: 'obj_4_2', label: `Goal 4 (${archive.goal_4_domain || 'Custom'}) - Objective 2`, text: archive.obj_4_2 }
         ].filter(o => o.text && o.text.trim() !== '');
 
         const { data: progressRows } = await supabaseClient
@@ -1867,7 +1866,7 @@
 
         return `
           <div class="goal-box" style="margin-bottom:20px;">
-            <h4 style="margin:0 0 12px 0;">IEP Version ${archive.iep_version} ‚Äî archived ${archivedDate}</h4>
+            <h4 style="margin:0 0 12px 0;">IEP Version ${archive.iep_version} - archived ${archivedDate}</h4>
             ${objectivesHtml || '<p style="color:var(--text-muted); font-size:13px; font-style:italic;">No objectives were set for this version.</p>'}
           </div>
         `;
@@ -1880,7 +1879,7 @@
       const student = allStudents.find(s => s.id === studentId);
       if (!student) return;
 
-      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals ‚Äî you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
+      if (!confirm(`Adding new IEP goals will archive ${student.first_name}'s current goals and all of their logged data under those goals - you'll still be able to view them later under "Past IEP Goals." All goal fields will then be cleared so you can paste in the new IEP's goals.\n\nContinue?`)) {
         return;
       }
 
@@ -1982,7 +1981,7 @@
     }
 
     // Typing a value into the Correct/Out of/Tally boxes counts as logging
-    // that objective ‚Äî this keeps the hidden status input (and therefore
+    // that objective - this keeps the hidden status input (and therefore
     // "has this been logged today" tracking) in sync without a pill click.
     function handleNumericEntryInput(studentId, objKey) {
       const input = document.getElementById(`status_input_${studentId}_${objKey}`);
@@ -2045,7 +2044,7 @@
           <div class="objective-card" id="card_${student.id}_${o.key}">
             <div class="obj-breadcrumbs flex-between">
               <span>${o.gNum} &bull; ${o.objNum} &bull; ${escapeHtml(o.domain)}
-                <span class="saved-badge" id="badge_${student.id}_${o.key}">‚úì Logged</span>
+                <span class="saved-badge" id="badge_${student.id}_${o.key}">Logged</span>
               </span>
               ${renderFlagIconHTML(student.id, o.key, student.iep_version || 1)}
             </div>
@@ -2117,7 +2116,7 @@
       const badgeEl = document.getElementById(`collapsed_badge_${studentId}`);
       if (collapsedEl) collapsedEl.style.display = 'flex';
       if (expandedEl) expandedEl.style.display = 'none';
-      if (badgeEl && logged) badgeEl.textContent = '‚úì Logged';
+      if (badgeEl && logged) badgeEl.textContent = 'Logged';
     }
 
     function expandStudentCard(studentId) {
@@ -2176,7 +2175,7 @@
       if (data.length > 0) {
         const logAllBtn = document.getElementById(`logall_${studentId}`);
         if (logAllBtn) {
-          logAllBtn.innerText = '‚úì Logged All';
+          logAllBtn.innerText = 'Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
       }
@@ -2279,7 +2278,7 @@
 
       if (failedObjKeys.length === 0) {
         if (logAllBtn) {
-          logAllBtn.innerText = '‚úì Logged All';
+          logAllBtn.innerText = 'Logged All';
           logAllBtn.style.backgroundColor = 'var(--success)';
         }
         collapseStudentCard(studentId, true);
@@ -2308,7 +2307,7 @@
           <div class="modal-content">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</h2>
-              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
+              <button class="danger sm" onclick="closeModal()">Close</button>
             </div>
 
             <div class="tab-buttons">
@@ -2326,55 +2325,55 @@
                 ${hasExistingGoals ? `
                   <div class="flex-between" style="margin-bottom:16px; align-items:flex-start; gap:16px;">
                     <p style="font-size:12px; color:var(--text-muted); margin:0;">
-                      Goals are locked once set, so historical data always stays tied to the goal it was actually logged against. To revise goals after an IEP meeting, use "Add New IEP Goals" ‚Äî this archives the current goals and their data (viewable under "Past IEP Goals"), then clears the fields so you can paste in the new IEP.
+                      You can edit goal text directly here - for example to fix a typo - and click "Save Changes" below. Use "Add New IEP Goals" only when you want to formally start a new IEP version: it archives the current goals and all data logged against them (viewable under "Past IEP Goals"), then clears the fields for the new IEP.
                     </p>
                     <button type="button" class="danger sm" style="white-space:nowrap;" onclick="startNewIepGoals('${student.id}')">Add New IEP Goals</button>
                   </div>
                 ` : `
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
-                    Paste in this student's IEP goals and objectives below, then click "Save Changes" at the bottom to lock them in.
+                    Paste in this student's IEP goals and objectives below, then click "Save Changes" at the bottom.
                   </p>
                 `}
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
                   <label>Objective 1.1</label>
-                  ${renderGoalFieldDisplay('edit_obj_1_1', student.obj_1_1, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_1_1', student.obj_1_1)}
                   ${renderGoalFormatSelect('edit_obj_1_1_format', getObjectiveFormat(student, 'obj_1_1'))}
                   <label>Objective 1.2</label>
-                  ${renderGoalFieldDisplay('edit_obj_1_2', student.obj_1_2, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_1_2', student.obj_1_2)}
                   ${renderGoalFormatSelect('edit_obj_1_2_format', getObjectiveFormat(student, 'obj_1_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
                   <label>Objective 2.1</label>
-                  ${renderGoalFieldDisplay('edit_obj_2_1', student.obj_2_1, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_2_1', student.obj_2_1)}
                   ${renderGoalFormatSelect('edit_obj_2_1_format', getObjectiveFormat(student, 'obj_2_1'))}
                   <label>Objective 2.2</label>
-                  ${renderGoalFieldDisplay('edit_obj_2_2', student.obj_2_2, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_2_2', student.obj_2_2)}
                   ${renderGoalFormatSelect('edit_obj_2_2_format', getObjectiveFormat(student, 'obj_2_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
                   <label>Objective 3.1</label>
-                  ${renderGoalFieldDisplay('edit_obj_3_1', student.obj_3_1, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_3_1', student.obj_3_1)}
                   ${renderGoalFormatSelect('edit_obj_3_1_format', getObjectiveFormat(student, 'obj_3_1'))}
                   <label>Objective 3.2</label>
-                  ${renderGoalFieldDisplay('edit_obj_3_2', student.obj_3_2, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_3_2', student.obj_3_2)}
                   ${renderGoalFormatSelect('edit_obj_3_2_format', getObjectiveFormat(student, 'obj_3_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
                   <label>Domain Name</label>
-                  ${renderGoalFieldDisplay('edit_goal_4_domain', student.goal_4_domain, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_goal_4_domain', student.goal_4_domain)}
                   <label>Objective 4.1</label>
-                  ${renderGoalFieldDisplay('edit_obj_4_1', student.obj_4_1, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_4_1', student.obj_4_1)}
                   ${renderGoalFormatSelect('edit_obj_4_1_format', getObjectiveFormat(student, 'obj_4_1'))}
                   <label>Objective 4.2</label>
-                  ${renderGoalFieldDisplay('edit_obj_4_2', student.obj_4_2, hasExistingGoals)}
+                  ${renderGoalFieldDisplay('edit_obj_4_2', student.obj_4_2)}
                   ${renderGoalFormatSelect('edit_obj_4_2_format', getObjectiveFormat(student, 'obj_4_2'))}
                 </div>
               </div>
@@ -2422,7 +2421,7 @@
 
                 <h4 style="margin:0 0 8px 0;">Class Schedule & Period Teachers</h4>
                 <p style="font-size:12px; color:var(--text-muted); margin-top:-8px; margin-bottom:12px;">
-                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard ‚Äî click "Data Schedule" on the ${getOrdinalSuffix(1)}‚Äì${getOrdinalSuffix(5)} Hour dashboards, not here.
+                  Each period's days-in-class and data-collection rotation group are set from that hour's dashboard - click "Data Schedule" on the ${getOrdinalSuffix(1)}-${getOrdinalSuffix(5)} Hour dashboards, not here.
                 </p>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                   ${[1, 2, 3, 4, 5].map(p => `
@@ -2464,7 +2463,7 @@
                 <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                   <h4 style="margin:0 0 8px 0; color:var(--danger);">Danger Zone</h4>
                   <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-                    This permanently deletes the student and all of their data. If a student just had a schedule change, use "Manage Students in Class" to remove them from your class instead ‚Äî don't delete them here.
+                    This permanently deletes the student and all of their data. If a student just had a schedule change, use "Manage Students in Class" to remove them from your class instead - don't delete them here.
                   </p>
                   <button type="button" class="danger" onclick="deleteStudent('${student.id}')">Delete Student</button>
                 </div>
@@ -2594,7 +2593,7 @@
       const format = getObjectiveFormat(student, objKey);
 
       // Tally Count is a raw occurrence count, not a pass/fail rate, so a
-      // pie breakdown doesn't mean anything for it ‚Äî show a note instead.
+      // pie breakdown doesn't mean anything for it - show a note instead.
       if (format === 'tally' && activeChartView === 'pie') {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2842,7 +2841,7 @@
             <tbody>
               ${data.map(d => {
                 const format = getObjectiveFormat(student, d.objective_key);
-                let valueCell = '‚Äî';
+                let valueCell = 'N/A';
                 if (format === 'accuracy' && d.status === 'Logged') {
                   valueCell = `${escapeHtml(d.numerator)} / ${escapeHtml(d.denominator)}`;
                 } else if (format === 'tally' && d.status === 'Logged') {
@@ -2928,7 +2927,7 @@
     }
 
     // Basic info, case manager, and all 8 goals/objectives (with tracking
-    // format) are all configured on this one screen and saved together ‚Äî
+    // format) are all configured on this one screen and saved together  -
     // no second "now go fill in the goals" modal afterward.
     async function openCreateStudentModal(fromAdmin = false) {
       const defaultCmUsername = fromAdmin ? '' : currentUserEmail.replace('@ahschools.us', '');
@@ -2938,7 +2937,7 @@
           <div class="modal-content">
             <div class="flex-between" style="margin-bottom:12px;">
               <h2 style="margin:0;">Add New Student</h2>
-              <button class="danger sm" onclick="closeModal()">‚úï Close</button>
+              <button class="danger sm" onclick="closeModal()">Close</button>
             </div>
             <form onsubmit="handleCreateStudent(event)">
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
@@ -2959,48 +2958,48 @@
               </div>
 
               <p style="font-size:12px; color:var(--text-muted); margin:16px 0;">
-                Paste in this student's IEP goals and objectives below (optional ‚Äî you can also add these later). Choose how each objective will be tracked on the daily logging cards.
+                Paste in this student's IEP goals and objectives below (optional - you can also add these later). Choose how each objective will be tracked on the daily logging cards.
               </p>
 
               <div class="goal-box">
                 <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
                 <label>Objective 1.1</label>
-                ${renderGoalFieldDisplay('new_obj_1_1', '', false)}
+                ${renderGoalFieldDisplay('new_obj_1_1', '')}
                 ${renderGoalFormatSelect('new_obj_1_1_format', 'yes_no')}
                 <label>Objective 1.2</label>
-                ${renderGoalFieldDisplay('new_obj_1_2', '', false)}
+                ${renderGoalFieldDisplay('new_obj_1_2', '')}
                 ${renderGoalFormatSelect('new_obj_1_2_format', 'yes_no')}
               </div>
 
               <div class="goal-box">
                 <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
                 <label>Objective 2.1</label>
-                ${renderGoalFieldDisplay('new_obj_2_1', '', false)}
+                ${renderGoalFieldDisplay('new_obj_2_1', '')}
                 ${renderGoalFormatSelect('new_obj_2_1_format', 'yes_no')}
                 <label>Objective 2.2</label>
-                ${renderGoalFieldDisplay('new_obj_2_2', '', false)}
+                ${renderGoalFieldDisplay('new_obj_2_2', '')}
                 ${renderGoalFormatSelect('new_obj_2_2_format', 'yes_no')}
               </div>
 
               <div class="goal-box">
                 <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
                 <label>Objective 3.1</label>
-                ${renderGoalFieldDisplay('new_obj_3_1', '', false)}
+                ${renderGoalFieldDisplay('new_obj_3_1', '')}
                 ${renderGoalFormatSelect('new_obj_3_1_format', 'yes_no')}
                 <label>Objective 3.2</label>
-                ${renderGoalFieldDisplay('new_obj_3_2', '', false)}
+                ${renderGoalFieldDisplay('new_obj_3_2', '')}
                 ${renderGoalFormatSelect('new_obj_3_2_format', 'yes_no')}
               </div>
 
               <div class="goal-box">
                 <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
                 <label>Domain Name</label>
-                ${renderGoalFieldDisplay('new_goal_4_domain', '', false)}
+                ${renderGoalFieldDisplay('new_goal_4_domain', '')}
                 <label>Objective 4.1</label>
-                ${renderGoalFieldDisplay('new_obj_4_1', '', false)}
+                ${renderGoalFieldDisplay('new_obj_4_1', '')}
                 ${renderGoalFormatSelect('new_obj_4_1_format', 'yes_no')}
                 <label>Objective 4.2</label>
-                ${renderGoalFieldDisplay('new_obj_4_2', '', false)}
+                ${renderGoalFieldDisplay('new_obj_4_2', '')}
                 ${renderGoalFormatSelect('new_obj_4_2_format', 'yes_no')}
               </div>
 
