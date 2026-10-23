@@ -304,6 +304,22 @@
     let activeChartInstances = {};
     let activeChartViews = {};
     let showingSetPasswordScreen = false;
+
+    // Remembers whichever chart type (Line or Pie) the user picked last,
+    // across sessions - defaults to Pie until they ever choose otherwise.
+    function getPreferredChartView() {
+      try {
+        return localStorage.getItem('iep_chart_view_preference') || 'pie';
+      } catch (e) {
+        return 'pie';
+      }
+    }
+
+    function setPreferredChartView(viewType) {
+      try {
+        localStorage.setItem('iep_chart_view_preference', viewType);
+      } catch (e) {}
+    }
     let flagsRealtimeChannel = null;
 
     const ADMIN_EMAILS = [
@@ -1814,22 +1830,15 @@
         }
 
         const avgPrompts = computeAveragePrompts(entries);
-        const promptsLabel = (avgPrompts !== null && avgPrompts !== undefined) ? `, avg ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}` : '';
-        let statLine, sentence;
-
-        if (format === 'tally') {
-          statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions${promptsLabel})`;
-          sentence = generateTallySentence(o.text, student.first_name, summary.avg, summary.count, avgPrompts);
-        } else {
-          const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
-          statLine = `${summary.percent}% (${occasionsLabel}${promptsLabel})`;
-          sentence = generateProgressSentence(o.text, student.first_name, summary.percent, avgPrompts);
-        }
+        const statLine = buildObjectiveStatLine(format, summary, student.first_name, avgPrompts);
+        const sentence = format === 'tally'
+          ? generateTallySentence(o.text, student.first_name, summary.avg, summary.count, avgPrompts)
+          : generateProgressSentence(o.text, student.first_name, summary.percent, avgPrompts);
 
         return `
           <div class="objective-card">
             <div class="obj-text">${escapeHtml(o.text)}</div>
-            <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">${statLine}</p>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">${escapeHtml(statLine)}</p>
             <textarea readonly style="width:100%; min-height:60px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
           </div>
         `;
@@ -2348,8 +2357,8 @@
           <div id="data-tab-objective-summary-${objKey}" style="margin-bottom:12px;"></div>
 
           <div style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <button type="button" class="status-pill selected" id="chartview-line-btn-${objKey}" onclick="setChartView('line', '${student.id}', '${objKey}')">Line</button>
-            <button type="button" class="status-pill" id="chartview-pie-btn-${objKey}" onclick="setChartView('pie', '${student.id}', '${objKey}')">Pie</button>
+            <button type="button" class="status-pill ${getPreferredChartView() === 'line' ? 'selected' : ''}" id="chartview-line-btn-${objKey}" onclick="setChartView('line', '${student.id}', '${objKey}')">Line</button>
+            <button type="button" class="status-pill ${getPreferredChartView() === 'pie' ? 'selected' : ''}" id="chartview-pie-btn-${objKey}" onclick="setChartView('pie', '${student.id}', '${objKey}')">Pie</button>
           </div>
 
           <div style="height:220px; position:relative; margin-bottom:16px;">
@@ -2361,6 +2370,26 @@
           <div id="data-history-table-${objKey}">Loading logs...</div>
         </div>
       `;
+    }
+
+    // One formal sentence, no parentheses, no abbreviations or symbols -
+    // written to be pasted into an official document as-is.
+    function buildObjectiveStatLine(format, summary, firstName, avgPrompts) {
+      const promptsClause = (avgPrompts !== null && avgPrompts !== undefined)
+        ? `, with an average of ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}`
+        : '';
+
+      if (format === 'tally') {
+        const occurrenceWord = summary.avg === 1 ? 'occurrence' : 'occurrences';
+        const sessionWord = summary.count === 1 ? 'session' : 'sessions';
+        return `${firstName} averaged ${summary.avg} ${occurrenceWord} per session, totaling ${summary.total} across ${summary.count} total ${sessionWord}${promptsClause}.`;
+      }
+
+      if (format === 'accuracy') {
+        return `${firstName} was correct on ${summary.numSum} of ${summary.denSum} total opportunities, equal to ${summary.percent} percent${promptsClause}.`;
+      }
+
+      return `${firstName} was observed during ${summary.yesCount} of ${summary.count} total observed occasions, equal to ${summary.percent} percent${promptsClause}.`;
     }
 
     function renderDataTabObjectiveSummary(student, objKey, entries) {
@@ -2376,21 +2405,10 @@
       }
 
       const avgPrompts = computeAveragePrompts(entries);
-      const promptsLabel = (avgPrompts !== null && avgPrompts !== undefined) ? `, avg ${avgPrompts} prompt${avgPrompts === 1 ? '' : 's'}` : '';
-      let statLine, sentence;
-
-      if (format === 'tally') {
-        statLine = `Averaged ${summary.avg} per session (${summary.total} total across ${summary.count} sessions${promptsLabel})`;
-        sentence = generateTallySentence(student[objKey], student.first_name, summary.avg, summary.count, avgPrompts);
-      } else {
-        const occasionsLabel = format === 'accuracy' ? `${summary.numSum} of ${summary.denSum} opportunities` : `${summary.yesCount} of ${summary.count} observed occasions`;
-        statLine = `${summary.percent}% (${occasionsLabel}${promptsLabel})`;
-        sentence = generateProgressSentence(student[objKey], student.first_name, summary.percent, avgPrompts);
-      }
+      const statLine = buildObjectiveStatLine(format, summary, student.first_name, avgPrompts);
 
       summaryEl.innerHTML = `
-        <p style="font-size:13px; color:var(--text-muted); margin:0 0 8px;">${statLine}</p>
-        <textarea readonly style="width:100%; min-height:50px; font-size:14px;" onclick="this.select()">${escapeHtml(sentence)}</textarea>
+        <p style="font-size:13px; color:var(--text-muted); margin:0;">${escapeHtml(statLine)}</p>
       `;
     }
 
@@ -2617,6 +2635,7 @@
 
     function setChartView(viewType, studentId, objKey) {
       activeChartViews[objKey] = viewType;
+      setPreferredChartView(viewType);
 
       const lineBtn = document.getElementById(`chartview-line-btn-${objKey}`);
       const pieBtn = document.getElementById(`chartview-pie-btn-${objKey}`);
@@ -2680,7 +2699,7 @@
       }
 
       const format = getObjectiveFormat(student, objKey);
-      const activeView = activeChartViews[objKey] || 'line';
+      const activeView = activeChartViews[objKey] || getPreferredChartView();
 
       // Tally Count is a raw occurrence count, not a pass/fail rate, so a
       // pie breakdown doesn't mean anything for it - show a note instead.
