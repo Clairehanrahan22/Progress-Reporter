@@ -287,6 +287,7 @@
   </div>
 
   <div id="modal-root"></div>
+  <div id="preview-modal-root"></div>
 
   <script>
     const SUPABASE_URL = 'https://jhrirprisfpksnzvcjls.supabase.co';
@@ -376,12 +377,12 @@
 
     // Tracking format stays editable even once the objective's goal text is
     // locked - changing how an objective is tracked doesn't rewrite history,
-    // it only changes what the logging card looks like going forward.
+    // it only changes what the logging card looks like going forward. Sits
+    // inline next to the "Objective X.X" label rather than its own row.
     function renderGoalFormatSelect(id, value) {
       const current = value || 'yes_no';
       return `
-        <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:0;">Tracking Format</label>
-        <select id="${id}" class="format-select" style="width:100%; margin-top:4px; margin-bottom:12px;">
+        <select id="${id}" class="format-select" title="Tracking Format">
           ${Object.entries(OBJECTIVE_FORMAT_LABELS).map(([val, label]) =>
             `<option value="${val}" ${current === val ? 'selected' : ''}>${escapeHtml(label)}</option>`
           ).join('')}
@@ -2470,7 +2471,7 @@
               <button class="tab-btn" id="tab-btn-pastgoals" onclick="switchModalTab('pastgoals', '${student.id}')">Past IEP Goals</button>
             </div>
 
-            <form id="student-main-form" onsubmit="saveStudentChanges(event, '${student.id}')">
+            <form id="student-main-form" onsubmit="previewStudentChanges(event, '${student.id}')">
 
               <div id="tab-content-goals" class="tab-content active">
                 ${hasExistingGoals ? `
@@ -2488,44 +2489,36 @@
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 1: Independent Living</h4>
-                  <label>Objective 1.1</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 1.1</label>${renderGoalFormatSelect('edit_obj_1_1_format', getObjectiveFormat(student, 'obj_1_1'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_1_1', student.obj_1_1)}
-                  ${renderGoalFormatSelect('edit_obj_1_1_format', getObjectiveFormat(student, 'obj_1_1'))}
-                  <label>Objective 1.2</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 1.2</label>${renderGoalFormatSelect('edit_obj_1_2_format', getObjectiveFormat(student, 'obj_1_2'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_1_2', student.obj_1_2)}
-                  ${renderGoalFormatSelect('edit_obj_1_2_format', getObjectiveFormat(student, 'obj_1_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 2: Post-Secondary Education</h4>
-                  <label>Objective 2.1</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 2.1</label>${renderGoalFormatSelect('edit_obj_2_1_format', getObjectiveFormat(student, 'obj_2_1'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_2_1', student.obj_2_1)}
-                  ${renderGoalFormatSelect('edit_obj_2_1_format', getObjectiveFormat(student, 'obj_2_1'))}
-                  <label>Objective 2.2</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 2.2</label>${renderGoalFormatSelect('edit_obj_2_2_format', getObjectiveFormat(student, 'obj_2_2'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_2_2', student.obj_2_2)}
-                  ${renderGoalFormatSelect('edit_obj_2_2_format', getObjectiveFormat(student, 'obj_2_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 3: Employment</h4>
-                  <label>Objective 3.1</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 3.1</label>${renderGoalFormatSelect('edit_obj_3_1_format', getObjectiveFormat(student, 'obj_3_1'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_3_1', student.obj_3_1)}
-                  ${renderGoalFormatSelect('edit_obj_3_1_format', getObjectiveFormat(student, 'obj_3_1'))}
-                  <label>Objective 3.2</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 3.2</label>${renderGoalFormatSelect('edit_obj_3_2_format', getObjectiveFormat(student, 'obj_3_2'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_3_2', student.obj_3_2)}
-                  ${renderGoalFormatSelect('edit_obj_3_2_format', getObjectiveFormat(student, 'obj_3_2'))}
                 </div>
 
                 <div class="goal-box">
                   <h4 style="margin:0 0 8px 0;">Goal 4 (Custom Domain)</h4>
                   <label>Domain Name</label>
                   ${renderGoalFieldDisplay('edit_goal_4_domain', student.goal_4_domain)}
-                  <label>Objective 4.1</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 4.1</label>${renderGoalFormatSelect('edit_obj_4_1_format', getObjectiveFormat(student, 'obj_4_1'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_4_1', student.obj_4_1)}
-                  ${renderGoalFormatSelect('edit_obj_4_1_format', getObjectiveFormat(student, 'obj_4_1'))}
-                  <label>Objective 4.2</label>
+                  <div style="display:flex; align-items:center;"><label style="margin:0;">Objective 4.2</label>${renderGoalFormatSelect('edit_obj_4_2_format', getObjectiveFormat(student, 'obj_4_2'))}</div>
                   ${renderGoalFieldDisplay('edit_obj_4_2', student.obj_4_2)}
-                  ${renderGoalFormatSelect('edit_obj_4_2_format', getObjectiveFormat(student, 'obj_4_2'))}
                 </div>
               </div>
 
@@ -3014,8 +3007,124 @@
       }
     }
 
-    async function saveStudentChanges(e, studentId) {
+    // Static mockup of exactly what the chosen tracking format looks like on
+    // the daily logging card - lets staff sanity-check that an objective's
+    // wording actually makes sense with the format before it goes live for
+    // every teacher logging against it.
+    function renderFormatPreviewControlsHTML(format) {
+      if (format === 'accuracy') {
+        return `
+          <div class="status-prompt-row">
+            <div class="numeric-entry-row">
+              <label>Correct:</label>
+              <input type="number" disabled placeholder="0">
+              <label>Out of:</label>
+              <input type="number" disabled placeholder="0">
+            </div>
+          </div>
+          <div class="status-prompt-row">
+            <div class="status-pill-group">
+              <button type="button" class="status-pill" disabled>No Opportunity</button>
+              <button type="button" class="status-pill" disabled>Absent</button>
+            </div>
+          </div>
+        `;
+      }
+      if (format === 'tally') {
+        return `
+          <div class="status-prompt-row">
+            <div class="numeric-entry-row">
+              <label>Tally:</label>
+              <input type="number" disabled placeholder="0">
+            </div>
+          </div>
+          <div class="status-prompt-row">
+            <div class="status-pill-group">
+              <button type="button" class="status-pill" disabled>No Opportunity</button>
+              <button type="button" class="status-pill" disabled>Absent</button>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="status-prompt-row">
+          <div class="status-pill-group">
+            <button type="button" class="status-pill" disabled>Yes</button>
+            <button type="button" class="status-pill" disabled>No</button>
+            <button type="button" class="status-pill" disabled>No Opportunity</button>
+            <button type="button" class="status-pill" disabled>Absent</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function closePreviewModal() {
+      document.getElementById('preview-modal-root').innerHTML = '';
+    }
+
+    // Shown before any save that includes objective text - staff review how
+    // each objective will actually render on other teachers' logging cards
+    // before committing, instead of finding out something reads oddly after
+    // it's already live.
+    function previewStudentChanges(e, studentId) {
       e.preventDefault();
+
+      const objectives = [
+        { key: 'obj_1_1', label: 'Goal 1 - Objective 1' },
+        { key: 'obj_1_2', label: 'Goal 1 - Objective 2' },
+        { key: 'obj_2_1', label: 'Goal 2 - Objective 1' },
+        { key: 'obj_2_2', label: 'Goal 2 - Objective 2' },
+        { key: 'obj_3_1', label: 'Goal 3 - Objective 1' },
+        { key: 'obj_3_2', label: 'Goal 3 - Objective 2' },
+        { key: 'obj_4_1', label: 'Goal 4 - Objective 1' },
+        { key: 'obj_4_2', label: 'Goal 4 - Objective 2' }
+      ].map(o => ({
+        ...o,
+        text: document.getElementById(`edit_${o.key}`)?.value.trim() || '',
+        format: document.getElementById(`edit_${o.key}_format`)?.value || 'yes_no'
+      })).filter(o => o.text);
+
+      if (objectives.length === 0) {
+        saveStudentChanges(e, studentId);
+        return;
+      }
+
+      const previewHTML = `
+        <div class="modal-backdrop">
+          <div class="modal-content" style="max-width:700px;">
+            <div class="flex-between" style="margin-bottom:12px;">
+              <h2 style="margin:0; font-size:18px;">Preview Before Saving</h2>
+              <button class="danger sm" onclick="closePreviewModal()">Close</button>
+            </div>
+            <div class="card" style="background:#eff6ff; border-color:#bfdbfe; margin-bottom:16px; padding:12px 16px;">
+              <strong>Read through each objective below.</strong>
+              <span style="color:var(--text-muted); font-size:13px;"> Would this make sense to someone else reading it, given the format you chose?</span>
+            </div>
+            ${objectives.map(o => `
+              <div class="objective-card">
+                <div class="obj-breadcrumbs">${escapeHtml(o.label)}</div>
+                <div class="obj-text">${escapeHtml(o.text)}</div>
+                ${renderFormatPreviewControlsHTML(o.format)}
+              </div>
+            `).join('')}
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+              <button type="button" class="outline" onclick="closePreviewModal()">Go Back and Edit</button>
+              <button type="button" class="success" onclick="confirmStudentSave('${studentId}')">Yes, Save Changes</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('preview-modal-root').innerHTML = previewHTML;
+    }
+
+    function confirmStudentSave(studentId) {
+      closePreviewModal();
+      saveStudentChanges(null, studentId);
+    }
+
+    async function saveStudentChanges(e, studentId) {
+      e?.preventDefault();
 
       const payload = {
         first_name: document.getElementById('edit_first_name')?.value.trim(),
@@ -3108,6 +3217,7 @@
       Object.values(activeChartInstances).forEach(instance => instance && instance.destroy());
       activeChartInstances = {};
       document.getElementById('modal-root').innerHTML = '';
+      document.getElementById('preview-modal-root').innerHTML = '';
     }
 
     window.onload = function() {
